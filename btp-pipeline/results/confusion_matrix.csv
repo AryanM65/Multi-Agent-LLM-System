@@ -1,0 +1,4 @@
+true,noise,contamination,ceiling
+noise,9,0,0
+contamination,0,10,0
+ceiling,0,0,5

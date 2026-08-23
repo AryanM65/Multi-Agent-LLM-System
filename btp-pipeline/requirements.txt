@@ -1,0 +1,6 @@
+datasets>=2.19.0
+ollama>=0.2.0
+sentence-transformers>=3.0.0
+scikit-learn>=1.4.0
+pandas>=2.2.0
+tqdm>=4.66.0

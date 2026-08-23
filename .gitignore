@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+btp-pipeline/btp-env/
+venv/
+env/
+.venv/
+
+# Dataset cache (large binary files — re-download with download_data.py)
+btp-pipeline/data/
+
+# MLX / HuggingFace model cache (multi-GB)
+*.safetensors
+*.bin
+*.gguf
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs and results ARE committed (they are the research output)
+# Uncomment the lines below if you prefer to gitignore them
+# btp-pipeline/logs/
+# btp-pipeline/results/
