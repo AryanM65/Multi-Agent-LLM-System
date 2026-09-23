@@ -15,23 +15,34 @@ Phase 2 additions:
   - sample_node() gains a `role` parameter and branches to compute the
     additional role-appropriate uncertainty metric alongside the existing
     lexical metric.
-  - get_normalizer(role) provides the normalizer function for each role,
-    keeping role dispatch in one place.
+  - get_normalizer(role) provides the normalizer function for each role.
 
-Backend: mlx_lm (Apple Silicon / Metal).
-The model is loaded ONCE as a module-level singleton via _get_model() to
-avoid reloading 9×k times per pipeline run (loading the 8B model takes ~3s).
+Work-stream 1 — Mock / CPU backend:
+  - When MOCK_MODE is True (BTP_MOCK=1 env-var), _generate_once() returns
+    a deterministic mock response instead of calling mlx_lm.
+  - Mock responses are seeded by (node_name, sample_index, prompt_hash) so
+    they are reproducible and vary enough across k samples to produce
+    non-trivial uncertainty values for full pipeline testing on Windows.
 """
 
 from __future__ import annotations
 
+import hashlib
+import random
 import re
 import string
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from src.config import DEFAULT_K, DEFAULT_TEMPERATURE, MODEL, MAX_TOKENS, MAX_TOKENS_REASONER
+from src.config import (
+    DEFAULT_K,
+    DEFAULT_TEMPERATURE,
+    MAX_TOKENS,
+    MAX_TOKENS_REASONER,
+    MOCK_MODE,
+    MODEL,
+)
 
 # ---------------------------------------------------------------------------
 # MLX model singleton loader
@@ -49,6 +60,62 @@ def _get_model():
         _mlx_model, _mlx_tokenizer = load(MODEL)
         print("[nodes] Model loaded.")
     return _mlx_model, _mlx_tokenizer
+
+
+# ---------------------------------------------------------------------------
+# Mock backend (Work-stream 1)
+# ---------------------------------------------------------------------------
+
+# Mock output banks keyed by role.  Enough variety to produce non-trivial k=3
+# self-consistency uncertainty (some samples agree, some differ slightly).
+_MOCK_OUTPUTS: Dict[str, List[str]] = {
+    "retriever": [
+        "Scott Derrickson is an American director, screenwriter, and producer.",
+        "Ed Wood was an American filmmaker, actor, and author.",
+        "Scott Derrickson was born in Denver, Colorado, United States.",
+        "Ed Wood is the subject of the 1994 Tim Burton biographical film.",
+        "Both Scott Derrickson and Ed Wood are American.",
+    ],
+    "reasoner": [
+        "Scott Derrickson is American. Ed Wood is also American. "
+        "FINAL ANSWER: Yes, they were of the same nationality — both American.",
+        "The evidence shows Derrickson is American and Ed Wood is American. "
+        "FINAL ANSWER: Yes, both Scott Derrickson and Ed Wood are American.",
+        "Derrickson hails from Denver, Colorado (USA). Ed Wood was born in the USA too. "
+        "FINAL ANSWER: Yes, they share American nationality.",
+        "Based on the evidence, both are from the United States. "
+        "FINAL ANSWER: Yes, both are American.",
+        "Scott Derrickson is American. Ed Wood is American too. "
+        "FINAL ANSWER: Yes, same nationality.",
+    ],
+    "writer": [
+        "Yes, they were both American.",
+        "Yes.",
+        "Yes, both were American.",
+        "Yes, they share the same nationality (American).",
+        "Yes, both Scott Derrickson and Ed Wood are American.",
+    ],
+}
+
+
+def _mock_generate(node_name: str, sample_index: int, prompt: str, role: str) -> str:
+    """Return a deterministic mock response for the given node and sample index.
+
+    The response is drawn from _MOCK_OUTPUTS[role] using a seed derived from
+    (node_name, sample_index, prompt_hash).  Two different prompts will produce
+    different but consistently sampled outputs across re-runs.
+
+    Args:
+        node_name:    Node identifier (for seeding).
+        sample_index: Which of the k samples this is (0-indexed).
+        prompt:       The full prompt string (only its hash is used for seeding).
+        role:         Node role — determines which bank to draw from.
+    """
+    prompt_hash = int(hashlib.md5(prompt.encode()).hexdigest(), 16) % (2 ** 32)
+    seed = (prompt_hash + sample_index * 1337 + hash(node_name)) % (2 ** 32)
+    rng = random.Random(seed)
+    bank = _MOCK_OUTPUTS.get(role, _MOCK_OUTPUTS["writer"])
+    return rng.choice(bank)
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +237,45 @@ class PipelineTrace:
 # Sampling
 # ---------------------------------------------------------------------------
 
+def _generate_once(
+    node_name: str,
+    sample_index: int,
+    prompt: str,
+    role: str,
+    temperature: float,
+    token_limit: int,
+) -> str:
+    """Generate one sample — dispatches to mock backend or MLX.
+
+    Centralises the mock/real decision so it is made in exactly one place.
+    """
+    if MOCK_MODE:
+        return _mock_generate(node_name, sample_index, prompt, role)
+
+    # Real MLX generation
+    from mlx_lm import generate
+    from mlx_lm.sample_utils import make_sampler
+
+    model, tokenizer = _get_model()
+    messages = [{"role": "user", "content": prompt}]
+    # enable_thinking=False suppresses Qwen3's internal <think> scratchpad.
+    formatted = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=False,
+    )
+    sampler = make_sampler(temp=temperature)
+    return generate(
+        model,
+        tokenizer,
+        prompt=formatted,
+        max_tokens=token_limit,
+        sampler=sampler,
+        verbose=False,
+    )
+
+
 def sample_node(
     node_name: str,
     prompt: str,
@@ -180,13 +286,17 @@ def sample_node(
 ) -> NodeResult:
     """Run one pipeline node with self-consistency sampling.
 
-    Calls mlx_lm.generate() k times sequentially (never concurrent —
+    Calls _generate_once() k times sequentially (never concurrent —
     hardware constraint).  Computes:
       1. Lexical uncertainty (always): agreement rate over normalised outputs.
       2. Role-specific additional uncertainty (Phase 2 — when role is provided):
            role='reasoner' → semantic clustering over extracted conclusions
            role='writer'   → semantic clustering over raw outputs
            role='retriever'→ Jaccard set-overlap (multi-item outputs only)
+
+    Mock mode (BTP_MOCK=1): calls _mock_generate() instead of the real model.
+    All downstream pipeline logic (uncertainty, fault injection, diagnosis) is
+    exercised identically — only the generation step is stubbed.
 
     Returns a NodeResult with the modal (most-agreed-on) raw sample as .output.
 
@@ -205,37 +315,15 @@ def sample_node(
         raise ValueError(f"k must be >= 1, got {k}")
 
     samples: List[str] = []
-    # Use Reasoner's token budget for the reasoner role; default otherwise.
     token_limit = MAX_TOKENS_REASONER if role == "reasoner" else MAX_TOKENS
 
     for i in range(k):
         try:
-            from mlx_lm import generate
-            from mlx_lm.sample_utils import make_sampler
-            model, tokenizer = _get_model()
-
-            messages = [{"role": "user", "content": prompt}]
-            # enable_thinking=False suppresses Qwen3's internal <think> scratchpad.
-            formatted = tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=False,
-            )
-
-            sampler = make_sampler(temp=temperature)
-            resp = generate(
-                model,
-                tokenizer,
-                prompt=formatted,
-                max_tokens=token_limit,
-                sampler=sampler,
-                verbose=False,
-            )
-            samples.append(resp)
+            out = _generate_once(node_name, i, prompt, role, temperature, token_limit)
+            samples.append(out)
         except Exception as exc:
             raise RuntimeError(
-                f"mlx_lm generation failed on sample {i + 1}/{k} "
+                f"Generation failed on sample {i + 1}/{k} "
                 f"for node '{node_name}' (role='{role}'): {exc}"
             ) from exc
 

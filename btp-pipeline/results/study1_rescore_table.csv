@@ -1,0 +1,10 @@
+fault_type,node,n_trials,lexical_mean,semantic_mean
+ceiling,reasoner,15,0.6667,0.9159
+ceiling,retriever,15,0.0889,0.1545
+ceiling,writer,15,0.0889,0.1439
+contamination,reasoner,15,0.6667,1.0
+contamination,retriever,15,0.2222,0.3265
+contamination,writer,15,0.2444,0.3545
+noise,reasoner,15,0.6667,1.0
+noise,retriever,15,0.0889,0.1159
+noise,writer,15,0.1111,0.1545

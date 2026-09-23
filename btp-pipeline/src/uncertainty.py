@@ -14,13 +14,11 @@ Design principles (per §2.1 of the implementation plan):
 All heavy imports (sentence_transformers, numpy) are deferred until first use;
 a process that never calls the semantic/jaccard functions pays zero loading cost.
 """
-
 from __future__ import annotations
 
+import math
 import re
 from typing import Dict, List, Optional
-
-import numpy as np
 
 
 # ---------------------------------------------------------------------------
@@ -108,9 +106,26 @@ def semantic_uncertainty(
     if len(texts) <= 1:
         return 0.0
 
-    embedder = get_embedder()
-    embs = embedder.encode(texts, normalize_embeddings=True)  # L2-normalized → dot = cosine
     n = len(texts)
+
+    try:
+        from src.config import MOCK_MODE
+    except Exception:
+        MOCK_MODE = False
+
+    try:
+        if MOCK_MODE:
+            raise ImportError("Mock mode active")
+        embedder = get_embedder()
+        embs = embedder.encode(texts, normalize_embeddings=True)
+        def get_sim(i: int, j: int) -> float:
+            return float(sum(a * b for a, b in zip(embs[i], embs[j])))
+    except Exception:
+        # Fallback for mock mode or environments without sentence-transformers
+        token_sets = [set(re.findall(r"\w+", t.lower())) for t in texts]
+        def get_sim(i: int, j: int) -> float:
+            u = token_sets[i] | token_sets[j]
+            return float(len(token_sets[i] & token_sets[j]) / len(u)) if u else 1.0
 
     cluster_of: List[int] = [-1] * n
     cluster_reps: List[int] = []
@@ -118,7 +133,7 @@ def semantic_uncertainty(
     for i in range(n):
         assigned = False
         for c_idx, rep_idx in enumerate(cluster_reps):
-            sim = float(np.dot(embs[i], embs[rep_idx]))  # cosine (both normalized)
+            sim = get_sim(i, rep_idx)
             if sim >= sim_threshold:
                 cluster_of[i] = c_idx
                 assigned = True
@@ -127,11 +142,11 @@ def semantic_uncertainty(
             cluster_reps.append(i)
             cluster_of[i] = len(cluster_reps) - 1
 
-    counts = np.bincount(cluster_of, minlength=len(cluster_reps))
-    probs = counts / n
+    counts = [cluster_of.count(c) for c in range(len(cluster_reps))]
+    probs = [cnt / n for cnt in counts]
     # Shannon entropy; clip to avoid log(0)
-    entropy = float(-np.sum(probs * np.log(probs + 1e-12)))
-    max_entropy = float(np.log(n))
+    entropy = -sum(p * math.log(p) for p in probs if p > 0)
+    max_entropy = math.log(n)
     return float(entropy / max_entropy) if max_entropy > 0 else 0.0
 
 
@@ -170,7 +185,7 @@ def jaccard_uncertainty(item_sets: List[List[str]]) -> float:
             inter = sets[i] & sets[j]
             sims.append(len(inter) / len(union) if union else 1.0)
 
-    avg_sim = float(np.mean(sims)) if sims else 1.0
+    avg_sim = float(sum(sims) / len(sims)) if sims else 1.0
     return round(1.0 - avg_sim, 4)
 
 
