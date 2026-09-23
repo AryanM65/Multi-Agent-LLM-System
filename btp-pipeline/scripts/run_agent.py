@@ -220,12 +220,14 @@ def run_writer_mode(args: argparse.Namespace):
 # ---------------------------------------------------------------------------
 
 def run_all_mode(args: argparse.Namespace):
-    from src.pipelines.retriever_pipeline import run_retriever_pipeline
-    from src.pipelines.reasoner_pipeline  import run_reasoner_pipeline
-    from src.pipelines.writer_pipeline    import run_writer_pipeline
-    from src.pipelines.retriever_pipeline import _save_output as save_ret
-    from src.pipelines.reasoner_pipeline  import _save_output as save_rea
-    from src.pipelines.writer_pipeline    import _save_output as save_wri
+    """Run all three nodes in sequence via the topology engine.
+
+    Phase 1 update: uses run_pipeline(default_topology(), ...) instead of
+    calling each standalone pipeline module separately.  The individual
+    per-node pipeline modules (retriever_pipeline, reasoner_pipeline,
+    writer_pipeline) still exist for single-node interactive testing.
+    """
+    from src.pipeline import run_pipeline, default_topology
 
     context = _resolve_context(args)
     question = args.question
@@ -234,56 +236,42 @@ def run_all_mode(args: argparse.Namespace):
 
     SEP = "═" * 68
     print(f"\n{SEP}")
-    print(f"  FULL PIPELINE: Retriever → Reasoner → Writer")
+    print(f"  FULL PIPELINE (topology engine): Retriever → Reasoner → Writer")
     print(f"  Question   : {question}")
     print(f"  k={k}  temperature={temperature}")
     print(SEP)
 
-    # --- Node 1: Retriever ---
-    print("\n[1/3] Running RETRIEVER...")
-    ret_out = run_retriever_pipeline(question=question, context=context, k=k, temperature=temperature)
-    print(f"  ✓ Retriever  uncertainty = {ret_out.result.uncertainty:.4f}")
-    print(f"  Selected evidence: {ret_out.selected_evidence[:200].strip()}")
-    if not args.no_save:
-        save_ret(ret_out)
+    topo = default_topology()
+    trace = run_pipeline(topo, question, context, k=k, temperature=temperature)
 
-    # --- Node 2: Reasoner ---
-    print("\n[2/3] Running REASONER...")
-    rea_out = run_reasoner_pipeline(question=question, evidence=ret_out.selected_evidence, k=k, temperature=temperature)
-    print(f"  ✓ Reasoner   uncertainty = {rea_out.result.uncertainty:.4f}")
-    print(f"  Reasoning (first 300 chars): {rea_out.reasoning_chain[:300].strip()}")
-    if not args.no_save:
-        save_rea(rea_out)
-
-    # --- Node 3: Writer ---
-    print("\n[3/3] Running WRITER...")
-    wri_out = run_writer_pipeline(question=question, reasoning=rea_out.reasoning_chain, k=k, temperature=temperature)
-    print(f"  ✓ Writer     uncertainty = {wri_out.result.uncertainty:.4f}")
-    print(f"  Final answer: {wri_out.final_answer.strip()}")
-    if not args.no_save:
-        save_wri(wri_out)
+    # --- Print per-node results ---
+    for i, (node_id, result) in enumerate(trace.node_results.items(), 1):
+        print(f"\n[{i}/{len(trace.node_results)}] {node_id.upper()}")
+        print(f"  ✓ uncertainty (lexical)   = {result.uncertainty:.4f}")
+        if result.uncertainty_semantic is not None:
+            print(f"  ✓ uncertainty (semantic)  = {result.uncertainty_semantic:.4f}")
+        print(f"  output: {result.output[:300].strip()}")
 
     # --- Summary ---
     print(f"\n{SEP}")
     print("  PER-NODE UNCERTAINTY SUMMARY  (never collapsed to a scalar)")
-    print(f"  {'Node':<12}  {'Uncertainty':>12}  {'Status'}")
-    print(f"  {'─'*12}  {'─'*12}  {'─'*20}")
+    print(f"  {'Node':<12}  {'Lex Unc':>10}  {'Sem Unc':>10}  {'Status'}")
+    print(f"  {'─'*12}  {'─'*10}  {'─'*10}  {'─'*20}")
 
     from src.config import UNCERTAINTY_THRESHOLD
-    all_results = [
-        ("retriever", ret_out.result.uncertainty),
-        ("reasoner",  rea_out.result.uncertainty),
-        ("writer",    wri_out.result.uncertainty),
-    ]
-    for name, u in all_results:
-        flag = "⚠  ABOVE THRESHOLD" if u > UNCERTAINTY_THRESHOLD else "✓  ok"
-        print(f"  {name:<12}  {u:>12.4f}  {flag}")
+    for node_id, result in trace.node_results.items():
+        flag = "⚠  ABOVE THRESHOLD" if result.uncertainty > UNCERTAINTY_THRESHOLD else "✓  ok"
+        sem_str = f"{result.uncertainty_semantic:.4f}" if result.uncertainty_semantic is not None else "  N/A  "
+        print(f"  {node_id:<12}  {result.uncertainty:>10.4f}  {sem_str:>10}  {flag}")
 
+    writer_result = trace.node_results.get("writer")
+    final_answer = writer_result.output.strip() if writer_result else "(not available)"
     print(f"\n  Threshold (UNCERTAINTY_THRESHOLD): {UNCERTAINTY_THRESHOLD}")
-    print(f"  Final answer : {wri_out.final_answer.strip()}")
+    print(f"  Topology : {trace.topology_id}")
+    print(f"  Final answer : {final_answer}")
     print(SEP + "\n")
 
-    return ret_out, rea_out, wri_out
+    return trace
 
 
 # ---------------------------------------------------------------------------

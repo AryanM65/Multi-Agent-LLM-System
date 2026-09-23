@@ -1,22 +1,26 @@
 """
 run_study1.py — Phase 4+ entry point: scored batch run + confusion matrix.
 
-Generates the primary Study 1 deliverable: a 3×3 confusion matrix with rows
-= true fault type, columns = diagnosed fault type.
+Phase 3 restructure:
+  - Per-question control trial always runs first (clean baseline).
+  - Full 3×3 fault grid (build_fault_conditions()) replaces the original 3-type list.
+  - verify_against_baseline() is computed and stored for every fault trial.
+  - Skipped trials (ceiling answer-survived, no distractors, etc.) logged to
+    a separate skipped_trials.jsonl with explicit reason fields.
+  - Reproducibility: every injector call uses make_rng(question_id, type, node).
+  - Substitute bank for downstream contamination is built once before the main
+    loop from a pilot set of clean Retriever/Reasoner outputs.
 
-Features:
-  - Append-only JSONL logging (crash-safe; completed trials are never lost).
+Features (unchanged from original):
+  - Append-only JSONL logging (crash-safe).
   - tqdm progress bar.
-  - Resumes from an existing log if run is interrupted and restarted
-    (--resume flag).
-  - Per-node diagnosis stored alongside primary diagnosed_label.
-  - Inference Gap computed as an experimental metric (disable with
-    --no-inference-gap).
+  - --resume flag skips already-logged trials.
+  - Confusion matrix generation + diagonal dominance check.
 
 Usage:
-    python scripts/run_study1.py
-    python scripts/run_study1.py --n-examples 15 --k 3
-    python scripts/run_study1.py --n-examples 15 --k 5 --resume
+    python scripts/run_study1.py --n-examples 15 --k 3 --no-inference-gap
+    python scripts/run_study1.py --n-examples 15 --k 3 --no-inference-gap --resume
+    python scripts/run_study1.py --n-examples 300 --k 5  # cloud scale-up
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -37,17 +41,21 @@ from src.config import (
     DATA_DIR,
     DEFAULT_K,
     DEFAULT_LOG_PATH,
+    DEFAULT_SKIP_LOG_PATH,
     DEFAULT_CONFUSION_MATRIX_PATH,
     RESULTS_DIR,
     LOG_DIR,
+    build_fault_conditions,
 )
-from src.diagnose import diagnose_trace, needs_diagnosis
+from src.diagnose import diagnose_trace, needs_diagnosis, verify_against_baseline
 from src.faults import (
     format_context,
     get_gold_context,
     inject_ceiling,
-    inject_contamination,
+    inject_contamination_downstream,
+    inject_contamination_retriever,
     inject_noise,
+    make_rng,
 )
 from src.nodes import PipelineTrace
 from src.pipeline import (
@@ -55,98 +63,232 @@ from src.pipeline import (
     reasoner_prompt,
     writer_prompt,
     run_pipeline,
+    default_topology,
 )
 
 # ---------------------------------------------------------------------------
-# Trial runner
+# Substitute bank builder (for downstream contamination faults)
 # ---------------------------------------------------------------------------
 
-def run_labeled_trial(
-    example: dict,
-    fault_fn: Callable,
-    k: int = DEFAULT_K,
-    compute_gap: bool = True,
-) -> Optional[PipelineTrace]:
-    """Run one fault-injected trial: pipeline → diagnosis → labeled PipelineTrace.
+def build_substitute_bank(
+    examples: list,
+    topo,
+    k: int,
+    n_pilot: int = 10,
+) -> Dict[str, List[str]]:
+    """Build a bank of clean node outputs from pilot examples.
 
-    Returns None if fault injection failed (e.g. insufficient distractors).
+    Used as the replacement pool for contamination faults targeting Reasoner
+    or Writer nodes.  Pre-built once before the main trial loop to avoid
+    per-trial overhead.
 
-    DESIGN CHOICE (multi-node flagging):
-      node_prompts is built for ALL three nodes so that diagnose_trace() can
-      handle any combination of flagged nodes.  The clean reference for every
-      node uses the FULL gold context (important for ceiling faults where
-      the faulted context is a stripped subset of gold — the clean prompt
-      uses the complete gold so the diagnostic can detect a genuine capability
-      gap vs. a data-quality issue).
+    Args:
+        examples:  Full example list.
+        topo:      Pipeline topology.
+        k:         Self-consistency samples (same as study k).
+        n_pilot:   Number of examples to collect clean outputs from.
+
+    Returns:
+        Dict {"retriever": [outputs...], "reasoner": [outputs...], "writer": [outputs...]}
     """
-    faulted = fault_fn(example)
-    if faulted is None:
-        return None
+    bank: Dict[str, List[str]] = {"retriever": [], "reasoner": [], "writer": []}
+    pilot = examples[:min(n_pilot, len(examples))]
+    print(f"[run_study1] Building substitute bank from {len(pilot)} pilot examples...")
+    for ex in pilot:
+        ctx = format_context(get_gold_context(ex))
+        trace = run_pipeline(topo, ex["question"], ctx, k=k, fault_config=None)
+        for node_id, result in trace.node_results.items():
+            if node_id in bank:
+                bank[node_id].append(result.output)
+    print(f"[run_study1] Bank sizes: { {k: len(v) for k, v in bank.items()} }")
+    return bank
 
-    temperature = faulted["sampling_override"]["temperature"]
 
-    trace = run_pipeline(
-        faulted["question"],
-        faulted["context"],
-        k=k,
-        temperature=temperature,
-    )
-    trace.true_label = faulted["true_label"]
-    trace.gold_answer = faulted["answer"]
+# ---------------------------------------------------------------------------
+# Per-trial runner
+# ---------------------------------------------------------------------------
 
-    # Build per-node prompts for the diagnostic.
-    # same_input_prompt: the prompt actually used in the faulted run.
-    # clean_input_prompt: the prompt with known-good (gold) context.
-    clean_context = format_context(get_gold_context(example))
+def run_trial(
+    example: dict,
+    fault_config: Optional[dict],
+    topo,
+    k: int,
+    compute_gap: bool,
+    baseline_uncertainties: Optional[Dict[str, float]],
+    substitute_bank: Optional[Dict[str, List[str]]],
+) -> Optional[Dict]:
+    """Run one trial (control or fault) and return the logged record.
 
-    # The retriever output used in the faulted run (for downstream nodes).
-    faulted_retriever_output = trace.node_results["retriever"].output
-    faulted_reasoner_output  = trace.node_results["reasoner"].output
+    Returns None if the fault injection was not applicable (logged externally
+    as a skip with reason).  For control trials, fault_config is None.
+
+    The returned dict is ready for JSON serialisation and appending to
+    trials.jsonl or skipped_trials.jsonl.
+    """
+    question = example["question"]
+    qid = str(example.get("_id", question))
+    gold_ctx = format_context(get_gold_context(example))
+    answer = example["answer"]
+
+    # --- Determine actual context + fault_config to run with ---
+    run_context = gold_ctx
+
+    if fault_config is None:
+        # Clean control trial
+        trace = run_pipeline(topo, question, gold_ctx, k=k, fault_config=None)
+        trace.true_label = "clean"
+        trace.gold_answer = answer
+        record = _trace_to_record(trace, fault_config=None, is_control=True)
+        return record
+
+    ft = fault_config["type"]
+    tn = fault_config["target_node"]
+    rng = make_rng(qid, ft, tn)
+    skip_reason = None
+
+    if ft == "noise":
+        injected = inject_noise(example, tn, rng)
+        run_fault_config = {"type": "noise", "target_node": tn}
+
+    elif ft == "contamination":
+        if tn == "retriever":
+            injected = inject_contamination_retriever(example, rng)
+            if injected is None:
+                skip_reason = "contamination_insufficient_distractors"
+                return _skip_record(qid, question, fault_config, skip_reason)
+            run_context = injected["context"]
+            run_fault_config = {"type": "contamination", "target_node": tn}
+        else:
+            # Downstream contamination: run clean first to get parent's output,
+            # then corrupt it.
+            clean_trace = run_pipeline(topo, question, gold_ctx, k=k, fault_config=None)
+            parent_map = {"reasoner": "retriever", "writer": "reasoner"}
+            parent_id = parent_map.get(tn)
+            if parent_id is None or parent_id not in clean_trace.node_results:
+                skip_reason = f"contamination_no_parent_for_{tn}"
+                return _skip_record(qid, question, fault_config, skip_reason)
+
+            clean_parent_output = clean_trace.node_results[parent_id].output
+            bank = (substitute_bank or {}).get(parent_id, [])
+            injected = inject_contamination_downstream(
+                example, tn, clean_parent_output, bank, rng
+            )
+            if injected is None:
+                skip_reason = "contamination_empty_substitute_bank"
+                return _skip_record(qid, question, fault_config, skip_reason)
+            run_fault_config = {
+                "type": "contamination",
+                "target_node": tn,
+                "_corrupted_input": injected["_corrupted_input"],
+            }
+
+    else:  # ceiling
+        injected = inject_ceiling(example, tn, rng)
+        if injected is None:
+            skip_reason = "ceiling_answer_survived"
+            return _skip_record(qid, question, fault_config, skip_reason)
+        if tn == "retriever":
+            run_context = injected["context"]
+            run_fault_config = {"type": "ceiling", "target_node": tn}
+        else:
+            # Downstream ceiling: hardened instruction variant
+            run_fault_config = {"type": "ceiling", "target_node": tn}
+            # The hardened instruction is stored in injected["_hardened_instruction"]
+            # For now, we signal it via the fault_config and let the topology
+            # engine read it when building the prompt.
+            run_fault_config["_hardened_instruction"] = injected.get("_hardened_instruction", "")
+
+    # --- Run pipeline with fault_config ---
+    trace = run_pipeline(topo, question, run_context, k=k, fault_config=run_fault_config)
+    trace.true_label = ft
+    trace.gold_answer = answer
+
+    # --- Diagnosis ---
+    faulted_retriever_output = trace.node_results.get("retriever", None)
+    faulted_reasoner_output = trace.node_results.get("reasoner", None)
 
     node_prompts: Dict[str, Dict[str, str]] = {
         "retriever": {
-            "same":  retriever_prompt(faulted["question"], faulted["context"]),
-            "clean": retriever_prompt(faulted["question"], clean_context),
+            "same":  retriever_prompt(question, run_context),
+            "clean": retriever_prompt(question, gold_ctx),
         },
         "reasoner": {
-            # Same input for reasoner = the (possibly faulted) retriever output.
-            "same":  reasoner_prompt(faulted["question"], faulted_retriever_output),
-            # Clean input = reasoner given a fresh retrieval from gold context.
-            # We use the faulted retriever output as a proxy here since we
-            # can't re-run retriever inline; full clean re-run is a Study 2
-            # enhancement.  Logged as a known approximation.
-            "clean": reasoner_prompt(faulted["question"], clean_context),
+            "same":  reasoner_prompt(question, faulted_retriever_output.output if faulted_retriever_output else ""),
+            # Known approximation: clean Reasoner gets gold ctx directly (not a re-run of Retriever).
+            "clean": reasoner_prompt(question, gold_ctx),
         },
         "writer": {
-            "same":  writer_prompt(faulted["question"], faulted_reasoner_output),
-            "clean": writer_prompt(faulted["question"], clean_context),
+            "same":  writer_prompt(question, faulted_reasoner_output.output if faulted_reasoner_output else ""),
+            "clean": writer_prompt(question, gold_ctx),
         },
     }
+    node_roles = {nid: topo.nodes[nid].role for nid in topo.nodes}
 
-    diagnose_trace(trace, node_prompts, k=k, compute_gap=compute_gap)
+    diagnose_trace(
+        trace, node_prompts, k=k, compute_gap=compute_gap,
+        node_roles=node_roles,
+    )
 
-    return trace
+    # --- Baseline verification ---
+    verification = None
+    if baseline_uncertainties is not None:
+        observed_u = trace.node_results[tn].uncertainty if tn in trace.node_results else 0.0
+        baseline_u = baseline_uncertainties.get(tn, 0.0)
+        verification = verify_against_baseline(observed_u, baseline_u, fault_config)
+
+    record = _trace_to_record(trace, fault_config=fault_config, is_control=False,
+                               verification=verification)
+    return record
 
 
 # ---------------------------------------------------------------------------
 # Serialisation helpers
 # ---------------------------------------------------------------------------
 
-def trace_to_record(trace: PipelineTrace) -> Dict:
-    """Convert a PipelineTrace to a JSON-serialisable dict for JSONL logging."""
+def _trace_to_record(
+    trace: PipelineTrace,
+    fault_config: Optional[dict] = None,
+    is_control: bool = False,
+    verification: Optional[Dict] = None,
+) -> Dict:
+    """Serialise a PipelineTrace to a JSON-ready dict."""
     return {
-        "question":          trace.question,
-        "true_label":        trace.true_label,
-        "diagnosed_label":   trace.diagnosed_label,
-        "uncertainties":     trace.uncertainties(),
-        "inference_gaps":    trace.inference_gaps(),
+        "question":           trace.question,
+        "true_label":         trace.true_label,
+        "diagnosed_label":    trace.diagnosed_label,
+        "is_control":         is_control,
+        "fault_config":       {k: v for k, v in (fault_config or {}).items()
+                               if not k.startswith("_")},  # strip internal keys
+        "topology_id":        trace.topology_id,
+        "uncertainties":      trace.uncertainties(),
+        "semantic_uncertainties": trace.semantic_uncertainties(),
+        "inference_gaps":     trace.inference_gaps(),
         "per_node_diagnoses": trace.per_node_diagnoses,
-        "gold_answer":       trace.gold_answer,
-        # Store raw samples for post-hoc analysis (e.g. manual spot-check of
-        # Writer normalization, §8 of the brief).
+        "gold_answer":        trace.gold_answer,
+        "verification":       verification,
         "samples": {
             name: r.samples for name, r in trace.node_results.items()
         },
+        "conclusions": {
+            name: r.conclusions for name, r in trace.node_results.items()
+            if r.conclusions is not None
+        },
+    }
+
+
+def _skip_record(
+    question_id: str,
+    question: str,
+    fault_config: Dict,
+    reason: str,
+) -> Dict:
+    """Create a skip record for skipped_trials.jsonl."""
+    return {
+        "_is_skip": True,
+        "question_id": question_id,
+        "question": question,
+        "fault_config": {k: v for k, v in fault_config.items() if not k.startswith("_")},
+        "reason": reason,
     }
 
 
@@ -158,25 +300,32 @@ def run_study1(
     n_examples: int = 15,
     k: int = DEFAULT_K,
     log_path: str = DEFAULT_LOG_PATH,
+    skip_log_path: str = DEFAULT_SKIP_LOG_PATH,
     compute_gap: bool = True,
     resume: bool = False,
 ) -> List[Dict]:
-    """Run the full Study 1 batch: n_examples × 3 fault types.
+    """Run the full Study 1 batch: n_examples × (clean control + 9 fault conditions).
 
-    Logging is append-only (crash-safe).  If resume=True and log_path already
-    contains records, those are loaded and used to skip already-completed
-    trials (matched by question + true_label).
+    Per-question order: control trial first, then all 9 fault conditions.
+    Append-only JSONL logging (crash-safe).  --resume skips already-logged trials.
 
-    Returns list of all records (loaded + newly computed).
+    Returns list of all non-skip records (loaded + newly computed).
     """
     os.makedirs(LOG_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    # Load dataset.
     print(f"[run_study1] Loading dataset from '{DATA_DIR}'...")
     ds = load_from_disk(DATA_DIR)
     examples = [ds[i] for i in range(min(n_examples, len(ds)))]
-    print(f"[run_study1] {len(examples)} examples, k={k}, fault types=3")
+    print(f"[run_study1] {len(examples)} examples, k={k}")
+
+    topo = default_topology()
+    conditions = build_fault_conditions()  # [None, {"type":..., "target_node":...}, ...]
+    print(f"[run_study1] Fault conditions per question: {len(conditions)} "
+          f"(1 clean control + {len(conditions) - 1} fault conditions)")
+
+    # Build substitute bank for downstream contamination faults.
+    substitute_bank = build_substitute_bank(examples, topo, k=k, n_pilot=10)
 
     # Load existing records if resuming.
     existing_records: List[Dict] = []
@@ -188,42 +337,96 @@ def run_study1(
                 if line:
                     rec = json.loads(line)
                     existing_records.append(rec)
-                    done_keys.add((rec["question"], rec["true_label"]))
+                    # Key: (question, true_label, fault_config_type, fault_config_target)
+                    fc = rec.get("fault_config") or {}
+                    done_keys.add((
+                        rec["question"],
+                        rec.get("true_label", ""),
+                        fc.get("type", ""),
+                        fc.get("target_node", ""),
+                    ))
         print(f"[run_study1] Resuming — loaded {len(existing_records)} existing records.")
 
-    fault_fns: List[Callable] = [inject_noise, inject_contamination, inject_ceiling]
     results: List[Dict] = list(existing_records)
-    skipped = 0
+    skipped_count = 0
 
-    total = len(examples) * len(fault_fns)
-    with open(log_path, "a") as log_file, tqdm(total=total, desc="Trials") as pbar:
+    total = len(examples) * len(conditions)
+    with (
+        open(log_path, "a") as log_file,
+        open(skip_log_path, "a") as skip_file,
+        tqdm(total=total, desc="Trials") as pbar,
+    ):
         for example in examples:
-            for fault_fn in fault_fns:
+            qid = str(example.get("_id", example["question"]))
+            gold_ctx = format_context(get_gold_context(example))
+
+            # (1) Control trial — always first to establish per-question baseline.
+            ctrl_key = (example["question"], "clean", "", "")
+            if ctrl_key in done_keys:
+                pbar.update(1)
+                skipped_count += 1
+                pbar.set_postfix(skipped=skipped_count)
+                # We still need the baseline uncertainties from the existing control record.
+                ctrl_rec = next(
+                    (r for r in results if r["question"] == example["question"]
+                     and r.get("true_label") == "clean"), None
+                )
+                baseline_u = ctrl_rec["uncertainties"] if ctrl_rec else None
+            else:
+                ctrl_record = run_trial(
+                    example, fault_config=None, topo=topo, k=k,
+                    compute_gap=compute_gap, baseline_uncertainties=None,
+                    substitute_bank=substitute_bank,
+                )
+                if ctrl_record and not ctrl_record.get("_is_skip"):
+                    log_file.write(json.dumps(ctrl_record) + "\n")
+                    log_file.flush()
+                    results.append(ctrl_record)
+                    done_keys.add(ctrl_key)
+                baseline_u = ctrl_record["uncertainties"] if ctrl_record else None
                 pbar.update(1)
 
-                faulted = fault_fn(example)
-                if faulted is None:
-                    skipped += 1
-                    pbar.set_postfix(skipped=skipped)
+            # (2) Each fault condition, verified against this question's baseline.
+            for fault_config in conditions:
+                if fault_config is None:
+                    continue  # control already done above
+
+                ft = fault_config["type"]
+                tn = fault_config["target_node"]
+                trial_key = (example["question"], ft, ft, tn)
+                pbar.update(1)
+
+                if trial_key in done_keys:
+                    skipped_count += 1
+                    pbar.set_postfix(skipped=skipped_count)
                     continue
 
-                key = (example["question"], faulted["true_label"])
-                if key in done_keys:
-                    skipped += 1
-                    pbar.set_postfix(skipped=skipped)
+                record = run_trial(
+                    example,
+                    fault_config=dict(fault_config),  # copy to avoid mutation
+                    topo=topo,
+                    k=k,
+                    compute_gap=compute_gap,
+                    baseline_uncertainties=baseline_u,
+                    substitute_bank=substitute_bank,
+                )
+                if record is None:
                     continue
 
-                trace = run_labeled_trial(example, fault_fn, k=k, compute_gap=compute_gap)
-                if trace is None:
-                    continue
+                if record.get("_is_skip"):
+                    skip_file.write(json.dumps(record) + "\n")
+                    skip_file.flush()
+                    skipped_count += 1
+                    pbar.set_postfix(skipped=skipped_count)
+                else:
+                    log_file.write(json.dumps(record) + "\n")
+                    log_file.flush()
+                    results.append(record)
+                    done_keys.add(trial_key)
 
-                record = trace_to_record(trace)
-                log_file.write(json.dumps(record) + "\n")
-                log_file.flush()   # ensure write is durable
-                results.append(record)
-                done_keys.add(key)
-
-    print(f"[run_study1] Done. {len(results)} records total, {skipped} skipped.")
+    print(f"[run_study1] Done. {len(results)} records total, {skipped_count} skipped.")
+    print(f"[run_study1] Logs: {log_path}")
+    print(f"[run_study1] Skip log: {skip_log_path}")
     return results
 
 
@@ -234,18 +437,20 @@ def run_study1(
 def build_confusion_matrix(
     results: List[Dict],
     save_path: str = DEFAULT_CONFUSION_MATRIX_PATH,
-) -> pd.DataFrame:
+) -> "pd.DataFrame":
     """Build and save a 3×3 confusion matrix (true × diagnosed).
 
-    Rows = true fault type, columns = diagnosed fault type.
+    Excludes clean control trials and 'no_fault_detected' records.
     """
     df = pd.DataFrame(results)
-    # Filter out any records where diagnosed_label is "no_fault_detected".
-    df_diag = df[df["diagnosed_label"] != "no_fault_detected"].copy()
-    no_fault_count = len(df) - len(df_diag)
+    # Exclude clean control trials and undiagnosed records.
+    df_fault = df[df["true_label"].isin(["noise", "contamination", "ceiling"])].copy()
+    df_diag = df_fault[df_fault["diagnosed_label"] != "no_fault_detected"].copy()
+
+    no_fault_count = len(df_fault) - len(df_diag)
     if no_fault_count > 0:
         print(
-            f"[confusion_matrix] Note: {no_fault_count} trial(s) had 'no_fault_detected' "
+            f"[confusion_matrix] {no_fault_count} fault trial(s) had 'no_fault_detected' "
             f"(all nodes below threshold) — excluded from confusion matrix."
         )
 
@@ -273,9 +478,10 @@ def build_confusion_matrix(
     print(cm.to_string())
     print()
 
-    # Quick diagonal dominance check.
     total = cm.values.sum()
-    correct = sum(cm.loc[l, l] for l in ["noise", "contamination", "ceiling"] if l in cm.index and l in cm.columns)
+    correct = sum(
+        cm.loc[l, l] for l in labels if l in cm.index and l in cm.columns
+    )
     if total > 0:
         accuracy = correct / total
         print(f"Overall diagnostic accuracy: {correct}/{total} = {accuracy:.1%}")
@@ -297,7 +503,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--n-examples", type=int, default=15,
-        help="Number of HotpotQA examples to use (default: 15).",
+        help="Number of HotpotQA examples (default: 15).",
     )
     parser.add_argument(
         "--k", type=int, default=DEFAULT_K,
@@ -305,11 +511,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--log-path", type=str, default=DEFAULT_LOG_PATH,
-        help=f"Path to append-only trial log (default: {DEFAULT_LOG_PATH}).",
+        help=f"Append-only trial log path (default: {DEFAULT_LOG_PATH}).",
+    )
+    parser.add_argument(
+        "--skip-log-path", type=str, default=DEFAULT_SKIP_LOG_PATH,
+        help=f"Skipped trials log path (default: {DEFAULT_SKIP_LOG_PATH}).",
     )
     parser.add_argument(
         "--no-inference-gap", action="store_true",
-        help="Disable Inference Gap computation (saves time; Study 2 feature).",
+        help="Disable Inference Gap computation (saves time).",
     )
     parser.add_argument(
         "--resume", action="store_true",
@@ -321,10 +531,13 @@ def main() -> None:
         n_examples=args.n_examples,
         k=args.k,
         log_path=args.log_path,
+        skip_log_path=args.skip_log_path,
         compute_gap=not args.no_inference_gap,
         resume=args.resume,
     )
-    build_confusion_matrix(results)
+    # Only build confusion matrix over fault trials (not control trials).
+    fault_results = [r for r in results if r.get("true_label") not in ("clean", None)]
+    build_confusion_matrix(fault_results)
 
 
 if __name__ == "__main__":
