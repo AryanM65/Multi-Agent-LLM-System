@@ -132,6 +132,7 @@ def run_trial(
     compute_gap: bool,
     baseline_uncertainties: Optional[Dict[str, float]],
     substitute_bank: Optional[Dict[str, List[str]]],
+    diagnose_enabled: bool = True,
 ) -> Optional[Dict]:
     """Run one trial (control or fault) and return the logged record.
 
@@ -240,10 +241,19 @@ def run_trial(
     }
     node_roles = {nid: topo.nodes[nid].role for nid in topo.nodes}
 
-    diagnose_trace(
-        trace, node_prompts, k=k, compute_gap=compute_gap,
-        node_roles=node_roles,
-    )
+    if diagnose_enabled:
+        diagnose_trace(
+            trace, node_prompts, k=k, compute_gap=compute_gap,
+            node_roles=node_roles,
+        )
+    else:
+        # Diagnosis skipped (--no-diagnose): raw per-node uncertainties + true_label
+        # are still recorded for dataset generation, but the retry-then-reprobe
+        # protocol's extra k-sample batches (up to 3x per flagged node) are not
+        # run. diagnosed_label/per_node_diagnoses stay at their defaults (None/{})
+        # rather than being computed — distinct from "no_fault_detected", which
+        # means diagnosis ran and found nothing.
+        pass
 
     # --- Baseline verification ---
     verification = None
@@ -285,6 +295,10 @@ def _trace_to_record(
         "samples": {
             name: r.samples for name, r in trace.node_results.items()
         },
+        "used_thinking_fallback": {
+            name: r.used_thinking_fallback for name, r in trace.node_results.items()
+            if any(r.used_thinking_fallback)
+        },
         "conclusions": {
             name: r.conclusions for name, r in trace.node_results.items()
             if r.conclusions is not None
@@ -320,11 +334,22 @@ def run_study1(
     compute_gap: bool = True,
     resume: bool = False,
     examples_json: Optional[str] = None,
+    diagnose_enabled: bool = True,
 ) -> List[Dict]:
     """Run the full Study 1 batch: n_examples × (clean control + 9 fault conditions).
 
     Per-question order: control trial first, then all 9 fault conditions.
     Append-only JSONL logging (crash-safe).  --resume skips already-logged trials.
+
+    diagnose_enabled: when False (--no-diagnose), skips the retry-then-reprobe
+    diagnostic protocol entirely for every fault trial — raw per-node
+    uncertainties + true_label are still recorded (this is what a dataset built
+    for downstream GNN/belief-propagation training actually needs), but the up
+    to 3 extra k-sample batches per flagged node that diagnose_trace() would
+    otherwise trigger are skipped, cutting a meaningful fraction of the
+    measured ~4.5-5x per-trial cost increase (see correct_project_context.md
+    Section 9.1). diagnosed_label/per_node_diagnoses are left at their
+    PipelineTrace defaults (None / {}) rather than computed.
 
     Returns list of all non-skip records (loaded + newly computed).
     """
@@ -464,6 +489,7 @@ def run_study1(
                         compute_gap=compute_gap,
                         baseline_uncertainties=baseline_u,
                         substitute_bank=substitute_bank,
+                        diagnose_enabled=diagnose_enabled,
                     )
                     if record is None:
                         continue
@@ -582,6 +608,15 @@ def main() -> None:
         help="Path to a JSON file of pre-extracted HotpotQA examples. "
              "Overrides --n-examples count (uses all examples in the file).",
     )
+    parser.add_argument(
+        "--no-diagnose", action="store_true",
+        help="Skip the retry-then-reprobe diagnostic protocol (diagnose_trace) "
+             "for every fault trial. Raw per-node uncertainties + true_label are "
+             "still recorded (what a GNN-training dataset needs); diagnosed_label/"
+             "per_node_diagnoses are left unset. Cuts up to 3x the k-sample calls "
+             "per flagged node -- use this for bulk dataset generation where the "
+             "retry-heuristic's own diagnostic accuracy isn't the thing being measured.",
+    )
     args = parser.parse_args()
 
     if args.mock:
@@ -601,10 +636,15 @@ def main() -> None:
         compute_gap=not args.no_inference_gap,
         resume=args.resume,
         examples_json=args.examples_json,
+        diagnose_enabled=not args.no_diagnose,
     )
     # Only build confusion matrix over fault trials (not control trials).
     fault_results = [r for r in results if r.get("true_label") not in ("clean", None)]
-    build_confusion_matrix(fault_results)
+    if args.no_diagnose:
+        print("[run_study1] --no-diagnose was set: skipping confusion matrix "
+              "(diagnosed_label was never computed).")
+    else:
+        build_confusion_matrix(fault_results)
 
 
 if __name__ == "__main__":

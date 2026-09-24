@@ -140,6 +140,7 @@ def run_trial(
     compute_gap: bool,
     baseline_uncertainties: Optional[Dict[str, float]],
     substitute_bank: Optional[Dict[str, List[str]]],
+    diagnose_enabled: bool = True,
 ) -> Optional[Dict]:
     """Run one trial (control or fault) and return the logged record (or skip dict)."""
     question  = example["question"]
@@ -228,8 +229,12 @@ def run_trial(
     # ── Diagnosis (per-node thresholds) ─────────────────────────────────────
     node_prompts = _build_node_prompts(topo, question, run_context, gold_ctx, trace)
     node_roles = {nid: topo.nodes[nid].role for nid in topo.nodes}
-    diagnose_trace(trace, node_prompts, k=k, compute_gap=compute_gap,
-                   node_roles=node_roles)
+    if diagnose_enabled:
+        diagnose_trace(trace, node_prompts, k=k, compute_gap=compute_gap,
+                       node_roles=node_roles)
+    # else: --no-diagnose — raw per-node uncertainties + true_label still
+    # recorded; diagnosed_label/per_node_diagnoses left at defaults (None/{}).
+    # See run_study1.py's run_trial() docstring-equivalent comment for why.
 
     # ── Baseline verification ────────────────────────────────────────────────
     verification = None
@@ -299,6 +304,10 @@ def _trace_to_record(
         "samples": {
             nid: r.samples for nid, r in trace.node_results.items()
         },
+        "used_thinking_fallback": {
+            nid: r.used_thinking_fallback for nid, r in trace.node_results.items()
+            if any(r.used_thinking_fallback)
+        },
         "conclusions": {
             nid: r.conclusions for nid, r in trace.node_results.items()
             if r.conclusions is not None
@@ -334,6 +343,7 @@ def run_topology_study(
     compute_gap: bool,
     resume: bool,
     done_keys: set,
+    diagnose_enabled: bool = True,
 ) -> List[Dict]:
     """Run the full fault grid for one topology and return all new records."""
     conditions = build_fault_conditions(topo)
@@ -384,7 +394,8 @@ def run_topology_study(
                     skipped += 1; pbar.set_postfix(skip=skipped); continue
 
                 record = run_trial(example, dict(fc), topo, k, compute_gap,
-                                   baseline_u, substitute_bank)
+                                   baseline_u, substitute_bank,
+                                   diagnose_enabled=diagnose_enabled)
                 if record is None:
                     continue
                 if record.get("_is_skip"):
@@ -488,6 +499,10 @@ def main() -> None:
                         help="Skip already-logged trials.")
     parser.add_argument("--mock", action="store_true",
                         help="Force mock backend (same as BTP_MOCK=1).")
+    parser.add_argument("--no-diagnose", action="store_true",
+                        help="Skip the retry-then-reprobe diagnostic protocol for every "
+                             "fault trial (see run_study1.py --no-diagnose for rationale). "
+                             "Use for bulk dataset generation.")
     args = parser.parse_args()
 
     # Allow --mock flag to override env-var
@@ -552,12 +567,17 @@ def main() -> None:
                 compute_gap=not args.no_inference_gap,
                 resume=args.resume,
                 done_keys=done_keys,
+                diagnose_enabled=not args.no_diagnose,
             )
             all_results.extend(new_records)
 
     print(f"\n[study2] Total records: {len(all_results)}")
     fault_results = [r for r in all_results if r.get("true_label") not in ("clean", None)]
-    build_confusion_matrices(fault_results, args.cm_dir)
+    if args.no_diagnose:
+        print("[study2] --no-diagnose was set: skipping confusion matrices "
+              "(diagnosed_label was never computed).")
+    else:
+        build_confusion_matrices(fault_results, args.cm_dir)
 
 
 # ---------------------------------------------------------------------------

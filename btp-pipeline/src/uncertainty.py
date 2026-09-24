@@ -215,31 +215,30 @@ def parse_retrieved_items(raw_output: str) -> List[str]:
     """Split a Retriever's raw text output into discrete selected items.
 
     The Retriever is prompted to return only the relevant sentences, one per
-    line or as a comma-separated list (depending on what the model produces).
-    This function handles both.
+    line. This function splits on newlines only.
 
-    IMPORTANT: The exact split logic was validated against real Retriever outputs
-    in logs/trials.jsonl and results/retriever_output.jsonl.  The model tends to
-    return one relevant sentence per line, occasionally comma-separated.  If the
-    output format changes (e.g. via prompt edits), verify this function still
-    splits correctly before running bulk studies.
+    A comma-based fallback used to exist here for single-line outputs, but it
+    was found (via scripts/calibrate_vllm_model.py's dry run) to shred a
+    single grammatically-normal sentence containing commas -- e.g. "Scott
+    Derrickson is an American director, screenwriter, and producer." split
+    into 3 meaningless fragments on the internal commas. This is the exact
+    same failure class the original numeric-comma bug (Fix 2.3, e.g.
+    "4,000 capacity" splitting on the thousands separator) was fixed for,
+    just triggered by ordinary sentence commas instead. Since the Retriever
+    prompt asks for full sentences (not a comma-separated list), a comma
+    fallback is never actually the right interpretation for this prompt
+    format -- removed rather than patched further.
 
     Returns empty list if raw_output is empty or whitespace-only.
     """
     if not raw_output or not raw_output.strip():
         return []
 
-    # Try newline-first (the dominant format in existing Study 1 outputs).
     lines = [x.strip() for x in raw_output.splitlines() if x.strip()]
     if len(lines) > 1:
         return lines
 
-    # Fallback: comma-separated (seen in some model outputs)
-    items = [x.strip() for x in raw_output.split(",") if x.strip()]
-    if len(items) > 1:
-        return items
-
-    # Single item (or unrecognized format) — treat whole output as one item
+    # Single line (or unrecognized format) — treat whole output as one item.
     stripped = raw_output.strip()
     return [stripped] if stripped else []
 

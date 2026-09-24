@@ -34,8 +34,9 @@ MOCK_MODE: bool = os.getenv("BTP_MOCK", "0") == "1"
 # Backend selection
 # ---------------------------------------------------------------------------
 # BTP_BACKEND controls which LLM backend is used:
-#   'ollama' (default) — local Ollama server, works on Windows/Linux/macOS CPU & GPU
+#   'ollama' (default) — local/cloud Ollama server, works on Windows/Linux/macOS CPU & GPU
 #   'mlx'             — Apple Silicon MLX (macOS only, fastest on M-series chips)
+#   'vllm'            — vLLM, GPU-only (Kaggle T4 etc.). See VLLM_MODEL below.
 # BTP_MOCK=1 overrides this entirely (no LLM at all).
 BACKEND: str = os.getenv("BTP_BACKEND", "ollama")
 
@@ -48,13 +49,39 @@ BACKEND: str = os.getenv("BTP_BACKEND", "ollama")
 OLLAMA_MODEL: str = os.getenv("BTP_OLLAMA_MODEL", "gpt-oss:20b-cloud")
 
 # ---------------------------------------------------------------------------
+# vLLM model selection
+# ---------------------------------------------------------------------------
+# The model to serve via vLLM when BACKEND='vllm'. Chosen for dataset
+# generation (see plan.md Section 0): standard instruction-tuned model, no
+# hidden reasoning pass (unlike gpt-oss), AWQ-quantized to leave real KV-cache
+# headroom on a 16GB T4 (fp16 weights alone would be ~15.2GB, starving batching).
+VLLM_MODEL: str = os.getenv("BTP_VLLM_MODEL", "Qwen/Qwen2.5-7B-Instruct-AWQ")
+VLLM_QUANTIZATION: str = os.getenv("BTP_VLLM_QUANTIZATION", "awq")
+VLLM_DTYPE: str = os.getenv("BTP_VLLM_DTYPE", "float16")  # T4 (Turing) lacks native bf16 tensor cores
+VLLM_GPU_MEMORY_UTILIZATION: float = float(os.getenv("BTP_VLLM_GPU_MEM_UTIL", "0.85"))
+VLLM_MAX_MODEL_LEN: int = int(os.getenv("BTP_VLLM_MAX_MODEL_LEN", "4096"))
+
+# ---------------------------------------------------------------------------
 # Self-consistency sampling
 # ---------------------------------------------------------------------------
-DEFAULT_K = 3              # samples per node — bump to 5 for cloud-scale Study 2
+DEFAULT_K = 5              # samples per node (cloud-scale Study 2; was 3 pre-Study-2)
 DEFAULT_TEMPERATURE = 0.7  # standard inference temperature
 NOISE_TEMPERATURE = 1.2    # elevated temperature used for noise fault injection
-MAX_TOKENS = 128           # max tokens for Retriever / Writer
-MAX_TOKENS_REASONER = 200  # extra headroom for Reasoner chain-of-thought
+
+# gpt-oss:20b-cloud reasons by default and returns that reasoning in a separate
+# `message["thinking"]` field (see src/nodes.py:_ollama_generate). num_predict
+# must cover BOTH the hidden reasoning pass and the final answer, or content
+# comes back empty. Measured via scripts/debug_gptoss_thinking.py: reasoning
+# alone commonly ran 400-1050 chars (~150-260 tokens); a 128-token budget left
+# content="" in 5/5 isolated test calls. 300 tokens reliably produced non-empty
+# Retriever content in follow-up testing; these values add margin above that.
+#
+# THESE ARE GPT-OSS-ERA VALUES. Qwen2.5 (the dataset-generation model, no
+# hidden reasoning pass) has not been calibrated yet — run
+# scripts/calibrate_vllm_model.py and update these based on its output before
+# trusting them for a Qwen2.5+vLLM run. Do not assume they transfer.
+MAX_TOKENS = 350           # max tokens for Retriever / Writer (was 128 — too low for gpt-oss reasoning overhead)
+MAX_TOKENS_REASONER = 600  # extra headroom for Reasoner chain-of-thought + reasoning overhead (was 200)
 
 # ---------------------------------------------------------------------------
 # Diagnosis -- global + per-node thresholds

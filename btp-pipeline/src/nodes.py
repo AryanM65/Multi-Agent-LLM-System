@@ -33,7 +33,7 @@ import re
 import string
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from src.config import (
     DEFAULT_K,
@@ -44,6 +44,11 @@ from src.config import (
     MODEL,
     OLLAMA_MODEL,
     BACKEND,
+    VLLM_MODEL,
+    VLLM_QUANTIZATION,
+    VLLM_DTYPE,
+    VLLM_GPU_MEMORY_UTILIZATION,
+    VLLM_MAX_MODEL_LEN,
 )
 
 # ---------------------------------------------------------------------------
@@ -65,22 +70,109 @@ def _get_model():
 
 
 # ---------------------------------------------------------------------------
+# vLLM model singleton loader
+# ---------------------------------------------------------------------------
+_vllm_llm = None
+
+
+def _get_vllm_llm():
+    """Lazy-load and cache the vLLM LLM instance (once per process).
+
+    GPU-only. This is a single-prompt-at-a-time loader used by sample_node's
+    existing k-sample-loop structure (see _vllm_generate below) -- it does NOT
+    do vLLM's real batching-across-trials optimization (see plan.md Section
+    4.3 / scripts/run_study_vllm.py for the batched generation path used for
+    actual bulk dataset generation). This loader exists so the same
+    backend-agnostic run_pipeline()/sample_node() code can be used directly
+    for calibration runs (scripts/calibrate_vllm_model.py) without writing a
+    separate calibration-only script.
+    """
+    global _vllm_llm
+    if _vllm_llm is None:
+        from vllm import LLM
+        print(f"[nodes] Loading model '{VLLM_MODEL}' via vLLM "
+              f"(quantization={VLLM_QUANTIZATION}, dtype={VLLM_DTYPE}, once per process)...")
+        _vllm_llm = LLM(
+            model=VLLM_MODEL,
+            quantization=VLLM_QUANTIZATION,
+            dtype=VLLM_DTYPE,
+            gpu_memory_utilization=VLLM_GPU_MEMORY_UTILIZATION,
+            max_model_len=VLLM_MAX_MODEL_LEN,
+        )
+        print("[nodes] Model loaded.")
+    return _vllm_llm
+
+
+def _vllm_generate(prompt: str, temperature: float, token_limit: int) -> Tuple[str, bool]:
+    """Generate one sample using vLLM.
+
+    Qwen2.5-Instruct is a standard instruction-tuned model (no hidden
+    reasoning pass like gpt-oss), so there is no separate "thinking" field
+    and no thinking-fallback path needed here -- the fallback flag is always
+    False for this backend. If output ever comes back empty for a reason
+    other than hidden reasoning (e.g. the model choosing to emit nothing),
+    that's a real data-quality signal worth investigating directly rather
+    than papering over with a fallback, unlike the gpt-oss case.
+
+    Uses the model's chat template via vLLM's .chat() convenience method so
+    prompts are formatted the same way (with special tokens etc.) that the
+    model was instruction-tuned to expect.
+    """
+    from vllm import SamplingParams
+
+    llm = _get_vllm_llm()
+    params = SamplingParams(temperature=temperature, max_tokens=token_limit)
+    outputs = llm.chat([{"role": "user", "content": prompt}], params, use_tqdm=False)
+    text = outputs[0].outputs[0].text.strip()
+    return text, False
+
+
+# ---------------------------------------------------------------------------
 # Ollama backend
 # ---------------------------------------------------------------------------
 
-def _ollama_generate(prompt: str, temperature: float, token_limit: int) -> str:
-    """Generate one sample using the local Ollama server.
+def _ollama_generate(prompt: str, temperature: float, token_limit: int) -> Tuple[str, bool]:
+    """Generate one sample using the Ollama server.
 
-    Strips Qwen3's <think>...</think> scratchpad from the response if present,
-    so only the clean answer text reaches downstream nodes.
+    Strips Qwen3's <think>...</think> scratchpad from the response if present
+    (only relevant if OLLAMA_MODEL is ever switched back to a Qwen3-style model
+    that inlines thinking in `content`).
+
+    gpt-oss models (the current OLLAMA_MODEL) reason by default and return that
+    reasoning in a separate `message["thinking"]` field, not inlined in
+    `content`. This reasoning pass is NON-DETERMINISTIC in length and appears
+    budget-seeking: raising num_predict does not reliably fix empty content —
+    measured examples ranged from ~570 to ~7600 chars of thinking across
+    different calls/budgets for the same prompt, sometimes still leaving
+    content="" even at num_predict=1200. Neither `think=False` nor
+    `think="low"` reliably suppresses this for the gpt-oss:20b-cloud proxy
+    (both confirmed via scripts/debug_gptoss_thinking.py to still produce
+    hundreds-to-thousands of chars of thinking and, in some calls, empty
+    content). Raising num_predict alone is therefore necessary but NOT
+    sufficient.
+
+    As a result, this function falls back to extracting an answer from
+    `thinking` whenever `content` comes back empty: first by looking for a
+    "final answer:" marker inside `thinking` (works well for the Reasoner,
+    whose prompt asks for that marker); otherwise by taking the last
+    non-empty line of `thinking` as a best-effort answer, since the model's
+    reasoning usually converges on the answer near the end even when it never
+    emits it into `content`. This guarantees a non-empty sample in nearly all
+    cases instead of silently returning "" (the root cause of ~95% empty
+    Retriever samples, and in one pilot question 100% empty Reasoner/Writer
+    samples, seen before this fallback was added).
 
     Args:
         prompt:      Full prompt string to send.
         temperature: Sampling temperature.
-        token_limit: Maximum tokens to generate.
+        token_limit: Maximum tokens to generate (must cover reasoning + answer).
 
     Returns:
-        Stripped response string.
+        (text, used_fallback) — text falls back to a thinking-derived answer
+        if `content` is empty ("" only if `thinking` is also empty/absent);
+        used_fallback is True whenever that fallback path fired, so callers
+        can flag/filter degraded samples instead of treating them as
+        equivalent to a native FINAL ANSWER extraction.
     """
     import ollama
     import re as _re
@@ -93,10 +185,25 @@ def _ollama_generate(prompt: str, temperature: float, token_limit: int) -> str:
             "num_predict": token_limit,
         },
     )
-    text = response["message"]["content"]
+    message = response["message"]
+    text = message.get("content", "") or ""
     # Strip Qwen3 thinking block if present
     text = _re.sub(r"<think>[\s\S]*?</think>", "", text, flags=_re.IGNORECASE).strip()
-    return text
+
+    used_fallback = False
+    if not text:
+        thinking = message.get("thinking") or ""
+        if thinking:
+            match = _re.search(r"final answer:?\s*(.*)", thinking, _re.IGNORECASE | _re.DOTALL)
+            if match:
+                text = match.group(1).strip().strip("*_").split("\n")[0].strip()
+            if not text:
+                lines = [ln.strip() for ln in thinking.strip().split("\n") if ln.strip()]
+                text = lines[-1] if lines else ""
+            if text:
+                used_fallback = True
+
+    return text, used_fallback
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +328,15 @@ class NodeResult:
     uncertainty: float        # Primary lexical metric ∈ [0, 1]
     samples: List[str] = field(default_factory=list)
 
+    # Per-sample flag: True if this sample's text came from the thinking-field
+    # fallback (src/nodes.py:_ollama_generate) rather than a native model
+    # `content` response. Fallback-derived samples are guaranteed non-empty
+    # but may be lower-quality truncated-reasoning fragments rather than
+    # clean answers — downstream consumers should filter/down-weight on this
+    # rather than treating all samples as equivalent. Always all-False for
+    # mock/MLX backends. Same length as `samples`.
+    used_thinking_fallback: List[bool] = field(default_factory=list)
+
     # Phase 2: role-specific additional uncertainty metrics
     uncertainty_semantic: Optional[float] = None     # Reasoner, Writer
     uncertainty_jaccard: Optional[float] = None       # Retriever (multi-item case)
@@ -281,19 +397,27 @@ def _generate_once(
     role: str,
     temperature: float,
     token_limit: int,
-) -> str:
+) -> Tuple[str, bool]:
     """Generate one sample — dispatches to mock, Ollama, or MLX backend.
+
+    Returns (text, used_thinking_fallback). The fallback flag is always False
+    for mock/MLX backends; only the Ollama path (gpt-oss reasoning models)
+    can set it True — see _ollama_generate's docstring.
 
     Backend selection priority:
       1. MOCK_MODE=True  → deterministic mock stubs (no LLM needed)
-      2. BACKEND='ollama' → local Ollama server (works on Windows/CPU/GPU)
-      3. BACKEND='mlx'   → Apple Silicon MLX (macOS only)
+      2. BACKEND='ollama' → local/cloud Ollama server (works on Windows/CPU/GPU)
+      3. BACKEND='vllm'  → vLLM, GPU-only (Kaggle T4 etc.)
+      4. BACKEND='mlx'   → Apple Silicon MLX (macOS only)
     """
     if MOCK_MODE:
-        return _mock_generate(node_name, sample_index, prompt, role)
+        return _mock_generate(node_name, sample_index, prompt, role), False
 
     if BACKEND == "ollama":
         return _ollama_generate(prompt, temperature, token_limit)
+
+    if BACKEND == "vllm":
+        return _vllm_generate(prompt, temperature, token_limit)
 
     # Real MLX generation (Apple Silicon)
     from mlx_lm import generate
@@ -316,7 +440,7 @@ def _generate_once(
         max_tokens=token_limit,
         sampler=sampler,
         verbose=False,
-    )
+    ), False
 
 
 def sample_node(
@@ -358,12 +482,14 @@ def sample_node(
         raise ValueError(f"k must be >= 1, got {k}")
 
     samples: List[str] = []
+    used_thinking_fallback: List[bool] = []
     token_limit = MAX_TOKENS_REASONER if role == "reasoner" else MAX_TOKENS
 
     for i in range(k):
         try:
-            out = _generate_once(node_name, i, prompt, role, temperature, token_limit)
+            out, fell_back = _generate_once(node_name, i, prompt, role, temperature, token_limit)
             samples.append(out)
+            used_thinking_fallback.append(fell_back)
         except Exception as exc:
             raise RuntimeError(
                 f"Generation failed on sample {i + 1}/{k} "
@@ -383,6 +509,7 @@ def sample_node(
         output=best_output,
         uncertainty=uncertainty_lexical,
         samples=samples,
+        used_thinking_fallback=used_thinking_fallback,
     )
 
     # --- Phase 2: role-specific additional metrics ---

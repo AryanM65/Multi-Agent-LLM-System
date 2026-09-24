@@ -1,0 +1,1018 @@
+[
+  {
+    "topology_id": "chain",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner"
+      ],
+      [
+        "reasoner",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "dual_retriever_fanin",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner"
+      ],
+      [
+        "retriever_b",
+        "reasoner"
+      ],
+      [
+        "reasoner",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "triple_retriever_fanin",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_c": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner"
+      ],
+      [
+        "retriever_b",
+        "reasoner"
+      ],
+      [
+        "retriever_c",
+        "reasoner"
+      ],
+      [
+        "reasoner",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "dual_retriever_fanin_deep",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_1": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_2": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner_1"
+      ],
+      [
+        "retriever_b",
+        "reasoner_1"
+      ],
+      [
+        "reasoner_1",
+        "reasoner_2"
+      ],
+      [
+        "reasoner_2",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "parallel_reasoner",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_a"
+      ],
+      [
+        "retriever",
+        "reasoner_b"
+      ],
+      [
+        "reasoner_a",
+        "writer"
+      ],
+      [
+        "reasoner_b",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "triple_parallel_reasoner",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_c": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_a"
+      ],
+      [
+        "retriever",
+        "reasoner_b"
+      ],
+      [
+        "retriever",
+        "reasoner_c"
+      ],
+      [
+        "reasoner_a",
+        "writer"
+      ],
+      [
+        "reasoner_b",
+        "writer"
+      ],
+      [
+        "reasoner_c",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "crossed_fanin_fanout",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner_a"
+      ],
+      [
+        "retriever_b",
+        "reasoner_a"
+      ],
+      [
+        "retriever_a",
+        "reasoner_b"
+      ],
+      [
+        "retriever_b",
+        "reasoner_b"
+      ],
+      [
+        "reasoner_a",
+        "writer"
+      ],
+      [
+        "reasoner_b",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "deep_chain",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_1": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_2": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent.  Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_1"
+      ],
+      [
+        "reasoner_1",
+        "reasoner_2"
+      ],
+      [
+        "reasoner_2",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "deep_chain_5node",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_1": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_2": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_3": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_1"
+      ],
+      [
+        "reasoner_1",
+        "reasoner_2"
+      ],
+      [
+        "reasoner_2",
+        "reasoner_3"
+      ],
+      [
+        "reasoner_3",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "star",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_c": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer_a": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      },
+      "writer_b": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner"
+      ],
+      [
+        "retriever_b",
+        "reasoner"
+      ],
+      [
+        "retriever_c",
+        "reasoner"
+      ],
+      [
+        "reasoner",
+        "writer_a"
+      ],
+      [
+        "reasoner",
+        "writer_b"
+      ]
+    ]
+  },
+  {
+    "topology_id": "tree",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer_a": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      },
+      "writer_b": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_a"
+      ],
+      [
+        "retriever",
+        "reasoner_b"
+      ],
+      [
+        "reasoner_a",
+        "writer_a"
+      ],
+      [
+        "reasoner_b",
+        "writer_b"
+      ]
+    ]
+  },
+  {
+    "topology_id": "wide_fanin",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_c": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_d": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner"
+      ],
+      [
+        "retriever_b",
+        "reasoner"
+      ],
+      [
+        "retriever_c",
+        "reasoner"
+      ],
+      [
+        "retriever_d",
+        "reasoner"
+      ],
+      [
+        "reasoner",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "wide_fanout_reasoner",
+    "split": "train",
+    "nodes": {
+      "retriever": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_c": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_d": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever",
+        "reasoner_a"
+      ],
+      [
+        "retriever",
+        "reasoner_b"
+      ],
+      [
+        "retriever",
+        "reasoner_c"
+      ],
+      [
+        "retriever",
+        "reasoner_d"
+      ],
+      [
+        "reasoner_a",
+        "writer"
+      ],
+      [
+        "reasoner_b",
+        "writer"
+      ],
+      [
+        "reasoner_c",
+        "writer"
+      ],
+      [
+        "reasoner_d",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "mixed_asymmetric",
+    "split": "train",
+    "nodes": {
+      "retriever_a": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "retriever_b": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "reasoner_a": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "reasoner_b": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "writer": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "retriever_a",
+        "reasoner_a"
+      ],
+      [
+        "retriever_b",
+        "reasoner_a"
+      ],
+      [
+        "retriever_b",
+        "reasoner_b"
+      ],
+      [
+        "reasoner_a",
+        "writer"
+      ],
+      [
+        "reasoner_b",
+        "writer"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_0",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n5_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n6_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_r"
+      ],
+      [
+        "n4_r",
+        "n5_r"
+      ],
+      [
+        "n5_r",
+        "n6_w"
+      ],
+      [
+        "n0_r",
+        "n3_r"
+      ],
+      [
+        "n0_r",
+        "n4_r"
+      ],
+      [
+        "n0_r",
+        "n5_r"
+      ],
+      [
+        "n1_r",
+        "n5_r"
+      ],
+      [
+        "n1_r",
+        "n6_w"
+      ],
+      [
+        "n2_r",
+        "n4_r"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_1",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n5_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_r"
+      ],
+      [
+        "n4_r",
+        "n5_w"
+      ],
+      [
+        "n0_r",
+        "n3_r"
+      ],
+      [
+        "n0_r",
+        "n5_w"
+      ],
+      [
+        "n1_r",
+        "n3_r"
+      ],
+      [
+        "n1_r",
+        "n5_w"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_2",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      },
+      "n5_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_w"
+      ],
+      [
+        "n4_w",
+        "n5_w"
+      ],
+      [
+        "n3_r",
+        "n5_w"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_3",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_w"
+      ],
+      [
+        "n2_r",
+        "n4_w"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_4",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      },
+      "n5_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_w"
+      ],
+      [
+        "n4_w",
+        "n5_w"
+      ],
+      [
+        "n0_r",
+        "n4_w"
+      ],
+      [
+        "n1_r",
+        "n4_w"
+      ],
+      [
+        "n2_r",
+        "n4_w"
+      ]
+    ]
+  },
+  {
+    "topology_id": "ood_random_5",
+    "split": "ood_test",
+    "nodes": {
+      "n0_r": {
+        "role": "retriever",
+        "instruction": "You are a Retriever agent. Given the question and candidate paragraphs, select and return only the sentences that are directly relevant to answering the question. Do not add any commentary or explanation \u2014 only return the relevant sentences."
+      },
+      "n1_r": {
+        "role": "reasoner",
+        "instruction": "You are a Reasoning agent. Given the evidence below, reason step by step to derive the answer to the question. Show your full chain of thought.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n2_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n3_r": {
+        "role": "reasoner",
+        "instruction": "You are a Refining Reasoning agent. You will receive a first-pass chain-of-thought produced by a previous Reasoning agent. Your task is to critically review it, identify any logical gaps or errors, and produce a corrected, more concise reasoning trace.\n\nEnd your response with a final line in exactly this format:\nFINAL ANSWER: <your one-sentence conclusion>"
+      },
+      "n4_w": {
+        "role": "writer",
+        "instruction": "You are a Writer agent. Given the reasoning trace below, produce a final, concise answer to the question. Output only the answer \u2014 no explanation, no preamble."
+      }
+    },
+    "edges": [
+      [
+        "n0_r",
+        "n1_r"
+      ],
+      [
+        "n1_r",
+        "n2_r"
+      ],
+      [
+        "n2_r",
+        "n3_r"
+      ],
+      [
+        "n3_r",
+        "n4_w"
+      ],
+      [
+        "n0_r",
+        "n2_r"
+      ],
+      [
+        "n0_r",
+        "n3_r"
+      ],
+      [
+        "n1_r",
+        "n3_r"
+      ],
+      [
+        "n1_r",
+        "n4_w"
+      ]
+    ]
+  }
+]

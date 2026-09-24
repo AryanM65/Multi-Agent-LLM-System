@@ -99,6 +99,29 @@ def writer_prompt(question: str, reasoning: str) -> str:
 # Topology engine: prompt builder
 # ---------------------------------------------------------------------------
 
+# Role-specific trailing continuation cues, matching the original hardcoded
+# retriever_prompt/reasoner_prompt/writer_prompt exactly. Restored after a
+# topology-engine regression test (scripts/debug_topology_regression.py)
+# found the generic build_prompt had silently dropped these cues plus the
+# Question-first field order — a real behavioral deviation from the
+# "reproduces old chain exactly" claim, not just cosmetic.
+_ROLE_CUE = {
+    "retriever": "Relevant sentences:",
+    "reasoner": "Reasoning:",
+    "writer": "Final answer:",
+}
+
+# Role-specific single-parent input labels, matching the original hardcoded
+# prompts' "Evidence:" / "Reasoning:" field names. Only used when a node has
+# exactly one parent — multi-parent nodes (e.g. dual-retriever fan-in) fall
+# back to the generic "[Input from <parent_id>]:" labeling since there's no
+# single semantic label that fits multiple same-role parents.
+_ROLE_INPUT_LABEL = {
+    "reasoner": "Evidence",
+    "writer": "Reasoning",
+}
+
+
 def build_prompt(
     topo: Topology,
     node_id: str,
@@ -110,10 +133,18 @@ def build_prompt(
     """Build the full prompt for node_id given parent outputs produced so far.
 
     Source nodes (no incoming edges) receive the raw question + context block,
-    just like the original Retriever node.
+    just like the original Retriever node: "Question: ...\\nParagraphs:\\n...".
 
-    Non-source nodes receive a block of "[Input from <parent_id>]: <output>"
-    lines, one per parent (in edge-definition order).
+    Non-source nodes with exactly one parent use the original role-specific
+    label ("Evidence:" for Reasoner, "Reasoning:" for Writer) to match the
+    old hardcoded chain exactly. Nodes with multiple parents (e.g. a
+    dual-retriever fan-in reasoner) fall back to a block of
+    "[Input from <parent_id>]: <output>" lines, one per parent.
+
+    Every prompt ends with a role-specific continuation cue (e.g.
+    "Relevant sentences:", "Reasoning:", "Final answer:") — this matches the
+    old hardcoded prompts and gives the model an explicit place to continue,
+    rather than trailing off after "Question: ...".
 
     Phase 3 hook: when fault_config specifies contamination or ceiling at a
     downstream (non-source) node, apply corrupt_downstream_input to the
@@ -124,31 +155,36 @@ def build_prompt(
     """
     node = topo.nodes[node_id]
     parent_ids = parents_of(topo, node_id)
+    cue = _ROLE_CUE.get(node.role, "Response:")
+
+    def _maybe_corrupt(pid: str) -> str:
+        parent_output = outputs[pid]
+        # Phase 3: contamination / ceiling targeting this node — corrupt the
+        # parent's output before it enters this node's prompt.
+        if (
+            fault_config is not None
+            and fault_config.get("type") in ("contamination", "ceiling")
+            and fault_config.get("target_node") == node_id
+            and fault_config.get("_corrupted_input") is not None
+        ):
+            # The corrupted replacement was pre-computed and stored in
+            # fault_config["_corrupted_input"] by run_pipeline before
+            # calling build_prompt — use it here.
+            return fault_config["_corrupted_input"]
+        return parent_output
 
     if not parent_ids:
         # Source node: Retriever pattern — reads question + context directly.
-        input_block = f"Paragraphs:\n{context}\n\nQuestion: {question}"
+        input_block = f"Question: {question}\nParagraphs:\n{context}"
     else:
-        # Downstream node: assemble parent outputs.
-        lines = []
-        for pid in parent_ids:
-            parent_output = outputs[pid]
-            # Phase 3: contamination / ceiling targeting this node — corrupt the
-            # parent's output before it enters this node's prompt.
-            if (
-                fault_config is not None
-                and fault_config.get("type") in ("contamination", "ceiling")
-                and fault_config.get("target_node") == node_id
-                and fault_config.get("_corrupted_input") is not None
-            ):
-                # The corrupted replacement was pre-computed and stored in
-                # fault_config["_corrupted_input"] by run_pipeline before
-                # calling build_prompt — use it here.
-                parent_output = fault_config["_corrupted_input"]
-            lines.append(f"[Input from {pid}]: {parent_output}")
-        input_block = "\n".join(lines) + f"\n\nQuestion: {question}"
+        label = _ROLE_INPUT_LABEL.get(node.role) if len(parent_ids) == 1 else None
+        if label:
+            input_block = f"Question: {question}\n{label}: {_maybe_corrupt(parent_ids[0])}"
+        else:
+            lines = [f"[Input from {pid}]: {_maybe_corrupt(pid)}" for pid in parent_ids]
+            input_block = f"Question: {question}\n" + "\n".join(lines)
 
-    return f"{node.instruction}\n\n{input_block}"
+    return f"{node.instruction}\n\n{input_block}\n\n{cue}"
 
 
 # ---------------------------------------------------------------------------
