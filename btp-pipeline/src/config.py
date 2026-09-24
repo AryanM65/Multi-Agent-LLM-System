@@ -31,6 +31,23 @@ MODEL = "mlx-community/Qwen3-8B-4bit"
 MOCK_MODE: bool = os.getenv("BTP_MOCK", "0") == "1"
 
 # ---------------------------------------------------------------------------
+# Backend selection
+# ---------------------------------------------------------------------------
+# BTP_BACKEND controls which LLM backend is used:
+#   'ollama' (default) — local Ollama server, works on Windows/Linux/macOS CPU & GPU
+#   'mlx'             — Apple Silicon MLX (macOS only, fastest on M-series chips)
+# BTP_MOCK=1 overrides this entirely (no LLM at all).
+BACKEND: str = os.getenv("BTP_BACKEND", "ollama")
+
+# ---------------------------------------------------------------------------
+# Ollama model selection
+# ---------------------------------------------------------------------------
+# The Ollama model to use when BACKEND='ollama'.
+# Override with BTP_OLLAMA_MODEL=<model_name> in the environment.
+# Default: qwen3:8b (matches the MLX model for fair comparison).
+OLLAMA_MODEL: str = os.getenv("BTP_OLLAMA_MODEL", "gpt-oss:20b-cloud")
+
+# ---------------------------------------------------------------------------
 # Self-consistency sampling
 # ---------------------------------------------------------------------------
 DEFAULT_K = 3              # samples per node — bump to 5 for cloud-scale Study 2
@@ -40,19 +57,27 @@ MAX_TOKENS = 128           # max tokens for Retriever / Writer
 MAX_TOKENS_REASONER = 200  # extra headroom for Reasoner chain-of-thought
 
 # ---------------------------------------------------------------------------
-# Diagnosis — global + per-node thresholds
+# Diagnosis -- global + per-node thresholds
 # ---------------------------------------------------------------------------
-UNCERTAINTY_THRESHOLD = 0.75   # global fallback (Study 1 / single-threshold mode)
+# IMPORTANT: These thresholds apply to SEMANTIC uncertainty (0.0-1.0 continuous range).
+# The old lexical uncertainty at k=3 is mathematically capped at 0.667 (all 3 samples
+# disagree), so a threshold of 0.75 is UNREACHABLE and would cause 0% detection rate.
+# All threshold calibration must be done against semantic uncertainty values.
 
-# Study 2 per-node threshold vector.  Callers that support per-node thresholds
-# should use needs_diagnosis_per_node() in diagnose.py which reads this dict.
-# Override any value here after empirical calibration on ≥15 clean runs.
+UNCERTAINTY_THRESHOLD = 0.50  # semantic fallback: flag if semantic uncertainty > 0.50
+
+# Per-node semantic uncertainty thresholds.
+# Calibrated from rescore_study1 data (semantic means on fault trials):
+#   retriever:  clean baseline ~0.10-0.15 | fault mean ~0.17-0.33
+#   reasoner:   clean baseline ~0.10-0.20 | fault mean ~0.92-1.00
+#   writer:     clean baseline ~0.05-0.10 | fault mean ~0.14-0.35
+# Thresholds set at 2x the expected clean baseline to minimize false positives.
 NODE_THRESHOLDS: dict = {
-    "retriever":   0.30,   # baseline ≈ 0.0 on clean gold context
-    "reasoner":    0.75,   # baseline ≈ 0.667 due to CoT phrasing variance
-    "writer":      0.30,   # baseline ≈ 0.0 on clean gold context
+    "retriever":   0.25,   # semantic: clean ~0.10, faulted ~0.17-0.33
+    "reasoner":    0.50,   # semantic: clean ~0.15, faulted ~0.92-1.00
+    "writer":      0.25,   # semantic: clean ~0.07, faulted ~0.14-0.35
     # Generic fallback for non-standard node IDs (used in multi-retriever topologies)
-    "_default":    0.75,
+    "_default":    0.50,
 }
 
 DEFAULT_RETRIES = 2

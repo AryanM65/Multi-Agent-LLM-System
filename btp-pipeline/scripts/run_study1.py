@@ -33,9 +33,25 @@ from typing import Dict, List, Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import pandas as pd
-from datasets import load_from_disk
-from tqdm import tqdm
+if hasattr(sys.stdout, "reconfigure") and sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure") and sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
+    tqdm.total = None
+    tqdm.set_postfix = lambda **kw: None
+    tqdm.update = lambda n=1: None
 
 from src.config import (
     DATA_DIR,
@@ -303,6 +319,7 @@ def run_study1(
     skip_log_path: str = DEFAULT_SKIP_LOG_PATH,
     compute_gap: bool = True,
     resume: bool = False,
+    examples_json: Optional[str] = None,
 ) -> List[Dict]:
     """Run the full Study 1 batch: n_examples × (clean control + 9 fault conditions).
 
@@ -314,9 +331,47 @@ def run_study1(
     os.makedirs(LOG_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    print(f"[run_study1] Loading dataset from '{DATA_DIR}'...")
-    ds = load_from_disk(DATA_DIR)
-    examples = [ds[i] for i in range(min(n_examples, len(ds)))]
+    from src.config import MOCK_MODE, BACKEND
+    mock_active = MOCK_MODE or (BACKEND == "mock")
+
+    if mock_active:
+        print("[run_study1] Mock mode ON -- generating synthetic examples.")
+        examples = [
+            {
+                "question": f"Were Person-{i} and Person-{i+1} of the same nationality?",
+                "answer": "yes",
+                "_id": f"mock-{i}",
+                "supporting_facts": {
+                    "title": [f"Person-{i}", f"Person-{i+1}"],
+                    "sent_id": [0, 0],
+                },
+                "context": {
+                    "title": [f"Person-{i}", f"Person-{i+1}", f"Distractor-{i}"],
+                    "sentences": [
+                        [f"Person-{i} is an American artist born in Denver."],
+                        [f"Person-{i+1} was an American filmmaker born in New York."],
+                        [f"Distractor-{i} is an unrelated entity from France."],
+                    ],
+                },
+            }
+            for i in range(n_examples)
+        ]
+    elif examples_json and os.path.exists(examples_json):
+        print(f"[run_study1] Loading examples from JSON: {examples_json}")
+        with open(examples_json, encoding="utf-8") as f:
+            all_ex = json.load(f)
+        examples = all_ex[:n_examples]
+        print(f"[run_study1] Loaded {len(examples)} examples from JSON.")
+    else:
+        try:
+            from datasets import load_from_disk
+            print(f"[run_study1] Loading dataset from '{DATA_DIR}'...")
+            ds = load_from_disk(DATA_DIR)
+            examples = [ds[i] for i in range(min(n_examples, len(ds)))]
+        except Exception as e:
+            print(f"[run_study1] ERROR: Could not load dataset: {e}")
+            print(f"[run_study1] Run 'python scripts/download_data.py' first, or use --mock.")
+            sys.exit(1)
     print(f"[run_study1] {len(examples)} examples, k={k}")
 
     topo = default_topology()
@@ -352,77 +407,77 @@ def run_study1(
 
     total = len(examples) * len(conditions)
     with (
-        open(log_path, "a") as log_file,
-        open(skip_log_path, "a") as skip_file,
-        tqdm(total=total, desc="Trials") as pbar,
+        open(log_path, "a", encoding="utf-8") as log_file,
+        open(skip_log_path, "a", encoding="utf-8") as skip_file,
     ):
-        for example in examples:
-            qid = str(example.get("_id", example["question"]))
-            gold_ctx = format_context(get_gold_context(example))
+        with tqdm(total=total, desc="Trials") as pbar:
+            for example in examples:
+                qid = str(example.get("_id", example["question"]))
+                gold_ctx = format_context(get_gold_context(example))
 
-            # (1) Control trial — always first to establish per-question baseline.
-            ctrl_key = (example["question"], "clean", "", "")
-            if ctrl_key in done_keys:
-                pbar.update(1)
-                skipped_count += 1
-                pbar.set_postfix(skipped=skipped_count)
-                # We still need the baseline uncertainties from the existing control record.
-                ctrl_rec = next(
-                    (r for r in results if r["question"] == example["question"]
-                     and r.get("true_label") == "clean"), None
-                )
-                baseline_u = ctrl_rec["uncertainties"] if ctrl_rec else None
-            else:
-                ctrl_record = run_trial(
-                    example, fault_config=None, topo=topo, k=k,
-                    compute_gap=compute_gap, baseline_uncertainties=None,
-                    substitute_bank=substitute_bank,
-                )
-                if ctrl_record and not ctrl_record.get("_is_skip"):
-                    log_file.write(json.dumps(ctrl_record) + "\n")
-                    log_file.flush()
-                    results.append(ctrl_record)
-                    done_keys.add(ctrl_key)
-                baseline_u = ctrl_record["uncertainties"] if ctrl_record else None
-                pbar.update(1)
-
-            # (2) Each fault condition, verified against this question's baseline.
-            for fault_config in conditions:
-                if fault_config is None:
-                    continue  # control already done above
-
-                ft = fault_config["type"]
-                tn = fault_config["target_node"]
-                trial_key = (example["question"], ft, ft, tn)
-                pbar.update(1)
-
-                if trial_key in done_keys:
+                # (1) Control trial -- always first to establish per-question baseline.
+                ctrl_key = (example["question"], "clean", "", "")
+                if ctrl_key in done_keys:
+                    pbar.update(1)
                     skipped_count += 1
                     pbar.set_postfix(skipped=skipped_count)
-                    continue
-
-                record = run_trial(
-                    example,
-                    fault_config=dict(fault_config),  # copy to avoid mutation
-                    topo=topo,
-                    k=k,
-                    compute_gap=compute_gap,
-                    baseline_uncertainties=baseline_u,
-                    substitute_bank=substitute_bank,
-                )
-                if record is None:
-                    continue
-
-                if record.get("_is_skip"):
-                    skip_file.write(json.dumps(record) + "\n")
-                    skip_file.flush()
-                    skipped_count += 1
-                    pbar.set_postfix(skipped=skipped_count)
+                    # We still need the baseline uncertainties from the existing control record.
+                    ctrl_rec = next(
+                        (r for r in results if r["question"] == example["question"]
+                         and r.get("true_label") == "clean"), None
+                    )
+                    baseline_u = ctrl_rec["uncertainties"] if ctrl_rec else None
                 else:
-                    log_file.write(json.dumps(record) + "\n")
-                    log_file.flush()
-                    results.append(record)
-                    done_keys.add(trial_key)
+                    ctrl_record = run_trial(
+                        example, fault_config=None, topo=topo, k=k,
+                        compute_gap=compute_gap, baseline_uncertainties=None,
+                        substitute_bank=substitute_bank,
+                    )
+                    if ctrl_record and not ctrl_record.get("_is_skip"):
+                        log_file.write(json.dumps(ctrl_record) + "\n")
+                        log_file.flush()
+                        results.append(ctrl_record)
+                        done_keys.add(ctrl_key)
+                    baseline_u = ctrl_record["uncertainties"] if ctrl_record else None
+                    pbar.update(1)
+
+                # (2) Each fault condition, verified against this question's baseline.
+                for fault_config in conditions:
+                    if fault_config is None:
+                        continue  # control already done above
+
+                    ft = fault_config["type"]
+                    tn = fault_config["target_node"]
+                    trial_key = (example["question"], ft, ft, tn)
+                    pbar.update(1)
+
+                    if trial_key in done_keys:
+                        skipped_count += 1
+                        pbar.set_postfix(skipped=skipped_count)
+                        continue
+
+                    record = run_trial(
+                        example,
+                        fault_config=dict(fault_config),  # copy to avoid mutation
+                        topo=topo,
+                        k=k,
+                        compute_gap=compute_gap,
+                        baseline_uncertainties=baseline_u,
+                        substitute_bank=substitute_bank,
+                    )
+                    if record is None:
+                        continue
+
+                    if record.get("_is_skip"):
+                        skip_file.write(json.dumps(record) + "\n")
+                        skip_file.flush()
+                        skipped_count += 1
+                        pbar.set_postfix(skipped=skipped_count)
+                    else:
+                        log_file.write(json.dumps(record) + "\n")
+                        log_file.flush()
+                        results.append(record)
+                        done_keys.add(trial_key)
 
     print(f"[run_study1] Done. {len(results)} records total, {skipped_count} skipped.")
     print(f"[run_study1] Logs: {log_path}")
@@ -437,60 +492,53 @@ def run_study1(
 def build_confusion_matrix(
     results: List[Dict],
     save_path: str = DEFAULT_CONFUSION_MATRIX_PATH,
-) -> "pd.DataFrame":
-    """Build and save a 3×3 confusion matrix (true × diagnosed).
+) -> None:
+    """Build and save a 3x3 confusion matrix using stdlib csv only.
 
     Excludes clean control trials and 'no_fault_detected' records.
     """
-    df = pd.DataFrame(results)
-    # Exclude clean control trials and undiagnosed records.
-    df_fault = df[df["true_label"].isin(["noise", "contamination", "ceiling"])].copy()
-    df_diag = df_fault[df_fault["diagnosed_label"] != "no_fault_detected"].copy()
-
-    no_fault_count = len(df_fault) - len(df_diag)
-    if no_fault_count > 0:
-        print(
-            f"[confusion_matrix] {no_fault_count} fault trial(s) had 'no_fault_detected' "
-            f"(all nodes below threshold) — excluded from confusion matrix."
-        )
-
+    import csv
     labels = ["noise", "contamination", "ceiling"]
-    cm = pd.DataFrame(0, index=labels, columns=labels)
-    cm.index.name = "true"
-    cm.columns.name = "diagnosed"
 
-    if not df_diag.empty:
-        ct = pd.crosstab(
-            df_diag["true_label"],
-            df_diag["diagnosed_label"],
-            rownames=["true"],
-            colnames=["diagnosed"],
-        )
-        for r in ct.index:
-            for c in ct.columns:
-                if r in cm.index and c in cm.columns:
-                    cm.loc[r, c] = ct.loc[r, c]
+    fault_records = [r for r in results if r.get("true_label") in labels]
+    diagnosed = [r for r in fault_records if r.get("diagnosed_label") not in (None, "no_fault_detected")]
+    no_fault_count = len(fault_records) - len(diagnosed)
+    if no_fault_count > 0:
+        print(f"[confusion_matrix] {no_fault_count} fault trial(s) had 'no_fault_detected' "
+              f"-- excluded from confusion matrix.")
 
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    cm.to_csv(save_path)
+    counts = {r: {c: 0 for c in labels} for r in labels}
+    for rec in diagnosed:
+        tl = rec.get("true_label")
+        dl = rec.get("diagnosed_label")
+        if tl in counts and dl in counts.get(tl, {}):
+            counts[tl][dl] += 1
+
+    os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+    with open(save_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["true"] + labels)
+        for r in labels:
+            writer.writerow([r] + [counts[r][c] for c in labels])
     print(f"[confusion_matrix] Saved to '{save_path}'.")
-    print("\n=== Confusion Matrix ===")
-    print(cm.to_string())
-    print()
 
-    total = cm.values.sum()
-    correct = sum(
-        cm.loc[l, l] for l in labels if l in cm.index and l in cm.columns
-    )
+    total = sum(counts[r][c] for r in labels for c in labels)
+    correct = sum(counts[l][l] for l in labels)
+
+    print("\n=== Confusion Matrix ===")
+    print(f"  {'':>15s}" + "".join(f"{c:>16s}" for c in labels))
+    for r in labels:
+        print(f"  {r:>15s}" + "".join(f"{counts[r][c]:>16d}" for c in labels))
+    print()
     if total > 0:
         accuracy = correct / total
         print(f"Overall diagnostic accuracy: {correct}/{total} = {accuracy:.1%}")
         if accuracy > 0.5:
-            print("✓ Diagonal dominates — diagnostic mechanism shows positive signal.")
+            print("Diagonal dominates -- diagnostic mechanism shows positive signal.")
         else:
-            print("⚠  Accuracy ≤ 50% — review UNCERTAINTY_THRESHOLD and injection logic.")
-
-    return cm
+            print("Accuracy <= 50% -- review NODE_THRESHOLDS and injection logic.")
+    else:
+        print("[confusion_matrix] No diagnosed fault records -- cannot compute accuracy.")
 
 
 # ---------------------------------------------------------------------------
@@ -525,7 +573,25 @@ def main() -> None:
         "--resume", action="store_true",
         help="Resume from existing log file, skipping already-completed trials.",
     )
+    parser.add_argument(
+        "--mock", action="store_true",
+        help="Use mock backend instead of real LLM (no Ollama/MLX required).",
+    )
+    parser.add_argument(
+        "--examples-json", type=str, default=None,
+        help="Path to a JSON file of pre-extracted HotpotQA examples. "
+             "Overrides --n-examples count (uses all examples in the file).",
+    )
     args = parser.parse_args()
+
+    if args.mock:
+        os.environ["BTP_MOCK"] = "1"
+        import src.config as _cfg; _cfg.MOCK_MODE = True
+        import src.nodes as _nodes; _nodes.MOCK_MODE = True
+
+    from src.config import MOCK_MODE, BACKEND, OLLAMA_MODEL
+    backend_label = "mock" if MOCK_MODE else (f"Ollama ({OLLAMA_MODEL})" if BACKEND == "ollama" else "MLX")
+    print(f"[run_study1] Backend: {backend_label}")
 
     results = run_study1(
         n_examples=args.n_examples,
@@ -534,6 +600,7 @@ def main() -> None:
         skip_log_path=args.skip_log_path,
         compute_gap=not args.no_inference_gap,
         resume=args.resume,
+        examples_json=args.examples_json,
     )
     # Only build confusion matrix over fault trials (not control trials).
     fault_results = [r for r in results if r.get("true_label") not in ("clean", None)]

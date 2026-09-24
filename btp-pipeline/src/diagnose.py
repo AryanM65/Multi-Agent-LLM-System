@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, TYPE_CHECKING
 
-from src.config import DEFAULT_K, DEFAULT_RETRIES, UNCERTAINTY_THRESHOLD
+from src.config import DEFAULT_K, DEFAULT_RETRIES, UNCERTAINTY_THRESHOLD, NODE_THRESHOLDS
 from src.nodes import NodeResult, PipelineTrace, sample_node
 
 if TYPE_CHECKING:
@@ -36,8 +36,25 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 def needs_diagnosis(trace: PipelineTrace, node_name: str) -> bool:
-    """Return True if the given node's lexical uncertainty exceeds the threshold."""
-    return trace.node_results[node_name].uncertainty > UNCERTAINTY_THRESHOLD
+    """Return True if the node's best-available uncertainty exceeds its threshold.
+
+    Priority:
+      1. Semantic uncertainty (uncertainty_semantic) vs NODE_THRESHOLDS[node_name]
+      2. Lexical uncertainty  (uncertainty)           vs UNCERTAINTY_THRESHOLD (global)
+
+    Using per-node thresholds greatly reduces false-negative rate for the Reasoner,
+    whose lexical baseline is ~0.667 (naturally high due to CoT phrasing variance)
+    but whose semantic uncertainty on clean inputs is ~0.0-0.2.
+    """
+    result = trace.node_results[node_name]
+    threshold = NODE_THRESHOLDS.get(node_name, NODE_THRESHOLDS.get("_default", UNCERTAINTY_THRESHOLD))
+
+    # Prefer semantic uncertainty when available
+    if result.uncertainty_semantic is not None:
+        return result.uncertainty_semantic > threshold
+
+    # Fallback: lexical uncertainty with global threshold
+    return result.uncertainty > UNCERTAINTY_THRESHOLD
 
 
 # ---------------------------------------------------------------------------
@@ -143,21 +160,26 @@ def diagnose(
     Returns:
         One of: 'noise', 'contamination', 'ceiling'.
     """
-    # Step 1 — Retry same input
+    # Step 1 -- Retry same input
     retry_results: List[NodeResult] = [
         sample_node(node_name, same_input_prompt, k=k, role=role)
         for _ in range(retries)
     ]
-    avg_retry_uncertainty = sum(r.uncertainty for r in retry_results) / len(retry_results)
-    if avg_retry_uncertainty < UNCERTAINTY_THRESHOLD:
+    # Use semantic uncertainty for retry decision when available
+    def _best_uncertainty(r: NodeResult) -> float:
+        return r.uncertainty_semantic if r.uncertainty_semantic is not None else r.uncertainty
+
+    threshold = NODE_THRESHOLDS.get(node_name, NODE_THRESHOLDS.get("_default", UNCERTAINTY_THRESHOLD))
+    avg_retry_uncertainty = sum(_best_uncertainty(r) for r in retry_results) / len(retry_results)
+    if avg_retry_uncertainty < threshold:
         return "noise"
 
-    # Step 2 — Retry with clean/known-good input
+    # Step 2 -- Retry with clean/known-good input
     clean_result = sample_node(node_name, clean_input_prompt, k=k, role=role)
-    if clean_result.uncertainty < UNCERTAINTY_THRESHOLD:
+    if _best_uncertainty(clean_result) < threshold:
         return "contamination"
 
-    # Step 3 — Neither retry helped → capability ceiling
+    # Step 3 -- Neither retry helped -> capability ceiling
     return "ceiling"
 
 

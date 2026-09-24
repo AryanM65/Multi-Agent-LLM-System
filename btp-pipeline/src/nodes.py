@@ -42,6 +42,8 @@ from src.config import (
     MAX_TOKENS_REASONER,
     MOCK_MODE,
     MODEL,
+    OLLAMA_MODEL,
+    BACKEND,
 )
 
 # ---------------------------------------------------------------------------
@@ -60,6 +62,41 @@ def _get_model():
         _mlx_model, _mlx_tokenizer = load(MODEL)
         print("[nodes] Model loaded.")
     return _mlx_model, _mlx_tokenizer
+
+
+# ---------------------------------------------------------------------------
+# Ollama backend
+# ---------------------------------------------------------------------------
+
+def _ollama_generate(prompt: str, temperature: float, token_limit: int) -> str:
+    """Generate one sample using the local Ollama server.
+
+    Strips Qwen3's <think>...</think> scratchpad from the response if present,
+    so only the clean answer text reaches downstream nodes.
+
+    Args:
+        prompt:      Full prompt string to send.
+        temperature: Sampling temperature.
+        token_limit: Maximum tokens to generate.
+
+    Returns:
+        Stripped response string.
+    """
+    import ollama
+    import re as _re
+
+    response = ollama.chat(
+        model=OLLAMA_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={
+            "temperature": temperature,
+            "num_predict": token_limit,
+        },
+    )
+    text = response["message"]["content"]
+    # Strip Qwen3 thinking block if present
+    text = _re.sub(r"<think>[\s\S]*?</think>", "", text, flags=_re.IGNORECASE).strip()
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -245,14 +282,20 @@ def _generate_once(
     temperature: float,
     token_limit: int,
 ) -> str:
-    """Generate one sample — dispatches to mock backend or MLX.
+    """Generate one sample — dispatches to mock, Ollama, or MLX backend.
 
-    Centralises the mock/real decision so it is made in exactly one place.
+    Backend selection priority:
+      1. MOCK_MODE=True  → deterministic mock stubs (no LLM needed)
+      2. BACKEND='ollama' → local Ollama server (works on Windows/CPU/GPU)
+      3. BACKEND='mlx'   → Apple Silicon MLX (macOS only)
     """
     if MOCK_MODE:
         return _mock_generate(node_name, sample_index, prompt, role)
 
-    # Real MLX generation
+    if BACKEND == "ollama":
+        return _ollama_generate(prompt, temperature, token_limit)
+
+    # Real MLX generation (Apple Silicon)
     from mlx_lm import generate
     from mlx_lm.sample_utils import make_sampler
 

@@ -1,0 +1,10 @@
+metric,old,new,delta
+total_fault_trials,45,56,
+overall_detection_rate,0.0,0.1786,0.1786
+overall_accuracy,0.0,0.4,0.4
+noise_detection_rate,0.0,0.1905,0.1905
+noise_accuracy,0.0,0.5,0.5
+contamination_detection_rate,0.0,0.1,0.1
+contamination_accuracy,0.0,0.5,0.5
+ceiling_detection_rate,0.0,0.2667,0.2667
+ceiling_accuracy,0.0,0.25,0.25
