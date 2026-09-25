@@ -285,13 +285,66 @@ Empty retriever samples: 0
 
 **On `pilot_k5_fix.jsonl`'s accuracy drop (Section 9.3a)**: this run doesn't cleanly isolate that question, since this pilot itself has both the fallback confound (52.6% rate) and the now-revealed threshold-miscalibration issue layered together. Not a clean before/after comparison — treat Section 9.3a's confound concern as still valid, just not further disentangled by this run.
 
-### 9.7 Topology pool (train + OOD) — still not generated
+### 9.7 Topology pool (train + OOD) — DONE (later same session)
 
-Confirmed still true. `src/topologies.py` has the factories (`chain_topology`, `dual_retriever_fanin_topology`, `parallel_reasoner_topology`, `deep_chain_topology`, `get_topology`, `all_topologies`) but there is no script that generates the concrete ~14-topology train pool + ~6-topology held-out OOD pool (via random-DAG construction per plan Section 5.2), deduplicates it, and freezes it to a file. This remains infrastructure-ready but not instantiated — **not attempted this session** (largest remaining item, deliberately left for a dedicated pass rather than rushed alongside the other five).
+Was the largest remaining item at the time this section was first written. **Since built**: `dataset/generate_topology_pool.py` (in the top-level `dataset/` folder). See Section 10.1 for full details — 14 train + 6 OOD topologies, frozen to `dataset/topology_pool.json`, validated and deduplicated.
 
 ---
 
-## 10. Bottom Line
+## 10. Model Switch to Qwen2.5-7B-Instruct-AWQ + Real Calibration Results
+
+Per `plan.md`, generation has moved off gpt-oss/Ollama entirely to **Qwen2.5-7B-Instruct-AWQ served via vLLM** on Kaggle GPU (T4 x2), driven by vLLM's real batching throughput and Qwen2.5 having no hidden-reasoning-pass problem class at all. This section covers what's been built and verified for that switch.
+
+### 10.1 Infrastructure built this session
+
+- **`BACKEND='vllm'` added to the pipeline** (`src/config.py`, `src/nodes.py`): `_get_vllm_llm()` (lazy singleton loader) and `_vllm_generate()`, dispatched from `_generate_once()` alongside the existing `ollama`/`mlx`/mock paths. Reuses the exact same `run_pipeline()`/`sample_node()`/uncertainty code — not a parallel implementation — so whatever gets calibrated here is what bulk generation will actually run through.
+- **`scripts/calibrate_vllm_model.py`** — runs real example questions through the pipeline (clean control only) and reports token usage, `FINAL ANSWER:` compliance, a `parse_retrieved_items` audit, achievable uncertainty spread, and suggested `NODE_THRESHOLDS`.
+- **Kaggle CLI verified working end-to-end from this machine**: authenticated via OAuth already, GPU quota confirmed (29.99h/30h remaining), a plain GPU smoke test confirmed 2x Tesla T4 (15360MiB each) with a real CUDA matmul executing successfully.
+- **`dataset/generate_topology_pool.py`** (in the top-level `dataset/` folder, sibling to `btp-pipeline/`) — generates and freezes the train (14 topologies: chain, fan-in/fan-out variants, deep chains, star, tree, wide fan-in/out, asymmetric) + OOD (6 topologies, random-DAG MOC-style construction, role-before-edges so valid by construction) pool to `dataset/topology_pool.json`. Deduplicated, round-trip-loadable, all validated via `validate_topology()`. This is pure Python, no GPU needed, and is done.
+- **A real, previously-live bug found and fixed via this work**: a mock dry-run of the calibration script caught `parse_retrieved_items` still shredding a normal sentence with internal commas (e.g. `"...director, screenwriter, and producer."` → 3 fragments) via a leftover comma-fallback branch — the same failure class the original numeric-comma fix targeted, just triggered differently. Removed the comma fallback entirely in `src/uncertainty.py`; newline-only splitting is correct for the Retriever's "one sentence per line" prompt format. Verified fixed both via direct testing and confirmed clean in the real Kaggle calibration run below (no more fragment-shredding observed).
+
+### 10.2 Real calibration run — Kaggle GPU, Qwen2.5-7B-Instruct-AWQ, 2026-09-24
+
+3 example questions, k=5, clean control only (45 total samples across 3 roles). Required 3 iterations to get the Kaggle kernel plumbing right (dataset mount path was actually `/kaggle/input/datasets/<user>/<dataset>`, not `/kaggle/input/<dataset>` as first assumed; a `scripts/` package-import issue). Once fixed, ran cleanly in ~5 minutes including vLLM install and model load (~100s engine init).
+
+**Results:**
+- **0/45 empty samples across all roles** — confirms Qwen2.5 has no reasoning-model truncation problem; `MAX_TOKENS=350`/`MAX_TOKENS_REASONER=600` (unchanged, gpt-oss-era values) are already comfortably sufficient (observed max: retriever 94 words, reasoner 226 words, writer 31 words).
+- **`FINAL ANSWER:` marker compliance: 15/15 (100%)** on Reasoner samples.
+- **`parse_retrieved_items` audit (the manual check the original master plan required but was never previously done): clean.** No fragment-shredding observed on any of the 15 real Retriever samples — the comma-fallback removal (Section 10.1) holds up on real data.
+- **New finding, not a bug**: the Retriever is not filtering to "only relevant sentences" as its prompt instructs — it mostly echoes back full paragraphs verbatim (including the `[Title]` bracket formatting from the input context block). E.g. for the Scott Derrickson/Ed Wood question, it returned both full paragraphs rather than the single relevant sentence from each. `parse_retrieved_items` handles this correctly (splits into paragraph-level items via newlines, no fragmentation) — this is an instruction-following gap in the model's behavior, not a parsing bug. Worth a prompt tweak (e.g. explicitly caution against copying full paragraphs) if tighter Retriever filtering matters for the dataset's quality; left as-is for now since it isn't broken, just more verbose than originally designed for.
+- **Uncertainty values, small-sample caveat**: Reasoner's semantic uncertainty swung 0.0 → 1.0 → 0.42 across the 3 questions (mean 0.47, std 0.41) — real per-question variance, not yet a stable calibrated number. Writer: mean 0.14, std 0.20. `NODE_THRESHOLDS` in `config.py` were **not** updated from these — still gpt-oss-era values, explicitly left alone since (a) diagnosis is disabled for generation so they don't matter yet, and (b) n=3 questions is too small a sample to treat as real calibration. Documented in `config.py`'s comments for whenever the retry-then-reprobe protocol is evaluated later as the naive-baseline comparator.
+
+### 10.3 `scripts/run_study_vllm.py` — written, logic-verified locally, GPU call not yet smoke-tested
+
+The batched generation script (per `plan.md` Section 4.3) now exists. Design:
+
+- **Reuses, does not reimplement**: `build_prompt`, `apply_fault_to_prompt`, fault injectors (`inject_noise`/`inject_contamination_retriever`/`inject_contamination_downstream`/`inject_ceiling`), `verify_against_baseline`, and `_trace_to_record`/`_skip_record`/`build_substitute_bank` (imported directly from `run_study2.py`). The only new logic is the batched per-node execution loop itself.
+- **A refactor was needed first, to avoid a second uncertainty-computation implementation**: `src/nodes.py`'s `sample_node()` had its post-generation uncertainty math (lexical/semantic/Jaccard) factored out into a new standalone `compute_node_result_from_samples()`. The batched path calls this exact same function after getting k samples back from one vLLM call per node (via `SamplingParams(n=k)`), instead of `sample_node`'s sequential k-loop. This was done specifically to avoid repeating the class of bug that caused the `build_prompt` continuation-cue regression (Section 9.4) — two divergent implementations of "the same computation."
+- **Two-phase batching per topology**: Phase 1 batches every question's control trial together to establish per-question baselines; Phase 2 resolves every fault trial's injection (skip-and-log invalid ones, identical logic to `run_study2.py`) *before* generation, then batches all resolved fault trials together, verifying each against its own question's Phase 1 baseline.
+- **Diagnosis is never called** (no `diagnose_trace` import at all) — consistent with the `--no-diagnose` decision; raw uncertainties + verified `true_label` are recorded, `diagnosed_label` stays `None`.
+- **A pre-existing gap found while reading `run_study2.py`'s fault logic (not introduced by this work, not fixed here)**: `_hardened_instruction` (meant to harden a downstream node's own instruction for a ceiling fault) is set into the fault-config dict in both `run_study1.py` and `run_study2.py` but is never actually read anywhere in `pipeline.py` — dead data. `run_study_vllm.py` faithfully replicates this existing (already-present) behavior rather than silently fixing it; flagged in the new script's comments for a future pass.
+
+**Verified locally, without a GPU, via `--mock`:**
+- Full dry run (2 topologies, 2 examples, mock backend) completes cleanly end-to-end, produces correctly-shaped records, `verify_results.py` runs against the output without error.
+- **Batched fault-config isolation directly tested**: a monkeypatch spy on `apply_fault_to_prompt` across a 3-trial mixed batch (`noise@retriever`, clean, `noise@writer`) confirmed it fires exactly twice — once for each correctly-targeted (trial, node) pair, never for the clean trial or the wrong node. This is the plan.md Section 5.5 item 3 check, passing at the orchestration-logic level.
+- Full regression suite (Jaccard unit tests, `debug_noise_scoping.py`, `debug_topology_regression.py`) re-run clean after the `sample_node` refactor — no regressions introduced.
+
+### 10.4 Kaggle GPU smoke test — PASSED, 2026-09-24
+
+Ran `scripts/run_study_vllm.py` for real against Qwen2.5-7B-Instruct-AWQ on Kaggle GPU (2 topologies — `chain`, `dual_retriever_fanin` — 2 examples, k=3, `--batch-size 15`). All `plan.md` Section 5.5 checks passed:
+
+- **GPU confirmed in use** — real weight loading (5.29 GiB), CUDA graph capture, GPU temp rose 44°C → 73°C across the run (not a silent CPU fallback).
+- **`llm.chat()`'s batched form confirmed working** — the one previously-unverified assumption in the new code (`List[List[message]]` + matching `List[SamplingParams]` in one call). No errors, correct per-trial outputs returned.
+- **`--batch-size 15` worked with no OOM** — chain topology's 18 fault trials ran as 2 sub-batches (28.7s + ~11s), `dual_retriever_fanin`'s similarly (~59s total for its full grid).
+- **Exit code 0, 41/41 trial records written** — exactly matching the mock dry-run's record count (19 + 22), confirming the real run's control flow matches the logic-verified mock path.
+- `verify_results.py` run against the real output: **0/41 empty samples, 0% thinking-fallback rate** (as expected — Qwen2.5 has no reasoning-model fallback path), skip pattern (5 `ceiling_injection_failed_*`) identical to the mock dry-run's skip pattern. `diagnosed_label` correctly `null` throughout (diagnosis intentionally never invoked).
+- The Kaggle code dataset (`btp-pipeline-code`) was updated to a new version including `run_study_vllm.py`, the refactored `src/nodes.py`, and `dataset/topology_pool.json` before this run — previously flagged as needed, now done.
+
+**Batched fault-config isolation** (Section 5.5 item 3) was verified at the orchestration-logic level in Section 10.3's mock-mode spy test, not independently re-verified against real generated text in this GPU run (harder to check directly from output alone) — the logic-level test is considered sufficient since the isolation happens before generation (in prompt/temperature assembly), identically regardless of backend.
+
+**Everything in `plan.md`'s Definition of Done (Section 7) is now checked off** except the full-scale generation run itself and its post-hoc `verify_results.py` check — the pipeline is generation-ready.
+
+## 11. Bottom Line
 
 The `corrected-pipeline` branch is substantially further along than any prior written summary (including the previous version of this file) credited it for. The topology-generalization and fault-taxonomy redesign — originally scoped as a large, mostly-unstarted body of work — is in fact implemented and structurally correct. `k` is now 5 and a reusable `verify_results.py` exists, closing both previously-open gaps.
 
@@ -299,4 +352,4 @@ The empty-sample data-quality bug is **substantially, but not completely, fixed*
 
 The Section 9 follow-up round (external review) closed five of six items and surfaced one genuine new bug: the topology engine's `build_prompt()` had silently diverged from the old hardcoded chain (missing continuation cues, swapped field order) despite the plan explicitly requiring a regression test to catch exactly this — now fixed and verified byte-identical. Noise-temperature scoping and Jaccard uncertainty both now have real executed-test evidence rather than resting on code-reading alone. The token-budget fix's true cost was also quantified directly (not guessed): expect **roughly 4.5-5x more total output tokens** for the same trial count than any pre-this-session estimate assumed, driven by both the k 3→5 increase and harder questions reliably pinning the raised token budgets.
 
-**Net effect on trust in numbers so far:** none of the detection/accuracy percentages produced to date (the original 17.9%/40.0%, or the pilot's 64.7%/27.3%) should be treated as representative of the system's true performance — all were generated under a broken, partially-broken, or now-superseded generation pipeline. **Remaining before full-scale generation:** re-run a fresh pilot with the `used_thinking_fallback` flag active to get real fallback-contamination rates and a clean-vs-fallback accuracy comparison; recalibrate `NODE_THRESHOLDS` against k=5 clean-baseline trials (Section 9.2, still fully open); re-measure actual Ollama Cloud usage-quota consumption against the new token budgets (Section 9.1); and generate/freeze the train+OOD topology pool (Section 9.6, not yet started). The system is closer than the original plan's Section 0 assessment suggested, but not yet ready for the ~400-trial run.
+**Net effect on trust in numbers so far:** none of the detection/accuracy percentages produced to date (the original 17.9%/40.0%, or the pilot's 64.7%/27.3%) should be treated as representative of the system's true performance — all were generated under a gpt-oss/Ollama pipeline now superseded for generation purposes (Section 10). **Remaining before full-scale generation** (updated, see Section 10.3 for the current concrete list): write `scripts/run_study_vllm.py` (the batched generation script) and smoke-test it on Kaggle. The topology pool (Section 9.7) and Qwen2.5 calibration (Section 10.2) are both done. `NODE_THRESHOLDS` recalibration remains open but is not a generation blocker since diagnosis is disabled for the bulk run.

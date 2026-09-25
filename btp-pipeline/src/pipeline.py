@@ -152,10 +152,31 @@ def build_prompt(
     handled here (not in apply_fault_to_prompt) because the corruption
     must modify what this node *sees* from its parent, not this node's
     own generated content.
+
+    BUG FOUND AND FIXED (2026-09-25): a ceiling fault targeting a downstream
+    (Reasoner/Writer) node is supposed to harden THIS node's own instruction
+    (e.g. "at most 2 reasoning steps") -- faults.py's _inject_ceiling_downstream
+    computes this and stores it in fault_config["_hardened_instruction"], but
+    build_prompt() never read that key, so it silently kept using the node's
+    normal instruction. Net effect: every downstream-targeted ceiling trial
+    ran with NO actual fault applied to the prompt -- confirmed by tracing why
+    the first full dataset generation run's ceiling trials on Reasoner/Writer
+    (18/20 of all ceiling trials) showed flat or *decreased* uncertainty
+    instead of the expected increase. Fixed below: use the hardened
+    instruction when this node is a downstream ceiling target.
     """
     node = topo.nodes[node_id]
     parent_ids = parents_of(topo, node_id)
     cue = _ROLE_CUE.get(node.role, "Response:")
+
+    instruction = node.instruction
+    if (
+        fault_config is not None
+        and fault_config.get("type") == "ceiling"
+        and fault_config.get("target_node") == node_id
+        and fault_config.get("_hardened_instruction")
+    ):
+        instruction = fault_config["_hardened_instruction"]
 
     def _maybe_corrupt(pid: str) -> str:
         parent_output = outputs[pid]
@@ -184,7 +205,7 @@ def build_prompt(
             lines = [f"[Input from {pid}]: {_maybe_corrupt(pid)}" for pid in parent_ids]
             input_block = f"Question: {question}\n" + "\n".join(lines)
 
-    return f"{node.instruction}\n\n{input_block}\n\n{cue}"
+    return f"{instruction}\n\n{input_block}\n\n{cue}"
 
 
 # ---------------------------------------------------------------------------

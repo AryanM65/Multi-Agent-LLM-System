@@ -76,12 +76,20 @@ NOISE_TEMPERATURE = 1.2    # elevated temperature used for noise fault injection
 # content="" in 5/5 isolated test calls. 300 tokens reliably produced non-empty
 # Retriever content in follow-up testing; these values add margin above that.
 #
-# THESE ARE GPT-OSS-ERA VALUES. Qwen2.5 (the dataset-generation model, no
-# hidden reasoning pass) has not been calibrated yet — run
-# scripts/calibrate_vllm_model.py and update these based on its output before
-# trusting them for a Qwen2.5+vLLM run. Do not assume they transfer.
-MAX_TOKENS = 350           # max tokens for Retriever / Writer (was 128 — too low for gpt-oss reasoning overhead)
-MAX_TOKENS_REASONER = 600  # extra headroom for Reasoner chain-of-thought + reasoning overhead (was 200)
+# CONFIRMED SUFFICIENT FOR QWEN2.5-7B-INSTRUCT-AWQ (real calibration run via
+# scripts/calibrate_vllm_model.py on Kaggle GPU, 3 questions, k=5, 45 total
+# samples, 2026-09-24): 0/45 empty samples across all roles -- Qwen2.5 has no
+# hidden-reasoning-pass problem at all (unlike gpt-oss), so these gpt-oss-era
+# budgets, sized generously for that different problem, simply carry a lot of
+# unused headroom for Qwen2.5 rather than being wrong. Observed real usage:
+# retriever max=94 words (~120 tokens), reasoner max=226 words (~300 tokens),
+# writer max=31 words. Could be tightened for efficiency but there is no
+# correctness reason to; left as-is. FINAL ANSWER: marker compliance was
+# 15/15 (100%). Re-run scripts/calibrate_vllm_model.py with more questions
+# before trusting these as final if generation starts hitting longer/harder
+# questions than the 3-question calibration sample covered.
+MAX_TOKENS = 350           # max tokens for Retriever / Writer
+MAX_TOKENS_REASONER = 600  # extra headroom for Reasoner chain-of-thought
 
 # ---------------------------------------------------------------------------
 # Diagnosis -- global + per-node thresholds
@@ -94,11 +102,26 @@ MAX_TOKENS_REASONER = 600  # extra headroom for Reasoner chain-of-thought + reas
 UNCERTAINTY_THRESHOLD = 0.50  # semantic fallback: flag if semantic uncertainty > 0.50
 
 # Per-node semantic uncertainty thresholds.
-# Calibrated from rescore_study1 data (semantic means on fault trials):
+# Calibrated from rescore_study1 data (semantic means on fault trials, gpt-oss):
 #   retriever:  clean baseline ~0.10-0.15 | fault mean ~0.17-0.33
 #   reasoner:   clean baseline ~0.10-0.20 | fault mean ~0.92-1.00
 #   writer:     clean baseline ~0.05-0.10 | fault mean ~0.14-0.35
 # Thresholds set at 2x the expected clean baseline to minimize false positives.
+#
+# STILL GPT-OSS-ERA VALUES. Not needed for dataset generation itself (the
+# retry-then-reprobe diagnostic protocol these gate is disabled via
+# --no-diagnose for the bulk run), so left unchanged rather than guessed at
+# from a tiny sample. A preliminary Qwen2.5 clean-baseline reading exists
+# (3 questions, 2026-09-24, via scripts/calibrate_vllm_model.py): reasoner
+# semantic mean=0.47 std=0.41 (swung 0.0 -> 1.0 -> 0.42 across the 3
+# questions -- high per-question variance, not a stable number yet), writer
+# semantic mean=0.14 std=0.20. Both far too small a sample (n=3) to treat as
+# a real calibration -- re-run with more questions (~15-20) before ever
+# trusting NODE_THRESHOLDS for Qwen2.5 if the retry-then-reprobe protocol is
+# evaluated later as the naive-baseline comparator (see plan.md / research
+# design). Retriever has no semantic value by design (uses lexical/Jaccard
+# instead) -- "no semantic values recorded" in a calibration run is expected,
+# not a gap.
 NODE_THRESHOLDS: dict = {
     "retriever":   0.25,   # semantic: clean ~0.10, faulted ~0.17-0.33
     "reasoner":    0.50,   # semantic: clean ~0.15, faulted ~0.92-1.00

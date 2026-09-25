@@ -496,6 +496,39 @@ def sample_node(
                 f"for node '{node_name}' (role='{role}'): {exc}"
             ) from exc
 
+    return compute_node_result_from_samples(
+        node_name, samples, used_thinking_fallback, normalize_fn, role
+    )
+
+
+def compute_node_result_from_samples(
+    node_name: str,
+    samples: List[str],
+    used_thinking_fallback: List[bool],
+    normalize_fn: Callable[[str], str] = hotpotqa_normalize,
+    role: str = "",
+) -> NodeResult:
+    """Compute a NodeResult's uncertainty metrics from an already-generated
+    list of k raw samples.
+
+    Factored out of sample_node() so that a batched generation path (e.g.
+    scripts/run_study_vllm.py, which gets k samples per prompt back from one
+    vLLM call via SamplingParams(n=k) rather than k sequential
+    _generate_once() calls) computes uncertainty through the exact same code
+    as the existing sequential path -- not a second, parallel implementation.
+    Two divergent code paths computing "the same thing" is exactly the class
+    of bug that caused the build_prompt continuation-cue regression earlier
+    this session; this factoring exists specifically to avoid repeating that.
+
+    Args:
+        node_name:              Node identifier (used in the returned NodeResult).
+        samples:                The k raw generation outputs.
+        used_thinking_fallback: Parallel list of fallback flags, one per sample
+                                 (all False for backends without a thinking-fallback
+                                 path, e.g. vLLM/Qwen2.5 -- see _vllm_generate).
+        normalize_fn:           Normalisation function for lexical scoring.
+        role:                   Node role ('retriever', 'reasoner', 'writer').
+    """
     # --- Lexical uncertainty (primary metric, always computed) ---
     normed = [normalize_fn(s) for s in samples]
     counts = Counter(normed)

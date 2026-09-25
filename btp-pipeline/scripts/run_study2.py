@@ -170,7 +170,7 @@ def run_trial(
 
     elif ft == "contamination":
         if topo.nodes[tn].role == "retriever":
-            injected = inject_contamination_retriever(example, rng)
+            injected = inject_contamination_retriever(example, rng, target_node=tn)
             if injected is None:
                 return _skip_record(qid, question, fault_config,
                                     "contamination_insufficient_distractors")
@@ -208,7 +208,7 @@ def run_trial(
             }
 
     else:  # ceiling
-        injected = inject_ceiling(example, tn, rng)
+        injected = inject_ceiling(example, tn, rng, role=topo.nodes[tn].role)
         if injected is None:
             return _skip_record(qid, question, fault_config, "ceiling_answer_survived")
         if topo.nodes[tn].role == "retriever":

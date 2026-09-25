@@ -169,7 +169,7 @@ def run_trial(
 
     elif ft == "contamination":
         if tn == "retriever":
-            injected = inject_contamination_retriever(example, rng)
+            injected = inject_contamination_retriever(example, rng, target_node=tn)
             if injected is None:
                 skip_reason = "contamination_insufficient_distractors"
                 return _skip_record(qid, question, fault_config, skip_reason)
@@ -200,7 +200,12 @@ def run_trial(
             }
 
     else:  # ceiling
-        injected = inject_ceiling(example, tn, rng)
+        # run_study1.py only ever runs the canonical 3-node chain, where
+        # node_id == role, so passing tn as role is correct here (unlike
+        # run_study2.py/run_study_vllm.py, which must look up topo.nodes[tn].role
+        # explicitly since arbitrary topologies use custom node IDs -- see the
+        # ceiling role-dispatch bug fix in src/faults.py).
+        injected = inject_ceiling(example, tn, rng, role=tn)
         if injected is None:
             skip_reason = "ceiling_answer_survived"
             return _skip_record(qid, question, fault_config, skip_reason)

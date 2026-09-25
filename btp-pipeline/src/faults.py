@@ -180,6 +180,7 @@ def inject_contamination_retriever(
     swap_fraction: float = 0.5,
     embedder=None,
     top_k_plausible: int = 3,
+    target_node: str = "retriever",
 ) -> Optional[Dict]:
     """Contamination fault targeting the Retriever.
 
@@ -199,6 +200,16 @@ def inject_contamination_retriever(
         swap_fraction:   Fraction of gold paragraphs to replace (default 0.5).
         embedder:        Optional SentenceTransformer for plausibility ranking.
         top_k_plausible: Top-k candidates to randomly sample from when ranking.
+        target_node:     The actual retriever-role node's ID (e.g. "retriever_a").
+                         Defaults to the literal "retriever" for backward
+                         compatibility. NOTE (hygiene fix, 2026-09-25): this
+                         field used to be hardcoded to "retriever" regardless
+                         of what the caller passed, which was harmless in
+                         practice only because every caller (run_study1/2/vllm.py)
+                         discards this function's own "target_node" and rebuilds
+                         it fresh with the real node ID -- but the dead field
+                         was misleading and a latent risk if anything ever
+                         trusted it directly. Now honors the real node ID.
     """
     gold = get_gold_context(example)
     distractors_raw = get_distractor_context(example)
@@ -223,7 +234,7 @@ def inject_contamination_retriever(
 
     return {
         "type": "contamination",
-        "target_node": "retriever",
+        "target_node": target_node,
         "true_label": "contamination",
         "context": format_context(corrupted),
         "answer": example["answer"],
@@ -263,8 +274,19 @@ def inject_contamination_downstream(
     Returns:
         fault_config dict with "_corrupted_input" field, or None if bank is empty.
     """
+    # BUG FOUND AND FIXED (2026-09-25): substitute_bank is built once per
+    # topology from ALL assigned questions' clean outputs (see
+    # scripts/run_study2.py's build_substitute_bank), including the very
+    # question currently being contaminated. Nothing previously excluded a
+    # question's own clean output from being drawn as its own "wrong"
+    # substitute -- with only 2-4 questions per topology (see plan.md's
+    # coverage strategy), this was a real, unguarded risk of a
+    # "contamination" trial whose corrupted input was actually still
+    # correct. Exact-match self-exclusion below closes this.
+    substitute_bank = [s for s in substitute_bank if s != clean_parent_output]
+
     if not substitute_bank:
-        return None
+        return None  # bank had no usable (non-self) substitute -- caller logs this skip
 
     if embedder is not None and len(substitute_bank) >= top_k:
         import numpy as np
@@ -298,6 +320,7 @@ def inject_ceiling(
     target_node: str,
     rng: random.Random,
     strip_fraction: float = 0.5,
+    role: Optional[str] = None,
 ) -> Optional[Dict]:
     """Ceiling fault — strips sentences from gold paragraphs then verifies the
     answer-bearing content was actually removed.
@@ -321,17 +344,40 @@ def inject_ceiling(
 
     Args:
         example:       HotpotQA dataset example dict.
-        target_node:   Which node to apply the ceiling fault to.
+        target_node:   Which node to apply the ceiling fault to (node ID,
+                       e.g. "retriever_a", "n0_r" -- NOT necessarily the
+                       literal string "retriever").
         rng:           Seeded random.Random for reproducibility.
         strip_fraction: Fraction of sentences to remove (default 0.5).
+        role:          The target node's ROLE ("retriever"/"reasoner"/"writer").
+                       REQUIRED for correct dispatch on any topology other than
+                       the plain 3-node chain -- see note below. If omitted,
+                       falls back to the old (broken-for-custom-node-IDs)
+                       target_node=="retriever" string check, kept only for
+                       backward compatibility with old call sites.
 
     Returns:
         fault_config dict, or None if the answer survived (discard this trial).
+
+    BUG FOUND AND FIXED (2026-09-25): this function used to dispatch on
+    `target_node == "retriever"` (a literal node-ID string match) rather than
+    the node's actual role. That only works for the plain default_chain
+    topology's canonical node IDs. Every other topology in the pool uses
+    custom node IDs (retriever_a, reasoner_1, n0_r, writer_b, ...), for which
+    the check silently failed and fell through to _inject_ceiling_downstream,
+    which ALSO checked by literal string ("reasoner"/"writer" only) and
+    returned None (an "injection failed" skip) for anything else. Net effect:
+    ceiling faults on any non-chain topology were being skipped almost every
+    time, regardless of whether the fault was actually valid -- discovered by
+    noticing ceiling ended up with only 20/118 successful trials (~17%) in
+    the first full generation run, then tracing the skip reasons back to
+    node IDs like "n2_r", "reasoner_1", "retriever_a" that should have worked.
     """
-    if target_node == "retriever":
+    is_retriever = (role == "retriever") if role is not None else (target_node == "retriever")
+    if is_retriever:
         return _inject_ceiling_retriever(example, rng, strip_fraction)
     else:
-        return _inject_ceiling_downstream(example, target_node, rng)
+        return _inject_ceiling_downstream(example, target_node, rng, role=role)
 
 
 def _inject_ceiling_retriever(
@@ -375,6 +421,7 @@ def _inject_ceiling_downstream(
     example: dict,
     target_node: str,
     rng: random.Random,
+    role: Optional[str] = None,
 ) -> Optional[Dict]:
     """Ceiling for Reasoner / Writer target: harder-subtask instruction variant.
 
@@ -389,6 +436,11 @@ def _inject_ceiling_downstream(
     relative to the clean baseline (sanity check 3.8d).  The verification
     that the instruction change degrades performance is empirical (run-time),
     not checkable statically here.
+
+    role: the target node's ROLE ("reasoner"/"writer"), used to select which
+    hardened instruction template to apply. Falls back to matching target_node
+    directly against the template keys (old, broken-for-custom-IDs behavior)
+    if role is not provided, for backward compatibility only.
     """
     hardened_instructions = {
         "reasoner": (
@@ -405,7 +457,8 @@ def _inject_ceiling_downstream(
         ),
     }
 
-    if target_node not in hardened_instructions:
+    lookup_key = role if role is not None else target_node
+    if lookup_key not in hardened_instructions:
         return None  # unsupported target for downstream ceiling
 
     return {
@@ -418,7 +471,7 @@ def _inject_ceiling_downstream(
         # The hardened instruction is stored here and must be applied by the
         # caller (run_study1) by overriding the NodeSpec.instruction for this
         # node when constructing the fault_config's topology.
-        "_hardened_instruction": hardened_instructions[target_node],
+        "_hardened_instruction": hardened_instructions[lookup_key],
     }
 
 

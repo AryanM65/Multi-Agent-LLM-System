@@ -1,6 +1,6 @@
 # Dataset Formation Plan — BTP-I Uncertainty Propagation Dataset
 
-> Companion to `correct_project_context.md` (project state) and the original master fix-plan. This document is the execution plan for the actual dataset-generation run: topologies, faults, backend choice, and the Kaggle CLI mechanics. It assumes the prerequisites in `correct_project_context.md` Section 9 are closing out (real combined-fix pilot, topology pool, Ollama Cloud quota check).
+> Companion to `correct_project_context.md` (project state) and the original master fix-plan. This document is the execution plan for the actual dataset-generation run: topologies, faults, backend choice, and the Kaggle CLI mechanics. Status: topology pool done, gpt-oss/Ollama pilot done, real Qwen2.5-7B-Instruct-AWQ calibration done (n=3, see `correct_project_context.md` Section 10). Remaining: `scripts/run_study_vllm.py` (the batched generation script) and its smoke test.
 
 ---
 
@@ -61,7 +61,9 @@ Updated after the Section 0 decision to switch to Qwen2.5-7B-Instruct + vLLM —
 
 ---
 
-## 2. Topology pool formation
+## 2. Topology pool formation — DONE
+
+Implemented as `dataset/generate_topology_pool.py` (in the top-level `dataset/` folder, sibling to `btp-pipeline/`, not inside `btp-pipeline/scripts/`). Output frozen to `dataset/topology_pool.json`: 14 train + 6 OOD topologies, validated, deduplicated, round-trip-loadable. The design below (originally written before this was built) matches what was actually implemented; kept as the design record.
 
 ### 2.1 Train pool (~14 topologies)
 
@@ -86,11 +88,11 @@ Generated via **random-DAG construction**, MOC-style, exactly as specified in th
 4. Randomly add additional forward-only edges (respecting the fixed topological order) with some probability (e.g. 30%) to create fan-in/fan-out structure beyond the plain backbone.
 5. Deduplicate against both the OOD pool itself and the train pool (compare by canonical edge-set + role-assignment, not just `topology_id` string) — reject and regenerate on collision.
 
-This needs a new script: `scripts/generate_topology_pool.py`. It does not exist yet — this plan describes its required behavior; writing it is the next concrete implementation step after this plan is agreed on **and is explicitly the largest remaining item Section 9.7 of `correct_project_context.md` flags as not started.**
+Implemented in `dataset/generate_topology_pool.py` (see Section 2 header — done, not still needed).
 
 ### 2.3 Freezing the pool
 
-Output: `data/topology_pool.json` (or `.jsonl`), containing every topology's full `NodeSpec`/edge definition (not just a name — the pool must be reproducible without re-running the generator), tagged `"split": "train"` or `"split": "ood_test"`. This file is committed and never regenerated once trial generation begins against it — regenerating it after starting generation would silently invalidate the train/OOD split guarantee the whole design depends on.
+Output: `dataset/topology_pool.json`, containing every topology's full `NodeSpec`/edge definition (not just a name — the pool is reproducible without re-running the generator via the included `load_topology_pool()` helper), tagged `"split": "train"` or `"split": "ood_test"`. This file is committed and should not be regenerated once trial generation begins against it — regenerating it after starting generation would silently invalidate the train/OOD split guarantee the whole design depends on.
 
 ---
 
@@ -164,7 +166,7 @@ Key points:
 - Fault application (`apply_fault_to_prompt`, `build_prompt`'s corruption hooks) is unchanged — these operate on prompt text and are backend-agnostic.
 - **New risk specific to this batched code, not present in the old sequential design**: `run_batch_of_trials` processes multiple trials with potentially *different* `fault_config`s in a single `llm.generate()` call, matching each prompt to its own `SamplingParams` positionally (e.g. one trial's noise fault sets `node_temp = NOISE_TEMPERATURE` for its prompt while another trial in the same batch keeps `temperature` at default). This should work correctly since each prompt/params pair is independent, but it is untested new code doing exactly the kind of per-trial-scoped-state handling that already produced one silent bug this session (the `build_prompt` continuation-cue regression, Section 9.4 of `correct_project_context.md`) — see Section 5.5's smoke test, which now explicitly checks this rather than assuming it's fine because it "looks obviously correct."
 
-**Not yet written.** This is the concrete next implementation step once the topology pool (Section 2) exists and the Qwen2.5 recalibration (Section 0.1) has run.
+**Not yet written.** The topology pool (Section 2) is done and the Qwen2.5 calibration pilot (Section 0.1) has run once (n=3 questions, real results in `correct_project_context.md` Section 10.2 — token budgets confirmed sufficient, no changes needed there). This is now the single concrete next implementation step.
 
 ---
 
@@ -227,10 +229,10 @@ This is a cheap way to catch a vLLM/T4/Qwen2.5 integration problem in minutes in
 
 ## 7. Definition of done for this phase
 
-- [ ] *(Optional, non-blocking)* gpt-oss/Ollama combined-fix pilot (`logs/pilot_combined_v2.jsonl`) — nice to finish reviewing, but its original purpose (reasoning-model fallback validation) is moot for Qwen2.5; do not wait on it
-- [ ] `scripts/generate_topology_pool.py` written, run, output frozen to `data/topology_pool.json`, committed
-- [ ] **Qwen2.5-7B-Instruct recalibration (Section 0.1)** done: token budgets set from real measurement, marker-compliance and `parse_retrieved_items` spot-checked, k=5 achievable-value-set confirmed, `NODE_THRESHOLDS` re-derived from Qwen2.5's own clean baseline
-- [ ] `scripts/run_study_vllm.py` (or equivalent) written per Section 4.3
+- [x] *(Optional, non-blocking)* gpt-oss/Ollama combined-fix pilot (`logs/pilot_combined_v2.jsonl`) — completed
+- [x] `dataset/generate_topology_pool.py` written, run, output frozen to `dataset/topology_pool.json`, committed (14 train + 6 OOD)
+- [x] **Qwen2.5-7B-Instruct recalibration (Section 0.1) — partial, n=3 questions**: token budgets confirmed sufficient from real measurement (0/45 empty samples), marker-compliance confirmed (15/15), `parse_retrieved_items` spot-checked clean on real output. **Not done**: `NODE_THRESHOLDS` re-derivation (deferred — not needed for generation since diagnosis is disabled; n=3 is too small a sample anyway, see `correct_project_context.md` Section 10.2). Recommend a larger calibration pass (~15-20 questions) before ever trusting thresholds for Qwen2.5.
+- [ ] `scripts/run_study_vllm.py` (or equivalent) written per Section 4.3 — **the current next concrete task**
 - [ ] Kaggle smoke-test kernel (Section 5.5) passes — GPU confirmed in use, output format confirmed compatible with `verify_results.py`
 - [ ] Full generation run completes (or resumes cleanly across multiple Kaggle sessions if needed)
 - [ ] `verify_results.py` run on the final combined log, numbers match the intended split sizes
