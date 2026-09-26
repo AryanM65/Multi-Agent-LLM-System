@@ -113,19 +113,38 @@ Each fault can target **any node** in the topology (not just the Retriever), and
 ```
 multi-agent-llm-system/
 ├── README.md                          ← You are here
+├── docs/                              ← All project documentation, organized by topic
+│   ├── README.md                      ← Documentation index
+│   ├── dataset/
+│   │   └── dataset_description.md     ← Full schema doc: fields, input features, ground truth, worked example
+│   ├── model/
+│   │   ├── model.md                   ← GNN training plan: deep background + rationale
+│   │   ├── model-plan.md              ← GNN training plan: practical steps + code
+│   │   └── futurework.md              ← Post-training roadmap (multi-fault, dataset expansion, etc.)
+│   ├── infra/
+│   │   └── kaggle-and-lightning-setup.md  ← How to run generation on Kaggle/Lightning AI, all practices + errors resolved
+│   ├── pipeline/
+│   │   ├── architecture.md            ← Topology engine, uncertainty redesign, fault injection design
+│   │   ├── local-dev-guide.md         ← Running phases locally (mock mode, MLX, Ollama)
+│   │   └── standalone-agents.md       ← Single-agent CLI pipelines (src/pipelines/, run_agent.py)
+│   └── results/
+│       └── study1-local-results.md    ← Original local Study 1 confusion matrix + findings
+│
 ├── dataset/                           ← Phase 2 output: the labeled training dataset
 │   ├── trials.jsonl                   ← 493 labeled trial records
 │   ├── skipped.jsonl                  ← 15 skipped/invalid trial records (with reason)
 │   ├── topology_pool.json             ← 20 topologies (14 train + 6 OOD), serialized DAGs
-│   ├── dataset_description.md         ← Full schema doc: fields, input features, ground truth, worked example
 │   └── generate_topology_pool.py      ← Regenerates topology_pool.json
 ├── dataset.zip                        ← Zipped copy of dataset/ for easy download
 │
+├── model/                             ← GNN fault-localization model (data loading, GNN, training, eval)
+│   ├── data/
+│   ├── gnn.py
+│   ├── train.py
+│   └── evaluate.py
+│
 └── btp-pipeline/
     ├── requirements.txt               ← Python dependencies
-    ├── plan.md                        ← Dataset-generation planning doc (Kaggle/vLLM decision history)
-    ├── correct_project_context.md     ← Running project context/status log
-    ├── HANDOFF_2026-09-25.md          ← Detailed session handoff: infra gotchas, bug writeups, timings
     │
     ├── src/                           ← Core library
     │   ├── config.py                  ← All tuneable constants (model, k, thresholds, backend, paths)
@@ -143,7 +162,7 @@ multi-agent-llm-system/
     │   ├── run_study_vllm.py          ← GPU-batched multi-topology generation (used for the dataset)
     │   ├── calibrate_vllm_model.py    ← vLLM backend calibration script
     │   ├── verify_results.py          ← Post-generation dataset sanity/statistics checker
-    │   └── sample_examples.py         ← Builds the 30-question HotpotQA source pool
+    │   └── sample_examples.py         ← Builds the HotpotQA source question pool
     │
     ├── data/
     │   ├── hotpotqa_distractor/       ← Cached dataset (gitignored)
@@ -267,11 +286,11 @@ python scripts/verify_results.py --trials dataset/trials.jsonl --skipped dataset
 
 ## 8. Dataset Generation Phase — Complete
 
-The labeled dataset for training a topology-aware fault classifier/localizer is complete and checked into `dataset/` on the `dataset` branch (**493 trial records**, **15 skipped**). Full field-by-field schema, input-feature spec, ground-truth spec, and a worked example are in **[`dataset/dataset_description.md`](dataset/dataset_description.md)**.
+The labeled dataset for training a topology-aware fault classifier/localizer is complete and checked into `dataset/` on the `dataset` branch (**493 trial records**, **15 skipped**). Full field-by-field schema, input-feature spec, ground-truth spec, and a worked example are in **[`docs/dataset/dataset_description.md`](docs/dataset/dataset_description.md)**.
 
 ### 8.1 Backend Migration: MLX/Ollama → vLLM on Kaggle GPU
 
-Generating hundreds of trials across 20 topologies at k=5 samples/node requires real GPU throughput and batching, which the local MLX/Ollama backends don't provide. The plan (documented in `btp-pipeline/plan.md`) considered serving the existing MXFP4-quantized model via vLLM on Kaggle's free T4 GPUs, but **T4 (compute capability 7.5) cannot run MXFP4** — that format needs Hopper/Ada-class hardware. The backend was switched to **`Qwen/Qwen2.5-7B-Instruct-AWQ`** (4-bit AWQ, `float16`), which fits T4's 16GB VRAM with room for KV-cache, and calibrated before the full run (`scripts/calibrate_vllm_model.py`).
+Generating hundreds of trials across 20 topologies at k=5 samples/node requires real GPU throughput and batching, which the local MLX/Ollama backends don't provide. The plan considered serving the existing MXFP4-quantized model via vLLM on Kaggle's free T4 GPUs, but **T4 (compute capability 7.5) cannot run MXFP4** — that format needs Hopper/Ada-class hardware. The backend was switched to **`Qwen/Qwen2.5-7B-Instruct-AWQ`** (4-bit AWQ, `float16`), which fits T4's 16GB VRAM with room for KV-cache, and calibrated before the full run (`scripts/calibrate_vllm_model.py`).
 
 Generation used `llm.chat(List[List[message]], List[SamplingParams])` for genuine cross-trial batching — all pending LLM calls across a topology round are dispatched together rather than sequentially, which is what makes hundreds of trials on a free-tier GPU tractable.
 
@@ -303,7 +322,7 @@ Fixing bug #1 and #2 together increased ceiling-fault representation from 20 →
 | Backend | vLLM, `Qwen/Qwen2.5-7B-Instruct-AWQ` |
 | GPU | Kaggle T4 |
 
-Full per-fault-type and per-topology breakdowns, the record schema, input-feature vector spec (`[lexical_uncertainty, semantic_uncertainty, jaccard_uncertainty, role_one_hot×3]` per node + `edge_index` from the topology), ground-truth spec, and a worked example mapping a raw record to a GNN feature vector are all in **[`dataset/dataset_description.md`](dataset/dataset_description.md)**.
+Full per-fault-type and per-topology breakdowns, the record schema, input-feature vector spec (`[lexical_uncertainty, semantic_uncertainty, jaccard_uncertainty, role_one_hot×3]` per node + `edge_index` from the topology), ground-truth spec, and a worked example mapping a raw record to a GNN feature vector are all in **[`docs/dataset/dataset_description.md`](docs/dataset/dataset_description.md)**.
 
 ### 8.5 Kaggle Workflow Notes
 
@@ -315,7 +334,7 @@ Practical lessons from running generation on Kaggle, kept here since they'll mat
 - **Verify dataset pushes**: `kaggle datasets version` can report "Upload successful" before the new content is actually live; always verify with a fresh `kaggle datasets download --unzip` into a clean directory, or poll `kaggle datasets files` until it reflects the new upload.
 - **Dataset-as-code-delivery pattern**: rather than committing generation code to a Kaggle Notebook directly, the pipeline code was packaged as a Kaggle Dataset and mounted into a separate Kernel — this makes iterating on code (push a new Dataset version) independent from managing Kernel runs.
 
-Full infra/bug detail: `btp-pipeline/HANDOFF_2026-09-25.md`.
+Full infra/bug detail, including the Lightning AI parallel-run setup: [`docs/infra/kaggle-and-lightning-setup.md`](docs/infra/kaggle-and-lightning-setup.md).
 
 ---
 
@@ -371,7 +390,7 @@ The three bugs in [Section 8.3](#83-bugs-found-and-fixed-during-data-quality-aud
 ## 11. Output File Formats
 
 ### `dataset/trials.jsonl` (Phase 2 — primary training dataset)
-See **[`dataset/dataset_description.md`](dataset/dataset_description.md)** for the full field-by-field schema, including topology metadata, per-node uncertainty triples, fault config, and ground-truth labels.
+See **[`docs/dataset/dataset_description.md`](docs/dataset/dataset_description.md)** for the full field-by-field schema, including topology metadata, per-node uncertainty triples, fault config, and ground-truth labels.
 
 ### `logs/trials.jsonl` (local/dev runs)
 One JSON record per line:
@@ -424,7 +443,7 @@ Key constants in `src/config.py`:
 ## 13. Next Steps (GNN Training & Beyond)
 
 ### Immediate
-- [ ] **Train a GNN fault classifier/localizer** on `dataset/trials.jsonl` using the per-node feature vectors and `edge_index` spec in `dataset_description.md`; hold out the 6 OOD topologies for generalization testing.
+- [ ] **Train a GNN fault classifier/localizer** on `dataset/trials.jsonl` using the per-node feature vectors and `edge_index` spec in `docs/dataset/dataset_description.md`; hold out the 6 OOD topologies for generalization testing.
 - [ ] **k-fold cross-validation** given the dataset's size (493 records) — a single train/test split risks high-variance evaluation at this scale.
 - [ ] **Extend the multi-parent contamination fix** — currently only the first parent's output is corrupted when a node has multiple parents; extend to corrupt all parents for full topology coverage.
 

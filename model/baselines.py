@@ -3,7 +3,7 @@
 naive_max_uncertainty_baseline: "guess whichever node has the highest lexical
 uncertainty." No learning, no training data needed. If this already scores
 well, a GNN isn't earning its complexity; if it fails in specific ways
-(see model-plan.md Step 4/8), that's exactly what the GNN needs to fix.
+(see docs/model/model-plan.md Step 4/8), that's exactly what the GNN needs to fix.
 """
 import torch
 

@@ -1,11 +1,11 @@
 """Turn each trial record + its topology's structure into one PyG graph.
 
-Feature vector per node (8-dim), see model-plan.md Step 2 for the full
+Feature vector per node (8-dim), see docs/model/model-plan.md Step 2 for the full
 explanation with a worked example:
     [lexical_unc, semantic_unc, jaccard_unc, has_semantic, has_jaccard,
      is_retriever, is_reasoner, is_writer]
 
-Known, accepted data quirk (see btp-pipeline/model.md Section 3, item 5):
+Known, accepted data quirk (see docs/model/model.md Section 3, item 5):
 `retriever_c` in the `star` and `triple_retriever_fanin` topologies is never
 a true fault target. We don't special-case it here (the graph is still built
 normally, features and all) -- it's handled at evaluation time instead, by

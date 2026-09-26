@@ -6,7 +6,7 @@
 
 ## 0. Final generation results (2026-09-25) — READ THIS FIRST
 
-**`dataset/trials.jsonl` is the SECOND, corrected generation run — not the first.** The first full run (410 records) was generated, then found via direct content inspection to have **two real bugs** silently affecting the `ceiling` fault type specifically (see `correct_project_context.md` Section 10 / `HANDOFF_2026-09-25.md` for full root-cause detail — summarized here):
+**`dataset/trials.jsonl` is the SECOND, corrected generation run — not the first.** The first full run (410 records) was generated, then found via direct content inspection to have **two real bugs** silently affecting the `ceiling` fault type specifically (full root-cause detail summarized here):
 
 1. `inject_ceiling()` dispatched retriever-vs-downstream by comparing the node's **ID string** (`"retriever"`) instead of its **role** — broke ceiling faults on every topology except the plain 3-node `chain` (custom node IDs like `retriever_a`, `n0_r` always fell through to an "unsupported" skip).
 2. The hardened instruction for downstream (Reasoner/Writer) ceiling faults was computed but **never actually applied to the prompt** — every downstream-targeted ceiling trial ran with zero real fault, despite being labeled `"ceiling"`.
@@ -35,7 +35,7 @@ A third, lower-severity gap (contamination substitute bank had no safeguard agai
 
 ## 1. What this dataset is for
 
-Training/evaluation data for a downstream fault-attribution model (naive baseline / belief propagation / GNN — see `correct_project_context.md` Section 1) that, given a multi-agent LLM pipeline's per-node uncertainty signals, predicts which node in the pipeline was the true source of a fault. Each **trial** is one execution of one topology on one question, optionally with one fault injected at one target node. Each trial produces a small labeled graph: nodes = pipeline agent roles (Retriever/Reasoner/Writer, however many the topology has), edges = who feeds whom, and each node carries uncertainty features derived from `k` self-consistency samples.
+Training/evaluation data for a downstream fault-attribution model (naive baseline / belief propagation / GNN) that, given a multi-agent LLM pipeline's per-node uncertainty signals, predicts which node in the pipeline was the true source of a fault. Each **trial** is one execution of one topology on one question, optionally with one fault injected at one target node. Each trial produces a small labeled graph: nodes = pipeline agent roles (Retriever/Reasoner/Writer, however many the topology has), edges = who feeds whom, and each node carries uncertainty features derived from `k` self-consistency samples.
 
 ---
 
@@ -195,13 +195,13 @@ Logged whenever a fault injection was attempted but invalid — **never silently
 
 ## 8. What's deliberately absent: diagnosis
 
-`diagnose_trace()` (the retry-then-reprobe heuristic that tries to *guess* `true_label` from uncertainty patterns) is **never invoked** during generation — confirmed by `run_study_vllm.py` never importing it. This was a deliberate decision (see `correct_project_context.md` Section 9.6/`plan.md`): the dataset's purpose is providing raw, verified features for training a *better* fault-attribution method, not pre-computing a weaker baseline's guess into every row. If you want `diagnose_trace`'s output as a comparison baseline later, run it separately as a post-hoc pass over the generated data (or re-run generation with `run_study1.py`/`run_study2.py`, which do call it, on a subset) — don't expect `diagnosed_label` to ever be populated in this dataset.
+`diagnose_trace()` (the retry-then-reprobe heuristic that tries to *guess* `true_label` from uncertainty patterns) is **never invoked** during generation — confirmed by `run_study_vllm.py` never importing it. This was a deliberate decision (a deliberate design decision, not an oversight): the dataset's purpose is providing raw, verified features for training a *better* fault-attribution method, not pre-computing a weaker baseline's guess into every row. If you want `diagnose_trace`'s output as a comparison baseline later, run it separately as a post-hoc pass over the generated data (or re-run generation with `run_study1.py`/`run_study2.py`, which do call it, on a subset) — don't expect `diagnosed_label` to ever be populated in this dataset.
 
 ---
 
 ## 9. Known data-quality notes (read before feature engineering)
 
-- **The Retriever tends to echo full paragraphs rather than filtering to single relevant sentences** (confirmed via real calibration run against Qwen2.5, see `correct_project_context.md` Section 10.2) — despite the prompt asking for "only the relevant sentences." This means Retriever `samples` are often longer/noisier than originally designed for, and `jaccard_uncertainties`/multi-item parsing will be empty more often than intended (a full-paragraph echo is usually parsed as one item, not several). Lexical/semantic uncertainty on the Retriever still works correctly, just reflects paragraph-level rather than sentence-level (dis)agreement.
+- **The Retriever tends to echo full paragraphs rather than filtering to single relevant sentences** (confirmed via real calibration run against Qwen2.5) — despite the prompt asking for "only the relevant sentences." This means Retriever `samples` are often longer/noisier than originally designed for, and `jaccard_uncertainties`/multi-item parsing will be empty more often than intended (a full-paragraph echo is usually parsed as one item, not several). Lexical/semantic uncertainty on the Retriever still works correctly, just reflects paragraph-level rather than sentence-level (dis)agreement.
 - **`used_thinking_fallback` will be near-universally empty for this dataset** (Qwen2.5, not a reasoning model) — do not expect it to carry signal; it's a schema leftover from the earlier gpt-oss-era pipeline.
 - **`topology_id` is the only link to train/OOD split** — join against `topology_pool.json`'s `"split"` field; it is not duplicated into each trial record. Do this join once when loading the dataset, not per-row at training time.
 - **A question can appear in multiple topologies** (all 30 questions are shared across the topology pool, per the coverage strategy in Section 4) — if you do any train/val split *within* the train-topology trials, consider splitting by question as well as by trial, to avoid the same question's phrasing appearing in both halves.

@@ -1,7 +1,7 @@
 """Evaluation metrics: top-1/top-2 accuracy, plus y_true/y_pred for
 precision/recall/F1/confusion-matrix via sklearn.metrics.
 
-Known dataset-specific rule (see model-plan.md Step 7, btp-pipeline/model.md
+Known dataset-specific rule (see docs/model/model-plan.md Step 7, docs/model/model.md
 Section 3 item 5): `retriever_c` in `star`/`triple_retriever_fanin` is never
 a true fault target. `excluded_node_by_topology` lets a caller drop that
 class index from consideration for those two topologies specifically when

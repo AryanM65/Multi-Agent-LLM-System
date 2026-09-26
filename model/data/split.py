@@ -4,7 +4,7 @@
   164 trials). Never touched during training or hyperparameter tuning.
 - Train/val = the remaining 14 topologies' graphs (329 trials), split by
   QUESTION (not by trial) so the same question's phrasing never appears in
-  both train and val -- dataset_description.md Section 9 flags this risk
+  both train and val -- docs/dataset/dataset_description.md Section 9 flags this risk
   explicitly (all 30 questions recur across many topologies/fault conditions).
 """
 import random

@@ -1,6 +1,6 @@
 # Model Training Plan — Fault-Localization Model over the Generated Dataset
 
-> Written 2026-09-26. This is the plan for the phase that comes *after* dataset generation (see `HANDOFF_2026-09-25.md`, `dataset/dataset_description.md`). No training code exists yet as of this writing — this document is the step-by-step spec for building it. Read `dataset/dataset_description.md` Section 6 and 11 first if you haven't; it defines exactly what's input, what's label, and what's bookkeeping-only in each record.
+> Written 2026-09-26. This is the plan for the phase that comes *after* dataset generation. No training code exists yet as of this writing — this document is the step-by-step spec for building it. Read [`docs/dataset/dataset_description.md`](../dataset/dataset_description.md) Section 6 and 11 first if you haven't; it defines exactly what's input, what's label, and what's bookkeeping-only in each record. For the Kaggle/Lightning AI generation infra itself, see [`docs/infra/kaggle-and-lightning-setup.md`](../infra/kaggle-and-lightning-setup.md).
 
 ---
 
@@ -158,7 +158,7 @@ Build these in order — each is a checkpoint, not throwaway work, since the nai
 
 1. **Naive/threshold baseline**: per-node uncertainty vs. a fixed or per-role threshold, no learning — "the node with max uncertainty is the fault source." Trivial to implement, gives an immediate sanity floor. Also re-derive `diagnose_trace`'s retry-then-reprobe heuristic as a second baseline if time permits (it's in `src/diagnose.py`, never invoked during generation — this is exactly the separate post-hoc pass `dataset_description.md` Section 8 describes).
 2. **Non-graph ML baseline**: flatten each trial into a fixed-size feature table (won't naturally generalize across variable node-count topologies, so this only makes sense evaluated *within* a fixed topology, or with padding/masking to a max node count) — logistic regression / gradient-boosted trees (XGBoost/LightGBM) per-node, framed as binary "is this node the fault" classification. Useful as a second sanity check that graph structure is actually adding value later.
-3. **GNN (the real target)**: message-passing network over the topology graph (edges from `topology_pool.json`), node classification head. This is the only architecture that naturally handles variable node count/structure and can generalize to the 6 unseen OOD topologies — the central point of the whole thesis (per `correct_project_context.md` Section 1).
+3. **GNN (the real target)**: message-passing network over the topology graph (edges from `topology_pool.json`), node classification head. This is the only architecture that naturally handles variable node count/structure and can generalize to the 6 unseen OOD topologies — the central point of the whole thesis.
 
 Recommended GNN specifics:
 - **Framework**: PyTorch Geometric (PyG) — standard, well-documented, easiest to iterate on for a thesis timeline.
@@ -291,7 +291,7 @@ These are unresolved in the data/schema layer, deliberately left to this phase �
 
 - **Dataset size (493 records) is small for a GNN** — expect to lean on: strong regularization, k-fold cross-validation within the train split (rather than a single train/val split) for more reliable hyperparameter selection, and treating results with appropriate statistical caution (report variance across folds/seeds, not a single run's number) in the write-up.
 - **No GPU needed for this phase** — unlike dataset generation (which needed Kaggle's T4s for the LLM), training a small GNN on ~500 tiny graphs runs in seconds-to-minutes on CPU. Don't over-invest in Kaggle/cloud infra here; local `btp-pipeline/` environment is fine.
-- **Reuse `scripts/verify_results.py`-style rigor**: this project has a demonstrated pattern (see the three real bugs found in Section 3 of `HANDOFF_2026-09-25.md`) of prose/summary claims not matching underlying data. Apply the same discipline to model evaluation — don't trust a single aggregate metric; spot-check individual predictions against the raw trial record before reporting a result.
+- **Reuse `scripts/verify_results.py`-style rigor**: this project has a demonstrated pattern (see [`docs/dataset/dataset_description.md`](../dataset/dataset_description.md) §0's bug-fix writeup) of prose/summary claims not matching underlying data. Apply the same discipline to model evaluation — don't trust a single aggregate metric; spot-check individual predictions against the raw trial record before reporting a result.
 
 ---
 
