@@ -186,12 +186,22 @@ def build_prompt(
             fault_config is not None
             and fault_config.get("type") in ("contamination", "ceiling")
             and fault_config.get("target_node") == node_id
-            and fault_config.get("_corrupted_input") is not None
         ):
-            # The corrupted replacement was pre-computed and stored in
-            # fault_config["_corrupted_input"] by run_pipeline before
-            # calling build_prompt — use it here.
-            return fault_config["_corrupted_input"]
+            # Multi-parent fix (2026-09-26): "_corrupted_inputs" (plural) is
+            # a dict keyed by parent_id, each parent independently corrupted
+            # -- checked first so a multi-parent node's OTHER (non-corrupted)
+            # parents still show their real clean output, not a duplicate of
+            # this pid's corruption. "_corrupted_input" (singular) is kept as
+            # a fallback for the single-parent case / older callers
+            # (run_study1.py, run_study2.py) that don't populate the plural
+            # key.
+            corrupted_map = fault_config.get("_corrupted_inputs")
+            if corrupted_map is not None:
+                if pid in corrupted_map:
+                    return corrupted_map[pid]
+                return parent_output
+            if fault_config.get("_corrupted_input") is not None:
+                return fault_config["_corrupted_input"]
         return parent_output
 
     if not parent_ids:

@@ -165,26 +165,35 @@ def resolve_fault_trial(
             parent_ids = parents_of(topo, tn)
             if not parent_ids:
                 return None  # contamination_no_parent_for_<tn>
-            parent_id = parent_ids[0]
-            parent_role = topo.nodes[parent_id].role
-            # Clean parent output needed to corrupt against -- one small
-            # sequential run_pipeline call, same as run_study2.py does. Not
-            # batched: this is a dependency-resolution step, not the main
-            # generation workload, and keeping it sequential reuses the
-            # already-tested run_pipeline path exactly.
+            # Full multi-parent fix (2026-09-26): every parent feeding the
+            # targeted node gets its OWN independent corruption, drawn from
+            # its own role/node-id's substitute bank. Previously only
+            # parent_ids[0] was corrupted, and (a worse bug found while
+            # fixing this) pipeline.build_prompt's `_maybe_corrupt` applied
+            # that single corrupted string to EVERY parent's displayed input
+            # line regardless of which parent it was rendering -- so a
+            # 2-parent contamination trial actually showed the identical
+            # corrupted text twice, not "one corrupted + one clean" as
+            # previously documented. `_corrupted_inputs` (plural, dict keyed
+            # by parent_id) below fixes both: each parent is corrupted
+            # independently and pipeline.py now looks up per-pid.
             clean_trace = run_pipeline(topo, question, gold_ctx, k=k, fault_config=None)
-            clean_parent_result = clean_trace.node_results.get(parent_id)
-            if clean_parent_result is None:
-                return None  # contamination_parent_not_in_trace
-            bank = (substitute_bank or {}).get(parent_id, (substitute_bank or {}).get(parent_role, []))
-            injected = inject_contamination_downstream(
-                example, tn, clean_parent_result.output, bank, rng)
-            if injected is None:
-                return None  # contamination_empty_substitute_bank
+            corrupted_inputs = {}
+            for parent_id in parent_ids:
+                parent_role = topo.nodes[parent_id].role
+                clean_parent_result = clean_trace.node_results.get(parent_id)
+                if clean_parent_result is None:
+                    return None  # contamination_parent_not_in_trace
+                bank = (substitute_bank or {}).get(parent_id, (substitute_bank or {}).get(parent_role, []))
+                injected = inject_contamination_downstream(
+                    example, tn, clean_parent_result.output, bank, rng)
+                if injected is None:
+                    return None  # contamination_empty_substitute_bank
+                corrupted_inputs[parent_id] = injected["_corrupted_input"]
             run_fault_config = {
                 "type": "contamination",
                 "target_node": tn,
-                "_corrupted_input": injected["_corrupted_input"],
+                "_corrupted_inputs": corrupted_inputs,
             }
 
     else:  # ceiling
@@ -323,6 +332,30 @@ def select_fault_conditions(topo: Topology, conditions: List[Optional[dict]],
     return selected
 
 
+def fallback_fault_conditions_for_node(node_id: str, primary_type: str,
+                                        conditions: List[Optional[dict]]) -> List[dict]:
+    """Coverage-gap fix (2026-09-26): previously, if a node's single cyclically-
+    assigned fault type (select_fault_conditions above) failed injection for
+    EVERY example (observed for `retriever_c` in `star`/`triple_retriever_fanin`
+    -- ceiling injection failed there 11/11 times, so those nodes ended up with
+    ZERO fault trials at all despite the "every node gets >=1 fault type"
+    coverage intent), there was no retry -- the node was silently left
+    uncovered. Returns the OTHER fault-type conditions for this node, in cycle
+    order, to try as a fallback if the primary type turns out to fail for
+    every example in this topology.
+    """
+    fault_types_cycle = ["noise", "contamination", "ceiling"]
+    start = fault_types_cycle.index(primary_type)
+    ordered_types = fault_types_cycle[start + 1:] + fault_types_cycle[:start]
+    fallbacks = []
+    for ft in ordered_types:
+        match = next((c for c in conditions
+                      if c is not None and c["target_node"] == node_id and c["type"] == ft), None)
+        if match:
+            fallbacks.append(match)
+    return fallbacks
+
+
 # ---------------------------------------------------------------------------
 # Per-topology driver
 # ---------------------------------------------------------------------------
@@ -354,18 +387,47 @@ def run_topology(topo: Topology, examples: list, k: int, batch_size: int,
         log_file.flush()
 
     # --- Phase 2: resolve every fault trial's injection, then batch-execute ---
+    # Coverage-gap fix (2026-09-26): if a node's assigned fault type fails
+    # injection for EVERY example, retry with the next fault type in the
+    # cycle for that node specifically, instead of leaving it with zero
+    # fault trials -- see fallback_fault_conditions_for_node's docstring.
     resolved_specs = []
+    pending_skips = []  # (ex, fc, reason) -- only written to skip_file once we
+                         # know whether a fallback for that (ex, node) ever succeeded
+    resolved_count_by_node: Dict[str, int] = {}
+
+    def try_condition(ex, fc):
+        resolved = resolve_fault_trial(ex, fc, topo, k, substitute_bank)
+        if resolved is None:
+            reason = f"{fc['type']}_injection_failed_{fc['target_node']}"
+            pending_skips.append((ex, fc, reason))
+            return False
+        resolved_specs.append(resolved)
+        resolved_count_by_node[fc["target_node"]] = resolved_count_by_node.get(fc["target_node"], 0) + 1
+        return True
+
     for ex in examples:
         for fc in conditions:
             if fc is None:
                 continue
-            resolved = resolve_fault_trial(ex, fc, topo, k, substitute_bank)
-            if resolved is None:
-                reason = f"{fc['type']}_injection_failed_{fc['target_node']}"
-                skip_file.write(json.dumps(_skip_record(
-                    str(ex.get("_id", ex["question"])), ex["question"], fc, reason)) + "\n")
+            try_condition(ex, fc)
+
+    if not full_grid:
+        for fc in conditions:
+            if fc is None:
                 continue
-            resolved_specs.append(resolved)
+            node_id, primary_type = fc["target_node"], fc["type"]
+            if resolved_count_by_node.get(node_id, 0) > 0:
+                continue  # this node already has at least one real fault trial
+            for fallback_fc in fallback_fault_conditions_for_node(node_id, primary_type, conditions):
+                for ex in examples:
+                    try_condition(ex, fallback_fc)
+                if resolved_count_by_node.get(node_id, 0) > 0:
+                    break  # this fallback type worked for at least one example -- stop trying more types
+
+    for ex, fc, reason in pending_skips:
+        skip_file.write(json.dumps(_skip_record(
+            str(ex.get("_id", ex["question"])), ex["question"], fc, reason)) + "\n")
     skip_file.flush()
 
     for batch_start in tqdm(range(0, len(resolved_specs), batch_size),

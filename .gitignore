@@ -29,8 +29,16 @@ btp-pipeline/data/
 *.swp
 *.swo
 
+# Secrets -- never commit
+lightning_credentials.json
+kaggle_credentials*.json
+*.kaggle.json
+
 # Jupyter
 .ipynb_checkpoints/
+
+# Trained model checkpoints -- regenerable via model/train.py, not source
+model/checkpoints/
 
 # Logs and results ARE committed (they are the research output)
 # Uncomment the lines below if you prefer to gitignore them
