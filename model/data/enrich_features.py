@@ -78,12 +78,17 @@ def compute_item_frequencies(trial: dict, topology: dict) -> dict:
     return freqs
 
 
-def compute_node_embeddings(trial: dict, topology: dict, embedder) -> dict:
-    """Mean-pooled sentence-embedding across a node's own k samples -- the
-    real per-node signal a scalar uncertainty number throws away. See
-    docs/model/futurework.md Section 2 / the embedding-features experiment.
+def compute_node_embeddings(trial: dict, topology: dict, embedder) -> tuple:
+    """Mean-pooled AND per-dim-std sentence-embeddings across a node's own k
+    samples. Mean is the "central" signal a scalar uncertainty number throws
+    away; std is an embedding-space analogue of self-consistency uncertainty
+    (how much do the k samples disagree, in a 384-dim sense rather than one
+    scalar) -- a genuinely different signal from the mean, not just "more of
+    the same." See docs/model/futurework.md Section 2.
+
+    Returns (mean_embeddings, std_embeddings), each {node: [384 floats]}.
     """
-    embeddings = {}
+    mean_embeddings, std_embeddings = {}, {}
     all_texts, spans = [], []  # spans: (node, start, end) into all_texts
     for node in topology["nodes"]:
         node_samples = trial["samples"].get(node)
@@ -94,13 +99,17 @@ def compute_node_embeddings(trial: dict, topology: dict, embedder) -> dict:
         spans.append((node, start, len(all_texts)))
 
     if not all_texts:
-        return embeddings
+        return mean_embeddings, std_embeddings
 
     all_embs = embedder.encode(all_texts, normalize_embeddings=True)
     for node, start, end in spans:
-        mean_vec = all_embs[start:end].mean(axis=0)
-        embeddings[node] = [round(float(x), 5) for x in mean_vec]
-    return embeddings
+        node_embs = all_embs[start:end]
+        mean_embeddings[node] = [round(float(x), 5) for x in node_embs.mean(axis=0)]
+        # std of a single sample (k=1, e.g. Writer/root nodes without repeats
+        # in some topologies) is undefined -- 0 is the correct "no disagreement
+        # observed" value here, not a missing-data placeholder.
+        std_embeddings[node] = [round(float(x), 5) for x in node_embs.std(axis=0)]
+    return mean_embeddings, std_embeddings
 
 
 def enrich(trials: list, topologies: dict, with_embeddings: bool = True) -> list:
@@ -110,7 +119,9 @@ def enrich(trials: list, topologies: dict, with_embeddings: bool = True) -> list
         trial["inference_gaps"] = compute_inference_gaps(trial, topo, embedder)
         trial["item_frequencies"] = compute_item_frequencies(trial, topo)
         if with_embeddings:
-            trial["node_embeddings"] = compute_node_embeddings(trial, topo, embedder)
+            mean_emb, std_emb = compute_node_embeddings(trial, topo, embedder)
+            trial["node_embeddings"] = mean_emb
+            trial["node_embedding_std"] = std_emb
         if (i + 1) % 100 == 0:
             print(f"  enriched {i + 1}/{len(trials)}", flush=True)
     return trials

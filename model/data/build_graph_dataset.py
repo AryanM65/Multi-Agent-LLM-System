@@ -27,7 +27,8 @@ EMBEDDING_DIM = 384
 NO_FAULT_LABEL = "__no_fault__"
 
 
-def node_feature_vector(trial: dict, node_id: str, role: str, use_embeddings: bool = False) -> list:
+def node_feature_vector(trial: dict, node_id: str, role: str, use_embeddings: bool = False,
+                        use_embedding_variance: bool = False) -> list:
     lex = trial["uncertainties"].get(node_id)
     lex = lex if lex is not None else 0.0
 
@@ -59,15 +60,24 @@ def node_feature_vector(trial: dict, node_id: str, role: str, use_embeddings: bo
 
     emb = trial.get("node_embeddings", {}).get(node_id)
     emb = emb if emb is not None else [0.0] * EMBEDDING_DIM
-    return scalar_feats + list(emb)
+    feats = scalar_feats + list(emb)
+
+    if use_embedding_variance:
+        std_emb = trial.get("node_embedding_std", {}).get(node_id)
+        std_emb = std_emb if std_emb is not None else [0.0] * EMBEDDING_DIM
+        feats = feats + list(std_emb)
+
+    return feats
 
 
-def trial_to_graph(trial: dict, topology: dict, bidirectional: bool = False, use_embeddings: bool = False) -> Data:
+def trial_to_graph(trial: dict, topology: dict, bidirectional: bool = False, use_embeddings: bool = False,
+                   use_embedding_variance: bool = False) -> Data:
     node_ids = list(topology["nodes"].keys())
     idx_of = {n: i for i, n in enumerate(node_ids)}
 
     x = [
-        node_feature_vector(trial, n, topology["nodes"][n]["role"], use_embeddings=use_embeddings)
+        node_feature_vector(trial, n, topology["nodes"][n]["role"], use_embeddings=use_embeddings,
+                            use_embedding_variance=use_embedding_variance)
         for n in node_ids
     ]
 
@@ -103,7 +113,8 @@ def trial_to_graph(trial: dict, topology: dict, bidirectional: bool = False, use
     )
 
 
-def build_dataset(trials: list, topologies: dict, bidirectional: bool = False, use_embeddings: bool = False) -> list:
+def build_dataset(trials: list, topologies: dict, bidirectional: bool = False, use_embeddings: bool = False,
+                  use_embedding_variance: bool = False) -> list:
     """Returns a list of PyG Data graphs, one per trial, with `y` set to a
     per-graph node-class-index (0..num_nodes-1), or the index for
     "no fault" if the trial is a clean control -- see NO_FAULT_LABEL.
@@ -114,7 +125,8 @@ def build_dataset(trials: list, topologies: dict, bidirectional: bool = False, u
     graphs = []
     for trial in trials:
         topo = topologies[trial["topology_id"]]
-        g = trial_to_graph(trial, topo, bidirectional=bidirectional, use_embeddings=use_embeddings)
+        g = trial_to_graph(trial, topo, bidirectional=bidirectional, use_embeddings=use_embeddings,
+                          use_embedding_variance=use_embedding_variance)
 
         if not g.target_node:
             # "no fault" is its own class, appended after all real nodes

@@ -8,28 +8,36 @@ softmax over N+1 classes: N real nodes + "clean, no fault".
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATConv, GCNConv, SAGEConv
 
 
 FAULT_TYPES = ["clean", "noise", "contamination", "ceiling"]
 
+CONV_CLASSES = {"gat": GATConv, "gcn": GCNConv, "sage": SAGEConv}
+
 
 class FaultLocalizerGNN(nn.Module):
-    def __init__(self, in_dim=8, hidden_dim=32, num_layers=2, dropout=0.2, multi_task=False):
+    def __init__(self, in_dim=8, hidden_dim=32, num_layers=2, dropout=0.2, multi_task=False, conv_type="gat"):
         super().__init__()
-        # Input projection + dropout before the first GATConv -- added after
-        # embeddings (384-dim) made in_dim jump from 12 to 396, feeding raw
-        # high-dim input straight into GATConv(in_dim, hidden_dim) with no
+        # Input projection + dropout before the first conv layer -- added
+        # after embeddings (384-dim) made in_dim jump from 12 to 396, feeding
+        # raw high-dim input straight into a conv layer with no
         # regularization caused severe overfitting (train top1 0.30->0.54,
         # OOD flat). This compresses+regularizes the input before message
-        # passing instead of relying on GATConv's own (linear) input weights.
+        # passing instead of relying on the conv layer's own (linear) input
+        # weights.
         self.input_proj = nn.Linear(in_dim, hidden_dim)
         self.input_dropout = nn.Dropout(dropout)
 
+        # GAT (default) learns attention weights over neighbors; GCN and
+        # SAGE use fixed/mean aggregation instead -- an architecture-level
+        # ablation, not assumed to be better or worse than GAT. See
+        # docs/model/futurework.md Section 6.
+        ConvClass = CONV_CLASSES[conv_type]
         self.convs = nn.ModuleList()
-        self.convs.append(GATConv(hidden_dim, hidden_dim))
+        self.convs.append(ConvClass(hidden_dim, hidden_dim))
         for _ in range(num_layers - 1):
-            self.convs.append(GATConv(hidden_dim, hidden_dim))
+            self.convs.append(ConvClass(hidden_dim, hidden_dim))
         self.dropout = dropout
         self.multi_task = multi_task
 
