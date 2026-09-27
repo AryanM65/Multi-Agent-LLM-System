@@ -35,6 +35,7 @@ kaggle_credentials*.json
 *.kaggle.json
 gpu2kaggleapitoken.txt
 light.txt
+kaggle.txt
 
 # Jupyter
 .ipynb_checkpoints/
