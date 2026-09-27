@@ -17,8 +17,17 @@ CONV_CLASSES = {"gat": GATConv, "gcn": GCNConv, "sage": SAGEConv}
 
 
 class FaultLocalizerGNN(nn.Module):
-    def __init__(self, in_dim=8, hidden_dim=32, num_layers=2, dropout=0.2, multi_task=False, conv_type="gat"):
+    def __init__(self, in_dim=8, hidden_dim=32, num_layers=2, dropout=0.2, multi_task=False, conv_type="gat",
+                 pool_type="mean"):
         super().__init__()
+        # Graph-level pooling for the "no fault" head and (if multi_task) the
+        # fault-type head -- mean (default) treats every node equally;
+        # attention lets the model learn which nodes matter most for those
+        # graph-level decisions. Ablation, not assumed better. See
+        # docs/model/futurework.md.
+        self.pool_type = pool_type
+        if pool_type == "attention":
+            self.pool_attn = nn.Linear(hidden_dim, 1)
         # Input projection + dropout before the first conv layer -- added
         # after embeddings (384-dim) made in_dim jump from 12 to 396, feeding
         # raw high-dim input straight into a conv layer with no
@@ -60,7 +69,13 @@ class FaultLocalizerGNN(nn.Module):
             h = F.dropout(h, p=self.dropout, training=self.training)
 
         node_logits = self.node_head(h).squeeze(-1)  # [num_nodes]
-        graph_repr = h.mean(dim=0, keepdim=True)      # [1, hidden_dim]
+        if self.pool_type == "attention":
+            attn_weights = torch.softmax(self.pool_attn(h), dim=0)  # [num_nodes, 1]
+            graph_repr = (attn_weights * h).sum(dim=0, keepdim=True)  # [1, hidden_dim]
+        elif self.pool_type == "max":
+            graph_repr = h.max(dim=0, keepdim=True).values  # [1, hidden_dim]
+        else:
+            graph_repr = h.mean(dim=0, keepdim=True)      # [1, hidden_dim]
         no_fault_logit = self.no_fault_head(graph_repr).squeeze(-1)  # [1]
 
         node_out = torch.cat([node_logits, no_fault_logit], dim=0)  # [num_nodes + 1]

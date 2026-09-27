@@ -28,7 +28,24 @@ def compute_no_fault_weight(graphs) -> float:
     return n_faulted / n_clean
 
 
-def run_epoch(model, graphs, optimizer=None, no_fault_weight=1.0, aux_weight=0.3):
+def _node_loss(logits, y, weight, loss_type="ce", label_smoothing=0.1, focal_gamma=2.0):
+    """logits: [num_nodes+1], y: [1] target index. loss_type:
+    - "ce": plain weighted cross-entropy (default, unchanged behavior)
+    - "label_smoothing": softens the one-hot target, discourages
+      overconfidence on noisy multi-class fault labels
+    - "focal": down-weights easy (already-confident) examples, focuses
+      gradient on hard ones -- see docs/model/futurework.md
+    """
+    if loss_type == "label_smoothing":
+        return F.cross_entropy(logits.unsqueeze(0), y, weight=weight, label_smoothing=label_smoothing)
+    if loss_type == "focal":
+        ce = F.cross_entropy(logits.unsqueeze(0), y, weight=weight, reduction="none")
+        pt = torch.exp(-ce)
+        return ((1 - pt) ** focal_gamma * ce).mean()
+    return F.cross_entropy(logits.unsqueeze(0), y, weight=weight)
+
+
+def run_epoch(model, graphs, optimizer=None, no_fault_weight=1.0, aux_weight=0.3, loss_type="ce"):
     training = optimizer is not None
     model.train(training)
 
@@ -40,7 +57,7 @@ def run_epoch(model, graphs, optimizer=None, no_fault_weight=1.0, aux_weight=0.3
             logits, fault_type_logits = out
             weight = torch.ones(g.num_nodes + 1)
             weight[g.num_nodes] = no_fault_weight
-            node_loss = F.cross_entropy(logits.unsqueeze(0), g.y, weight=weight)
+            node_loss = _node_loss(logits, g.y, weight, loss_type=loss_type)
 
             fault_type_idx = FAULT_TYPES.index(g.true_label)
             type_target = torch.tensor([fault_type_idx], dtype=torch.long)
@@ -51,7 +68,7 @@ def run_epoch(model, graphs, optimizer=None, no_fault_weight=1.0, aux_weight=0.3
             logits = out  # [num_nodes + 1]
             weight = torch.ones(g.num_nodes + 1)
             weight[g.num_nodes] = no_fault_weight
-            loss = F.cross_entropy(logits.unsqueeze(0), g.y, weight=weight)
+            loss = _node_loss(logits, g.y, weight, loss_type=loss_type)
 
         if training:
             optimizer.zero_grad()
@@ -64,7 +81,8 @@ def run_epoch(model, graphs, optimizer=None, no_fault_weight=1.0, aux_weight=0.3
 
 
 def train(model, train_graphs, val_graphs, epochs=100, lr=1e-3, weight_decay=1e-4,
-          checkpoint_path=None, patience=20, verbose=True, class_weighted=True, aux_weight=0.3):
+          checkpoint_path=None, patience=20, verbose=True, class_weighted=True, aux_weight=0.3,
+          loss_type="ce"):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     no_fault_weight = compute_no_fault_weight(train_graphs) if class_weighted else 1.0
     if verbose and class_weighted:
@@ -78,8 +96,8 @@ def train(model, train_graphs, val_graphs, epochs=100, lr=1e-3, weight_decay=1e-
 
     for epoch in range(epochs):
         epochs_run = epoch + 1
-        train_loss = run_epoch(model, train_graphs, optimizer, no_fault_weight=no_fault_weight, aux_weight=aux_weight)
-        val_loss = run_epoch(model, val_graphs, optimizer=None, no_fault_weight=no_fault_weight, aux_weight=aux_weight)
+        train_loss = run_epoch(model, train_graphs, optimizer, no_fault_weight=no_fault_weight, aux_weight=aux_weight, loss_type=loss_type)
+        val_loss = run_epoch(model, val_graphs, optimizer=None, no_fault_weight=no_fault_weight, aux_weight=aux_weight, loss_type=loss_type)
         val_metrics = evaluate(model, val_graphs)
         val_acc = val_metrics["top1_accuracy"]
 
