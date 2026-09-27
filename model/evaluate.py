@@ -25,7 +25,8 @@ def evaluate(model, graphs, k_for_top_k=2):
 
     with torch.no_grad():
         for g in graphs:
-            logits = model(g.x, g.edge_index)
+            out = model(g.x, g.edge_index)
+            logits = out[0] if isinstance(out, tuple) else out  # multi_task models return (node_logits, fault_type_logits)
             true_y = int(g.y.item())
 
             ranked = logits.argsort(descending=True)
@@ -46,6 +47,20 @@ def evaluate(model, graphs, k_for_top_k=2):
         "y_true": all_true,
         "y_pred": all_pred,
     }
+
+
+def macro_prf1(y_true, y_pred):
+    """Macro-averaged precision/recall/F1 across all class indices seen in
+    y_true or y_pred, via sklearn. Unlike top-1/top-2 accuracy, this catches
+    a model that's accurate overall but systematically bad on rarer classes
+    (e.g. always guessing the most common node)."""
+    from sklearn.metrics import precision_recall_fscore_support
+
+    labels = sorted(set(y_true) | set(y_pred))
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred, labels=labels, average="macro", zero_division=0
+    )
+    return {"precision": float(precision), "recall": float(recall), "f1": float(f1)}
 
 
 def classification_report(graphs, y_true, y_pred):

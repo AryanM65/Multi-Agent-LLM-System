@@ -323,3 +323,43 @@ Reference the dataset-generation pipeline's code (`btp-pipeline/src/diagnose.py`
 ## 7. Immediate next action
 
 Start with **Step 2 + Step 3** (`model/data/build_graph_dataset.py`) — everything downstream depends on getting the feature/label extraction right and resolving the three open decisions in Section 3. Validate it by hand on a handful of records against the worked example in `dataset_description.md` §11 before moving to Step 5 (baselines).
+
+---
+
+## 8. Experiment log (post-baseline, 2026-09-27) — chasing OOD top-1 accuracy up from ~0.22
+
+Full numbers are in `model/metrics_history.jsonl` (append-only, one row per run). Summary of every change tried, in order, on OOD top-1 accuracy (macro-F1 in parens):
+
+| # | Change | Dataset size | OOD top1 | OOD top2 | OOD macroF1 |
+|---|---|---|---|---|---|
+| 0 | Original baseline (8-dim scalar features, forward-only edges) | 493 | 0.220 | 0.354 | — |
+| 1 | Dataset expanded (60+30 disjoint questions, k=5, bugs fixed) | 1762 | 0.206 | 0.380 | 0.179 |
+| 2 | + Bidirectional edges | 1762 | 0.232 | 0.383 | 0.232 |
+| 3 | + Node embeddings (384-dim mean-pooled per node, raw, no regularization) | 1762 | 0.239 | 0.446 | 0.229 |
+| 4 | + Input projection layer + dropout 0.3 + PCA-32 embedding compression (fixes #3's overfitting) | 1762 | **0.263** | 0.463 | **0.257** |
+| 5 | + Hyperparameter sweep winner (hidden_dim=64, num_layers=2, lr=1e-3) | 1762 | **0.275** | 0.449 | 0.259 |
+| 6 | + Multi-task auxiliary head (fault-type prediction, aux_weight=0.3) | 1762 | 0.267 | 0.434 | 0.259 |
+
+**Best model so far**: run #5 — bidirectional edges + enriched scalar features (`inference_gaps`, `item_frequencies`) + PCA-compressed node embeddings + input projection/dropout regularization + hidden_dim=64/num_layers=2/lr=1e-3, **no** multi-task head (it made things slightly worse). Checkpoint: pulled from Kaggle kernel `aryanmahajan7/btp-hyperparam-sweep` version corresponding to that config; retrain locally with the same config to reproduce (see `model/hyperparam_sweep.py`'s winning combo).
+
+**What actually moved the needle vs. what didn't**:
+- Bidirectional edges (#2): small but real, cheap, no downside. Keep always.
+- Raw embeddings alone (#3): looked like a big win on train/val, but OOD barely moved — classic overfitting from feeding 384 raw dims into a tiny GNN with no regularization. A trap if you only look at train/val numbers.
+- Regularization + dimensionality reduction (#4): this is what actually made embeddings pay off on OOD, not the embeddings themselves. The lesson: a bigger feature space needs proportionally more regularization, or the model just memorizes train-topology-specific text patterns.
+- Hyperparameter sweep (#5): hidden_dim=64 helped meaningfully; num_layers=3 uniformly hurt (likely over-smoothing on these small 3-7 node graphs); lr=5e-4 was uniformly worse than 1e-3.
+- Multi-task head (#6): neutral-to-slightly-negative. Not worth the added complexity as implemented (aux_weight=0.3); might be worth revisiting with a smaller aux_weight or a different formulation, but not a priority.
+
+**Still well short of the eventual target (0.6 OOD top1)** — even the best 8-way-comparison result (0.275) is only modestly above chance-level guessing for the smaller-node-count OOD topologies. Two things queued to actually close that gap, both in progress as of this writing:
+- **k=10 self-consistency regeneration** (up from k=5) — finer-grained uncertainty values (10 discrete levels instead of 6), running in parallel across two Kaggle accounts and a Lightning AI account, covering the 60-question and 30-question-disjoint sets separately.
+- Once k=10 data lands: rerun the full enrichment pipeline (`model/data/enrich_features.py`, now producing `inference_gaps` + `item_frequencies` + `node_embeddings` in one pass) and retrain with the winning architecture from this log.
+
+**Code added this round** (all under `model/`, see file docstrings for details):
+- `model/data/enrich_features.py` — post-hoc pass computing `inference_gaps` (embedding drift from parent output to node output), `item_frequencies` (per-item retrieval consensus), and `node_embeddings` (384-dim mean-pooled sentence embeddings), all from data already in `trials.jsonl` — no regeneration needed for this part.
+- `model/data/reduce_embeddings.py` — PCA compression of the 384-dim embeddings to a configurable smaller dimension (32 used above), fit on train graphs only to avoid leakage into val/OOD.
+- `model/gnn.py` — added an input projection layer (`nn.Linear(in_dim, hidden_dim)` + dropout) before the first GAT layer, and an optional `multi_task` flag adding a fault-type auxiliary head.
+- `model/train.py` — added class-imbalance loss weighting for the "no fault" class (`compute_no_fault_weight`), and multi-task combined-loss support.
+- `model/hyperparam_sweep.py` — small sweep script (hidden_dim × num_layers × lr, ~8 combos), logs every run.
+- `model/nongraph_baseline.py` — flat-feature RandomForest baseline (answers "is the graph structure actually helping"), not yet run against the final architecture.
+- `model/eval_ood_breakdown.py` — per-topology OOD accuracy breakdown (confirmed the weak OOD performance is spread fairly evenly across all 6 OOD topologies, not concentrated in one — see log entry from that run).
+
+See `docs/infra/kaggle-and-lightning-setup.md` for the infra practices used to run all of the above (CPU-only kernels for non-GPU-bound work, the k=10 multi-account parallelization pattern, Lightning AI credit-exhaustion recovery).

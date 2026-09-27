@@ -275,3 +275,20 @@ kaggle kernels delete <owner>/<kernel-slug>               # only way to "stop"
 - Whether the `numba` version bump (past `vllm`'s pinned exact version) ever causes a *runtime* (not just import-time) behavior difference in vLLM's quantization kernels — not fully ruled out, only import-level testing was done.
 - Lightning AI's free-tier GPU-hour budget isn't as clearly surfaced as Kaggle's 30h/week — check the account's current balance before relying on it for a many-hour run.
 - Consider scripting the "stop all Running jobs older than N minutes with no `started_at`" check as a guard, since the concurrent-capacity deadlock (§2.6) is easy to hit again after several relaunch iterations.
+
+---
+
+## 6. Don't request a GPU for CPU-bound work (Kaggle kernels)
+
+A Kaggle kernel that only needs CPU (feature enrichment via sentence-transformers, small-GNN training, hyperparameter sweeps) but is launched with `"enable_gpu": true` competes for the same limited GPU-slot queue as your actual data-generation kernels. Symptom observed: a kernel stuck `QUEUED` with a completely empty log for 15+ minutes, across 4 relaunch attempts (2 stuck, 2 cancelled) — looked like a code bug, wasn't. A minimal `enable_gpu: false` test kernel (no dataset, just a print statement) scheduled and completed **instantly** on the same account at the same time, confirming the bottleneck was GPU-queue contention, not the kernel itself.
+
+**Fix**: set `"enable_gpu": false` in `kernel-metadata.json` for anything that doesn't do LLM inference. `torch`/`torch_geometric` training on graphs this small (3-7 nodes, a few hundred to a couple thousand examples) runs fine on CPU — this was already true by design (see `model/train.py`'s own docstring), it just wasn't reflected in the kernel config until the GPU-contention symptom forced the question. This also frees up the account's GPU quota to run a real data-generation job on the *same* account in parallel with CPU-only training/enrichment work, without them blocking each other.
+
+## 7. Scaling dataset generation across more than 2 compute sources
+
+When one Kaggle account + one Lightning account isn't enough parallelism (e.g. regenerating at a higher `k`, which costs roughly proportionally more GPU time per topology), the same patterns in this doc compose across as many accounts as you have:
+
+- **A third Kaggle account**: identical setup to Section 1, just a new account's API token exported as `KAGGLE_API_TOKEN` for that specific command (`export KAGGLE_API_TOKEN=<token>; python -m kaggle ...`) rather than overwriting `~/.kaggle/credentials.json` (which stays bound to your main/first account). Verify which account you're actually hitting with a cheap authenticated call first (e.g. `kaggle datasets list --mine`) before assuming the export took effect.
+- **A second Lightning AI account**: same Studio/Job pattern as Section 2, but check the teamspace ownership model again on the new account — it may differ from your first account's (e.g. first account's teamspace was org-owned, a second account's personal teamspace may be owned directly by the `User`, not an `Organization`). Try `Studio(name=..., teamspace='default-project', user='<username>', create_ok=True)` first; only fall back to the `org=` parameter if that 403s.
+- **Splitting the work**: give each compute source a disjoint slice (e.g. a disjoint question set, or a disjoint topology range) so outputs merge cleanly afterward with no duplicate-recipe risk — same principle as §3.3, just extended to N sources instead of 2.
+- **Handle one source running out mid-generation gracefully**: if a source (typically the one with the tightest free-tier budget) exhausts its credits/quota partway through, pull whatever partial output it produced (same per-file download pattern as §2.7's Windows workaround) and resume the *remaining* topologies on a source that still has capacity, seeding that source's `logs/` directory with the partial output before invoking `--resume` — exactly the same recovery pattern used for a single-source crash (§2.6), just re-targeted at a different compute source than the one that produced the partial data.

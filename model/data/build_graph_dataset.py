@@ -16,13 +16,18 @@ from torch_geometric.data import Data
 
 ROLE_LIST = ["retriever", "reasoner", "writer"]
 
+# all-MiniLM-L6-v2 output dim -- see model/data/enrich_features.py's
+# compute_node_embeddings(). Used to zero-pad when node_embeddings is
+# missing (pre-enrichment data), so in_dim stays consistent either way.
+EMBEDDING_DIM = 384
+
 # Trials whose fault target is None (`is_control` / clean baseline) get this
 # label. Handled as an extra "no fault" class -- see build_dataset()'s
 # `num_classes` / class-index remapping below.
 NO_FAULT_LABEL = "__no_fault__"
 
 
-def node_feature_vector(trial: dict, node_id: str, role: str) -> list:
+def node_feature_vector(trial: dict, node_id: str, role: str, use_embeddings: bool = False) -> list:
     lex = trial["uncertainties"].get(node_id)
     lex = lex if lex is not None else 0.0
 
@@ -34,26 +39,48 @@ def node_feature_vector(trial: dict, node_id: str, role: str) -> list:
     has_jac = 1.0 if jac is not None else 0.0
     jac = jac if jac is not None else 0.0
 
+    # Added via model/data/enrich_features.py post-hoc pass -- see
+    # docs/model/futurework.md Section 2. Missing/None on un-enriched data,
+    # handled the same "value + has_X flag" way as sem/jac above.
+    inf_gap = trial.get("inference_gaps", {}).get(node_id)
+    has_inf_gap = 1.0 if inf_gap is not None else 0.0
+    inf_gap = inf_gap if inf_gap is not None else 0.0
+
+    item_freq = trial.get("item_frequencies", {}).get(node_id)
+    has_item_freq = 1.0 if item_freq is not None else 0.0
+    item_freq = item_freq if item_freq is not None else 0.0
+
     role_onehot = [1.0 if role == r else 0.0 for r in ROLE_LIST]
 
-    return [lex, sem, jac, has_sem, has_jac] + role_onehot
+    scalar_feats = [lex, sem, jac, has_sem, has_jac, inf_gap, has_inf_gap, item_freq, has_item_freq] + role_onehot
+
+    if not use_embeddings:
+        return scalar_feats
+
+    emb = trial.get("node_embeddings", {}).get(node_id)
+    emb = emb if emb is not None else [0.0] * EMBEDDING_DIM
+    return scalar_feats + list(emb)
 
 
-def trial_to_graph(trial: dict, topology: dict) -> Data:
+def trial_to_graph(trial: dict, topology: dict, bidirectional: bool = False, use_embeddings: bool = False) -> Data:
     node_ids = list(topology["nodes"].keys())
     idx_of = {n: i for i, n in enumerate(node_ids)}
 
     x = [
-        node_feature_vector(trial, n, topology["nodes"][n]["role"])
+        node_feature_vector(trial, n, topology["nodes"][n]["role"], use_embeddings=use_embeddings)
         for n in node_ids
     ]
 
     edges = topology["edges"]
     if edges:
-        edge_index = [
-            [idx_of[src] for src, dst in edges],
-            [idx_of[dst] for src, dst in edges],
-        ]
+        src_list = [idx_of[src] for src, dst in edges]
+        dst_list = [idx_of[dst] for src, dst in edges]
+        if bidirectional:
+            # Add reverse edges too: forward matches real pipeline execution
+            # order, backward lets a fault symptom's message-passing trace
+            # back toward its cause -- see docs/model/futurework.md Section 6.
+            src_list, dst_list = src_list + dst_list, dst_list + src_list
+        edge_index = [src_list, dst_list]
     else:
         edge_index = [[], []]
 
@@ -76,7 +103,7 @@ def trial_to_graph(trial: dict, topology: dict) -> Data:
     )
 
 
-def build_dataset(trials: list, topologies: dict) -> list:
+def build_dataset(trials: list, topologies: dict, bidirectional: bool = False, use_embeddings: bool = False) -> list:
     """Returns a list of PyG Data graphs, one per trial, with `y` set to a
     per-graph node-class-index (0..num_nodes-1), or the index for
     "no fault" if the trial is a clean control -- see NO_FAULT_LABEL.
@@ -87,7 +114,7 @@ def build_dataset(trials: list, topologies: dict) -> list:
     graphs = []
     for trial in trials:
         topo = topologies[trial["topology_id"]]
-        g = trial_to_graph(trial, topo)
+        g = trial_to_graph(trial, topo, bidirectional=bidirectional, use_embeddings=use_embeddings)
 
         if not g.target_node:
             # "no fault" is its own class, appended after all real nodes

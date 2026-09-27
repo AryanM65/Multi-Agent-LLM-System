@@ -32,6 +32,7 @@ def log_run(config: dict, metrics: dict, notes: str = "", path=DEFAULT_LOG_PATH)
         "metrics": metrics,
         "notes": notes,
     }
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")

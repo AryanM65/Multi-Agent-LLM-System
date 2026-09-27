@@ -33,6 +33,8 @@ btp-pipeline/data/
 lightning_credentials.json
 kaggle_credentials*.json
 *.kaggle.json
+gpu2kaggleapitoken.txt
+light.txt
 
 # Jupyter
 .ipynb_checkpoints/
