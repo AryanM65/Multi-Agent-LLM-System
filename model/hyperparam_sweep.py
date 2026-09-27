@@ -25,13 +25,14 @@ EPOCHS = 150
 PATIENCE = 30
 
 
-def run_one(graphs, train_set, val_set, ood_set, hidden_dim, num_layers, lr, use_embeddings):
+def run_one(graphs, train_set, val_set, ood_set, hidden_dim, num_layers, lr, use_embeddings, conv_type="gat"):
     torch.manual_seed(SEED)
     in_dim = graphs[0].x.shape[1]
     # dropout=0.3 matches the regularization fix that fixed the embeddings
     # overfit (see model/metrics_history.jsonl run comparison) -- keep it
     # consistent across the sweep rather than reverting to the old 0.2.
-    model = FaultLocalizerGNN(in_dim=in_dim, hidden_dim=hidden_dim, num_layers=num_layers, dropout=0.3)
+    model = FaultLocalizerGNN(in_dim=in_dim, hidden_dim=hidden_dim, num_layers=num_layers, dropout=0.3,
+                              conv_type=conv_type)
 
     model, best_val_acc, best_epoch, epochs_run = train(
         model, train_set, val_set, epochs=EPOCHS, lr=lr, patience=PATIENCE, verbose=False,
@@ -50,6 +51,7 @@ def run_one(graphs, train_set, val_set, ood_set, hidden_dim, num_layers, lr, use
         "seed": SEED, "hidden_dim": hidden_dim, "num_layers": num_layers, "dropout": 0.3,
         "lr": lr, "epochs_requested": EPOCHS, "patience": PATIENCE, "in_dim": in_dim,
         "bidirectional_edges": True, "use_embeddings": use_embeddings, "sweep": True,
+        "conv_type": conv_type,
     }
     metrics = {
         "train": {"top1_accuracy": train_metrics["top1_accuracy"], "top2_accuracy": train_metrics["top2_accuracy"], **train_prf1, "n": len(train_set)},
@@ -66,6 +68,9 @@ if __name__ == "__main__":
     import sys
 
     use_embeddings = "--embeddings" in sys.argv
+    conv_type = "gat"
+    if "--conv-type" in sys.argv:
+        conv_type = sys.argv[sys.argv.index("--conv-type") + 1]
 
     topologies = load_topologies()
     trials = load_trials()
@@ -82,7 +87,7 @@ if __name__ == "__main__":
     results = []
     for hidden_dim, num_layers, lr in itertools.product(HIDDEN_DIMS, NUM_LAYERS, LRS):
         print(f"\n--- hidden_dim={hidden_dim} num_layers={num_layers} lr={lr} ---")
-        config, metrics = run_one(graphs, train_set, val_set, ood_set, hidden_dim, num_layers, lr, use_embeddings)
+        config, metrics = run_one(graphs, train_set, val_set, ood_set, hidden_dim, num_layers, lr, use_embeddings, conv_type=conv_type)
         ood_top1 = metrics["ood"]["top1_accuracy"]
         print(f"ood_top1={ood_top1:.3f}  ood_top2={metrics['ood']['top2_accuracy']:.3f}  ood_macroF1={metrics['ood']['f1']:.3f}")
         results.append((ood_top1, config, metrics))
