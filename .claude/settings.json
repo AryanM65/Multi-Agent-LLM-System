@@ -19,11 +19,11 @@
       "Bash(kaggle:*)",
       "Read",
       "Grep",
-      "Glob"
+      "Glob",
+      "Edit",
+      "Write"
     ],
     "ask": [
-      "Edit",
-      "Write",
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)",
       "Bash(git branch -D:*)",
