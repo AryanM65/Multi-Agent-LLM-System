@@ -26,7 +26,7 @@ class FaultLocalizerGNN(nn.Module):
         # graph-level decisions. Ablation, not assumed better. See
         # docs/model/futurework.md.
         self.pool_type = pool_type
-        if pool_type == "attention":
+        if pool_type in ("attention", "hybrid"):
             self.pool_attn = nn.Linear(hidden_dim, 1)
         # Input projection + dropout before the first conv layer -- added
         # after embeddings (384-dim) made in_dim jump from 12 to 396, feeding
@@ -52,15 +52,17 @@ class FaultLocalizerGNN(nn.Module):
 
         self.node_head = nn.Linear(hidden_dim, 1)  # one "fault score" per node
         # a single learned scalar representing "no fault at all" for this graph,
-        # computed from the graph's mean node embedding
-        self.no_fault_head = nn.Linear(hidden_dim, 1)
+        # computed from the graph's pooled node embedding -- hybrid pooling
+        # concatenates mean+attention (2x hidden_dim) instead of picking one.
+        graph_repr_dim = hidden_dim * 2 if pool_type == "hybrid" else hidden_dim
+        self.no_fault_head = nn.Linear(graph_repr_dim, 1)
 
         if multi_task:
             # Auxiliary graph-level head: predict fault TYPE (clean/noise/
             # contamination/ceiling) alongside node localization. See
             # docs/model/futurework.md Section 6 -- an ablation, not assumed
             # to help; compare against multi_task=False before keeping it.
-            self.fault_type_head = nn.Linear(hidden_dim, len(FAULT_TYPES))
+            self.fault_type_head = nn.Linear(graph_repr_dim, len(FAULT_TYPES))
 
     def forward(self, x, edge_index):
         h = self.input_dropout(F.relu(self.input_proj(x)))
@@ -74,6 +76,11 @@ class FaultLocalizerGNN(nn.Module):
             graph_repr = (attn_weights * h).sum(dim=0, keepdim=True)  # [1, hidden_dim]
         elif self.pool_type == "max":
             graph_repr = h.max(dim=0, keepdim=True).values  # [1, hidden_dim]
+        elif self.pool_type == "hybrid":
+            attn_weights = torch.softmax(self.pool_attn(h), dim=0)  # [num_nodes, 1]
+            attn_repr = (attn_weights * h).sum(dim=0, keepdim=True)  # [1, hidden_dim]
+            mean_repr = h.mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            graph_repr = torch.cat([mean_repr, attn_repr], dim=1)  # [1, 2*hidden_dim]
         else:
             graph_repr = h.mean(dim=0, keepdim=True)      # [1, hidden_dim]
         no_fault_logit = self.no_fault_head(graph_repr).squeeze(-1)  # [1]
