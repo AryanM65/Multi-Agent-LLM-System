@@ -16,6 +16,18 @@ from torch_geometric.data import Data
 
 ROLE_LIST = ["retriever", "reasoner", "writer"]
 
+# Per-node scalars added by model/data/enrich_discrepancy.py. Each contributes
+# a (value, has_value) pair to the feature vector, same convention as sem/jac.
+DISCREPANCY_FIELDS = [
+    "node_novel_ratio",
+    "node_dropped_ratio",
+    "node_sibling_disagree",
+    "node_child_novel",
+    "node_len_mean",
+    "node_len_std",
+    "node_len_z",
+]
+
 # all-MiniLM-L6-v2 output dim -- see model/data/enrich_features.py's
 # compute_node_embeddings(). Used to zero-pad when node_embeddings is
 # missing (pre-enrichment data), so in_dim stays consistent either way.
@@ -54,6 +66,18 @@ def node_feature_vector(trial: dict, node_id: str, role: str, use_embeddings: bo
     role_onehot = [1.0 if role == r else 0.0 for r in ROLE_LIST]
 
     scalar_feats = [lex, sem, jac, has_sem, has_jac, inf_gap, has_inf_gap, item_freq, has_item_freq] + role_onehot
+
+    # Discrepancy + length features from model/data/enrich_discrepancy.py.
+    # Every pre-existing feature is an uncertainty measure, and uncertainty
+    # only moves for contamination faults -- it is flat for noise and
+    # *inverted* for ceiling (truncated output is more self-consistent, so
+    # uncertainty falls). node_len_z is what actually localizes ceiling:
+    # single-feature oracle hit rate 0.716 vs 0.199 random, where every
+    # uncertainty-derived signal scored 0.03-0.28. See enrich_discrepancy.py.
+    for field in DISCREPANCY_FIELDS:
+        v = trial.get(field, {})
+        v = v.get(node_id) if isinstance(v, dict) else None
+        scalar_feats += [float(v) if v is not None else 0.0, 1.0 if v is not None else 0.0]
 
     if not use_embeddings:
         return scalar_feats
