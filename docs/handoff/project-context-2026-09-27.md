@@ -52,10 +52,11 @@ All code lives in `./model/` (never in `btp-pipeline/src/` — hard rule).
 - Added 384-dim mean-pooled sentence embeddings of node output text, PCA-compressed (fit on train graphs only, no leakage) — raw embeddings alone overfit badly (train/val looked great, OOD barely moved) until PCA + dropout + input-projection layer were added
 - Added `node_embedding_std` (embedding variance across the k samples) as an extra feature — confirmed a real win
 - Compared GAT vs GCN vs GraphSAGE convolutions at matched hyperparameters — **SAGE clearly best** (0.359 vs GAT 0.275 vs GCN 0.246 OOD top-1)
-- Compared pooling strategies for the graph-level auxiliary head — **attention pooling** currently best
-- Tried: multi-task fault-type auxiliary head (neutral/slightly negative), 3-seed ensembling (helped a bit, 0.383, but attention pooling alone beat it at 0.387), various loss functions (label smoothing, focal — modest, not decisive), PCA dimension sweep (128 components did better than 32 or 64 once variance features were added)
+- Compared pooling strategies for the graph-level auxiliary head — **attention pooling** was the single-technique best (0.387)
+- Tried: multi-task fault-type auxiliary head (neutral/slightly negative), 3-seed ensembling alone (0.383), various loss functions (label smoothing, focal — modest, not decisive), PCA dimension sweep (128 components did better than 32 or 64 once variance features were added)
+- **Latest run (2026-09-27 17:15:23)**: stacking attention pooling **and** the 3-seed ensemble together (rather than either alone) gave a further improvement — this is the current best.
 
-**Current best result** (verified directly from `model/metrics_history.jsonl`, run at 2026-09-27 16:35:43): **GraphSAGE, 3 layers, hidden_dim=64, dropout=0.3, lr=5e-4, bidirectional edges, PCA-128 embeddings (mean+std/variance), attention pooling → OOD top-1 accuracy = 0.387**, OOD top-2 = 0.552, OOD macro-F1 ≈ 0.353.
+**Current best result** (verified directly from `model/metrics_history.jsonl`, run at 2026-09-27 17:15:23, notes: "Attention pooling + 3-seed ensemble (stacking the two best independent wins)"): **GraphSAGE, 3 layers, hidden_dim=64, dropout=0.3, lr=5e-4, bidirectional edges, PCA-128 embeddings (mean+std/variance), attention pooling, 3-seed ensemble → OOD top-1 accuracy = 0.395**, OOD top-2 = 0.587, OOD precision = 0.427, OOD recall = 0.365, OOD F1 = 0.380.
 
 **Comparison table** (OOD test set, n=574, all evaluated identically):
 
@@ -66,12 +67,31 @@ All code lives in `./model/` (never in `btp-pipeline/src/` — hard rule).
 | GNN — GAT | 0.275 |
 | GNN — GCN | 0.246 |
 | GNN — SAGE (base config) | 0.359 |
-| **GNN — SAGE + attention pooling (best)** | **0.387** |
-| GNN — SAGE + 3-seed ensemble | 0.383 |
+| GNN — SAGE + embedding variance feature | 0.378 |
+| GNN — SAGE + attention pooling | 0.387 |
+| GNN — SAGE + 3-seed ensemble (no attention pooling) | 0.383 |
+| **GNN — SAGE + attention pooling + 3-seed ensemble (best)** | **0.395** |
 
-This confirms the core thesis claim so far: graph structure adds real value over both a naive per-node rule and a non-graph model, and SAGE-style neighbor aggregation clearly outperforms GAT/GCN on these small (3–7 node) graphs.
+This confirms the core thesis claim so far: graph structure adds real value over both a naive per-node rule and a non-graph model, and SAGE-style neighbor aggregation clearly outperforms GAT/GCN on these small (3–7 node) graphs. The full evolution from the first GNN run to the current best is charted in `docs/results/figures/fig8_accuracy_evolution.png`.
 
-**⚠️ Known doc/reality gap**: `docs/model/model.md` §8's experiment log is **stale** — it stops at OOD top-1=0.275 and states "target 0.6" as the number still to beat. The actual `model/metrics_history.jsonl` has 41 more runs since then, reaching 0.387. Update that doc before anyone else reads it, or just treat `metrics_history.jsonl` as the source of truth.
+**⚠️ Known doc/reality gap**: `docs/model/model.md` §8's experiment log is **stale** — it stops at OOD top-1=0.275 and states "target 0.6" as the number still to beat. The actual `model/metrics_history.jsonl` has 42 more runs since then, reaching 0.395. Update that doc before anyone else reads it, or just treat `metrics_history.jsonl` as the source of truth.
+
+**Charts** (real data, saved permanently in `docs/results/figures/`, regenerable via `docs/results/figures/make_report_charts.py`):
+- `fig1_fault_type_distribution.png` — dataset composition by fault type
+- `fig2_train_ood_split.png` — train vs. OOD trial counts
+- `fig3_topology_size_distribution.png` — topology graph-size distribution
+- `fig4_ood_accuracy_progression.png` — OOD top-1 across all 42 logged runs (1762-record dataset only)
+- `fig5_architecture_comparison.png` — GAT vs. GCN vs. SAGE at matched hyperparameters
+- `fig6_model_comparison.png` — naive baseline vs. RandomForest vs. best GNN
+- `fig7_best_model_metrics.png` — best model's top-1/top-2/precision/recall/F1 across train/val/OOD
+- `fig8_accuracy_evolution.png` — milestone-by-milestone OOD accuracy from the first GNN run (0.220) to the current best (0.395)
+
+**ROC/PR/confusion-matrix charts (2026-09-28 follow-up)** — these required actually re-running the best model locally (torch_geometric installed via pip; the repo's `dataset/trials.jsonl` already has the enriched `node_embeddings`/`node_embedding_std` fields needed) to dump real per-node predicted probabilities on the OOD set, since `metrics_history.jsonl` only stores aggregate metrics, not raw scores. Local CPU reproduction of the attn_ensemble config got OOD top-1=0.383 (matches the logged 0.395 run closely; small difference is normal run-to-run seed/CPU variance). Regenerate via `docs/results/figures/make_roc_charts.py` (trains 3 seeds, dumps `ood_node_predictions.json`/`ood_graph_predictions.json`) then `docs/results/figures/make_roc_plots.py` (builds the charts from those dumps):
+- `fig9_roc_curve.png` — pooled binary ROC ("is this node the true fault source", across every node instance in every OOD graph, n=3962). **AUC = 0.739.**
+- `fig10_pr_curve.png` — same pooled binary task as a Precision-Recall curve (more informative than ROC here since only ~14.5% of node instances are positive). **Average Precision = 0.415** vs. a 0.145 random baseline.
+- `fig11_roc_by_role.png` — the same ROC broken out by node role: reasoner AUC=0.785 (n=1946), writer AUC=0.732 (n=770), retriever AUC=0.695 (n=672), "no fault" AUC=0.675 (n=574). Reasoner faults are the easiest to identify; retriever faults and clean/no-fault graphs are the hardest.
+- `fig12_role_confusion_matrix.png` — row-normalized confusion matrix, true role vs. predicted role, OOD set. **Key finding**: the model over-predicts "reasoner" across the board (41% of true-retriever cases, 37% of true-writer cases, and 50% of true-no-fault/clean cases all get predicted as reasoner) — reasoner is the model's default/majority-class fallback, not just its strongest class. Worth flagging explicitly as a limitation in the Results/Discussion section.
+- `fig13_accuracy_by_fault_type.png` — OOD top-1 accuracy split by true fault type: **contamination 0.589** (n=168, clearly the easiest — matches the Phase-1 local-study finding that contamination gives the strongest signal), ceiling 0.35 (n=140), clean 0.286 (n=84), noise 0.264 (n=182, hardest — consistent with noise being the most "recoverable"/transient fault type and thus the weakest structural signal).
 
 **Not yet done / open items**:
 - k=10 self-consistency regeneration (finer-grained uncertainty resolution than current k=5) was planned/queued per the docs but not verified as landed — check `dataset/trials.jsonl` record count and a sample record's `samples` list length (should be 10, not 5) to confirm before assuming it's done.
