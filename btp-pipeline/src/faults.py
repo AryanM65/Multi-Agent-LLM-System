@@ -319,7 +319,12 @@ def inject_ceiling(
     example: dict,
     target_node: str,
     rng: random.Random,
-    strip_fraction: float = 0.5,
+    # Raised from 0.5 -> 0.75 (2026-09-29): only 8% of ceiling trials
+    # registered target_deviated=True against the old (buggy, assumed_std=0.10)
+    # verifier, and node_len_z's oracle hit rate (0.716) shows length IS the
+    # right signal -- the fault itself was just too mild to reliably shrink
+    # output. Stripping more of the gold context forces a bigger length drop.
+    strip_fraction: float = 0.75,
     role: Optional[str] = None,
 ) -> Optional[Dict]:
     """Ceiling fault — strips sentences from gold paragraphs then verifies the
@@ -442,18 +447,23 @@ def _inject_ceiling_downstream(
     directly against the template keys (old, broken-for-custom-IDs behavior)
     if role is not provided, for backward compatibility only.
     """
+    # Caps tightened 2026-09-29 (reasoner 2->1 step, writer 5->2 words): the
+    # 2-step/5-word caps only shrank output enough to register as deviated in
+    # 8% of ceiling trials. See strip_fraction note above for the same
+    # rationale -- the goal is a length drop big enough for node_len_z to
+    # reliably fire, not just a nominally "harder" instruction.
     hardened_instructions = {
         "reasoner": (
             "You are a Reasoning agent. Given the evidence below, attempt to "
-            "derive the answer to the question. You may use AT MOST 2 reasoning "
-            "steps. If you cannot determine the answer within this constraint, "
+            "derive the answer to the question. You may use AT MOST 1 reasoning "
+            "step. If you cannot determine the answer within this constraint, "
             "state your best guess.\n\n"
             "End your response with a final line in exactly this format:\n"
             "FINAL ANSWER: <your one-sentence conclusion>"
         ),
         "writer": (
             "You are a Writer agent. Given the reasoning trace below, produce "
-            "a final answer to the question. Output AT MOST 5 WORDS — no explanation."
+            "a final answer to the question. Output AT MOST 2 WORDS — no explanation."
         ),
     }
 

@@ -66,7 +66,13 @@ VLLM_MAX_MODEL_LEN: int = int(os.getenv("BTP_VLLM_MAX_MODEL_LEN", "4096"))
 # ---------------------------------------------------------------------------
 DEFAULT_K = 5              # samples per node (cloud-scale Study 2; was 3 pre-Study-2)
 DEFAULT_TEMPERATURE = 0.7  # standard inference temperature
-NOISE_TEMPERATURE = 1.2    # elevated temperature used for noise fault injection
+# Raised from 1.2 -> 1.8 (2026-09-29): at 1.2 the noise fault only moved mean
+# semantic uncertainty +0.062 vs 253 clean controls (real per-node std 0.165,
+# z~0.37 -- weak, barely above measurement noise). 1.2 is a mild nudge above
+# the 0.7 baseline; 1.8 is near vLLM's practical ceiling before output
+# degenerates into incoherence. See model/data/enrich_discrepancy.py docstring
+# and docs/model/model.md for the full measurement.
+NOISE_TEMPERATURE = 1.8    # elevated temperature used for noise fault injection
 
 # gpt-oss:20b-cloud reasons by default and returns that reasoning in a separate
 # `message["thinking"]` field (see src/nodes.py:_ollama_generate). num_predict
