@@ -1,0 +1,76 @@
+[{"stream_name":"stderr","time":293.352742595,"data":"ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n"}
+,{"stream_name":"stderr","time":293.352785966,"data":"grpcio-tools 1.71.2 requires protobuf\u003c6.0dev,\u003e=5.26.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352790638,"data":"ydata-profiling 4.18.4 requires numba\u003c0.63,\u003e=0.60, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352793247,"data":"dask-cuda 26.2.0 requires cuda-core==0.3.*, but you have cuda-core 1.2.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.35279569,"data":"gradio 6.26.0 requires pillow\u003c13.0,\u003e=8.0, but you have pillow 13.0.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352798159,"data":"pylibcudf-cu12 26.2.1 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.35280069,"data":"numba-cuda 0.22.2 requires cuda-core\u003c1.0.0,\u003e=0.3.2, but you have cuda-core 1.2.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352803158,"data":"libcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352805866,"data":"rmm-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352808305,"data":"cuml-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.35281075,"data":"cuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352813176,"data":"cuml-cu12 26.2.0 requires numba\u003c0.62.0,\u003e=0.60.0, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352815703,"data":"pylibraft-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352818131,"data":"cuvs-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352820579,"data":"google-ai-generativelanguage 0.6.15 requires protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,\u003c6.0.0dev,\u003e=3.20.2, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352824756,"data":"ydf 0.15.0 requires protobuf\u003c7.0.0,\u003e=5.29.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352827265,"data":"cudf-cu12 26.2.1 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352830668,"data":"cudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.35283311,"data":"cudf-cu12 26.2.1 requires numba\u003c0.62.0,\u003e=0.60.0, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352835566,"data":"libcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352837957,"data":"libraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.35284039,"data":"grpcio-status 1.71.2 requires protobuf\u003c6.0dev,\u003e=5.26.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352846033,"data":"google-adk 2.7.1 requires opentelemetry-api\u003c=1.42.1,\u003e=1.39, but you have opentelemetry-api 1.45.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":293.352848755,"data":"google-adk 2.7.1 requires opentelemetry-sdk\u003c=1.42.1,\u003e=1.39, but you have opentelemetry-sdk 1.45.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":317.014623276,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":317.015894481,"data":"  File \"/kaggle/src/script.py\", line 136, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.015909037,"data":"    main()\n"}
+,{"stream_name":"stderr","time":317.015913622,"data":"    ~~~~^^\n"}
+,{"stream_name":"stderr","time":317.015917569,"data":"  File \"/kaggle/src/script.py\", line 74, in main\n"}
+,{"stream_name":"stderr","time":317.015921633,"data":"    from vllm import LLM, SamplingParams\n"}
+,{"stream_name":"stderr","time":317.015926183,"data":"  File \"\u003cfrozen importlib._bootstrap\u003e\", line 1420, in _handle_fromlist\n"}
+,{"stream_name":"stderr","time":317.015930746,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/__init__.py\", line 70, in __getattr__\n"}
+,{"stream_name":"stderr","time":317.015935377,"data":"    module = import_module(module_name, __package__)\n"}
+,{"stream_name":"stderr","time":317.015939115,"data":"  File \"/usr/lib/python3.13/importlib/__init__.py\", line 88, in import_module\n"}
+,{"stream_name":"stderr","time":317.015942859,"data":"    return _bootstrap._gcd_import(name[level:], package, level)\n"}
+,{"stream_name":"stderr","time":317.015946493,"data":"           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":317.015950055,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/entrypoints/llm.py\", line 13, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.01595391,"data":"    from vllm.config import (\n"}
+,{"stream_name":"stderr","time":317.015957335,"data":"    ...\u003c6 lines\u003e...\n"}
+,{"stream_name":"stderr","time":317.015961002,"data":"    )\n"}
+,{"stream_name":"stderr","time":317.015968231,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/config/__init__.py\", line 26, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.015970916,"data":"    from vllm.config.model import (\n"}
+,{"stream_name":"stderr","time":317.015973338,"data":"    ...\u003c4 lines\u003e...\n"}
+,{"stream_name":"stderr","time":317.015975692,"data":"    )\n"}
+,{"stream_name":"stderr","time":317.015978026,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/config/model.py\", line 31, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.015980612,"data":"    from vllm.transformers_utils.config import (\n"}
+,{"stream_name":"stderr","time":317.015982981,"data":"    ...\u003c14 lines\u003e...\n"}
+,{"stream_name":"stderr","time":317.015985345,"data":"    )\n"}
+,{"stream_name":"stderr","time":317.015987585,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/transformers_utils/config.py\", line 20, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.015990214,"data":"    from transformers.models.auto.image_processing_auto import get_image_processor_config\n"}
+,{"stream_name":"stderr","time":317.015992874,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/auto/image_processing_auto.py\", line 24, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.01599558,"data":"    from ...image_processing_utils import ImageProcessingMixin\n"}
+,{"stream_name":"stderr","time":317.016018514,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/image_processing_utils.py\", line 34, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.016024322,"data":"    from .processing_utils import ImagesKwargs, Unpack\n"}
+,{"stream_name":"stderr","time":317.016029176,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/processing_utils.py\", line 38, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.016033445,"data":"    from .audio_utils import AudioInput, load_audio, make_list_of_audio\n"}
+,{"stream_name":"stderr","time":317.016037098,"data":"  File \"/usr/local/lib/python3.13/dist-packages/transformers/audio_utils.py\", line 58, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.016040932,"data":"    import torchaudio\n"}
+,{"stream_name":"stderr","time":317.016044237,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torchaudio/__init__.py\", line 7, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.016048832,"data":"    from . import _extension  # noqa  # usort: skip\n"}
+,{"stream_name":"stderr","time":317.016052346,"data":"    ^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":317.016055955,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torchaudio/_extension/__init__.py\", line 36, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":317.016059794,"data":"    _check_cuda_version()\n"}
+,{"stream_name":"stderr","time":317.01606316,"data":"    ~~~~~~~~~~~~~~~~~~~^^\n"}
+,{"stream_name":"stderr","time":317.016066599,"data":"  File \"/usr/local/lib/python3.13/dist-packages/torchaudio/_extension/utils.py\", line 124, in _check_cuda_version\n"}
+,{"stream_name":"stderr","time":317.016070396,"data":"    raise RuntimeError(\n"}
+,{"stream_name":"stderr","time":317.016073903,"data":"    ...\u003c3 lines\u003e...\n"}
+,{"stream_name":"stderr","time":317.016077438,"data":"    )\n"}
+,{"stream_name":"stderr","time":317.016084902,"data":"RuntimeError: Detected that PyTorch and TorchAudio were compiled with different CUDA versions. PyTorch has CUDA version 13.0 whereas TorchAudio has CUDA version 12.8. Please install the TorchAudio version that matches your PyTorch version.\n"}
+,{"stream_name":"stderr","time":322.746208937,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":322.746237153,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":322.96061096,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":322.960636492,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":323.878109483,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":324.861884405,"data":"[NbConvertApp] Writing 306435 bytes to __results__.html\n"}
+]
