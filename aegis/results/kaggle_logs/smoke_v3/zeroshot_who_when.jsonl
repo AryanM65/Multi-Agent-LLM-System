@@ -1,0 +1,8 @@
+{"id": "who_when_0_47e16855", "raw_output": "{\"faulty_agents\": []}", "prompt_tokens": 2157, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_1_7942b508", "raw_output": "{\"faulty_agents\": []}", "prompt_tokens": 2230, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_2_fc3c4fdd", "raw_output": "{\"faulty_agents\": [{\"agent_name\": \"StreamingService_Expert\", \"error_type\": \"FM-2.6\"}]}", "prompt_tokens": 2428, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_3_cbf4aab9", "raw_output": "{\"faulty_agents\": []}", "prompt_tokens": 2906, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_4_03cb3e1a", "raw_output": "{\"faulty_agents\": [{\"agent_name\": \"IMDB_Ratings_Expert\", \"error_type\": \"FM-3.1\"}]}", "prompt_tokens": 2368, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_5_e6535f9d", "raw_output": "{\"faulty_agents\": [{\"agent_name\": \"DataVerification_Expert\", \"error_type\": \"FM-3.1\"}, {\"agent_name\": \"DataVerification_Expert\", \"error_type\": \"FM-3.2\"}]}", "prompt_tokens": 3996, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_6_339ac0b8", "raw_output": "{\"faulty_agents\": []}", "prompt_tokens": 3493, "truncated": false, "finish_reason": "stop"}
+{"id": "who_when_7_5c1923b5", "raw_output": "{\"faulty_agents\": []}", "prompt_tokens": 2809, "truncated": false, "finish_reason": "stop"}

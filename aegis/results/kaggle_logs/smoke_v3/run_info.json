@@ -1,0 +1,20 @@
+{
+  "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+  "max_model_len": 16384,
+  "conv_token_budget": 14874,
+  "max_new_tokens": 512,
+  "splits": {
+    "test": {
+      "records": 8,
+      "newly_run": 8,
+      "truncated_this_run": 0,
+      "seconds": 109
+    },
+    "who_when": {
+      "records": 8,
+      "newly_run": 8,
+      "truncated_this_run": 0,
+      "seconds": 31
+    }
+  }
+}
