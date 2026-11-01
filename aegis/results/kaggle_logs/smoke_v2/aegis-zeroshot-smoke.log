@@ -1,0 +1,272 @@
+[{"stream_name":"stderr","time":481.046150992,"data":"ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n"}
+,{"stream_name":"stderr","time":481.046242061,"data":"grpcio-tools 1.71.2 requires protobuf\u003c6.0dev,\u003e=5.26.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046249963,"data":"ydata-profiling 4.18.4 requires numba\u003c0.63,\u003e=0.60, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046255246,"data":"dask-cuda 26.2.0 requires cuda-core==0.3.*, but you have cuda-core 1.2.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.04626013,"data":"gradio 6.26.0 requires pillow\u003c13.0,\u003e=8.0, but you have pillow 13.0.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046264292,"data":"pylibcudf-cu12 26.2.1 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046268361,"data":"numba-cuda 0.22.2 requires cuda-core\u003c1.0.0,\u003e=0.3.2, but you have cuda-core 1.2.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046272536,"data":"libcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046276668,"data":"rmm-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046280685,"data":"cuml-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046285456,"data":"cuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046289927,"data":"cuml-cu12 26.2.0 requires numba\u003c0.62.0,\u003e=0.60.0, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046294325,"data":"pylibraft-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046298786,"data":"cuvs-cu12 26.2.0 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046303511,"data":"google-ai-generativelanguage 0.6.15 requires protobuf!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,\u003c6.0.0dev,\u003e=3.20.2, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046309701,"data":"ydf 0.15.0 requires protobuf\u003c7.0.0,\u003e=5.29.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046313739,"data":"cudf-cu12 26.2.1 requires cuda-python\u003c13.0,\u003e=12.9.2, but you have cuda-python 13.4.4 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046320548,"data":"cudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046324967,"data":"cudf-cu12 26.2.1 requires numba\u003c0.62.0,\u003e=0.60.0, but you have numba 0.65.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046329737,"data":"libcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046335059,"data":"libraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046339851,"data":"grpcio-status 1.71.2 requires protobuf\u003c6.0dev,\u003e=5.26.1, but you have protobuf 7.36.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046351449,"data":"google-adk 2.7.1 requires opentelemetry-api\u003c=1.42.1,\u003e=1.39, but you have opentelemetry-api 1.45.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":481.046356004,"data":"google-adk 2.7.1 requires opentelemetry-sdk\u003c=1.42.1,\u003e=1.39, but you have opentelemetry-sdk 1.45.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":524.608727183,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stdout","time":527.279933993,"data":"(MainProcess pid=7) INFO 11-01 18:31:12 [api_utils.py:286] non-default args: {'dtype': 'float16', 'max_model_len': 16384, 'gpu_memory_utilization': 0.9, 'disable_log_stats': True, 'quantization': 'awq', 'enforce_eager': True, 'model': 'Qwen/Qwen2.5-7B-Instruct-AWQ'}\n"}
+,{"stream_name":"stdout","time":546.732921854,"data":"(MainProcess pid=7) INFO 11-01 18:31:32 [model.py:733] Resolved architecture: Qwen2ForCausalLM\n"}
+,{"stream_name":"stdout","time":546.733654327,"data":"(MainProcess pid=7) INFO 11-01 18:31:32 [model.py:2152] Using max model len 16384\n"}
+,{"stream_name":"stdout","time":548.276063661,"data":"(MainProcess pid=7) INFO 11-01 18:31:33 [scheduler.py:307] Chunked prefill is enabled with max_num_batched_tokens=8192.\n"}
+,{"stream_name":"stderr","time":548.882263416,"data":"\rParse safetensors files:   0%|          | 0/2 [00:00\u003c?, ?it/s]\rParse safetensors files:  50%|█████     | 1/2 [00:00\u003c00:00,  3.56it/s]\rParse safetensors files: 100%|██████████| 2/2 [00:00\u003c00:00,  5.63it/s]\n"}
+,{"stream_name":"stdout","time":548.888308355,"data":"(MainProcess pid=7) WARNING 11-01 18:31:34 [vllm.py:1703] Enforce eager set, disabling torch.compile, CUDAGraphs, and JIT kernel warmup. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none and --kernel_config.enable_jit_warmup=False\n"}
+,{"stream_name":"stdout","time":548.888780585,"data":"(MainProcess pid=7) WARNING 11-01 18:31:34 [vllm.py:1727] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.\n"}
+,{"stream_name":"stdout","time":548.889314728,"data":"(MainProcess pid=7) INFO 11-01 18:31:34 [kernel.py:467] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native'])\n"}
+,{"stream_name":"stdout","time":548.889643593,"data":"(MainProcess pid=7) INFO 11-01 18:31:34 [vllm.py:1929] Cudagraph is disabled under eager mode\n"}
+,{"stream_name":"stdout","time":548.889895346,"data":"(MainProcess pid=7) INFO 11-01 18:31:34 [compilation.py:317] Enabled custom fusions: norm_quant, act_quant\n"}
+,{"stream_name":"stderr","time":549.232860877,"data":"\rFetching 10 files:   0%|          | 0/10 [00:00\u003c?, ?it/s]\rFetching 10 files:  80%|████████  | 8/10 [00:00\u003c00:00, 55.07it/s]\rFetching 10 files: 100%|██████████| 10/10 [00:00\u003c00:00, 37.80it/s]\n"}
+,{"stream_name":"stdout","time":554.417531807,"data":"(EngineCore pid=125) INFO 11-01 18:31:39 [core.py:133] Initializing a V1 LLM engine (v0.32.0) with config: model='Qwen/Qwen2.5-7B-Instruct-AWQ', speculative_config=None, tokenizer='Qwen/Qwen2.5-7B-Instruct-AWQ', skip_tokenizer_init=False, tokenizer_mode=auto, revision=main, tokenizer_revision=main, trust_remote_code=False, dtype=torch.float16, max_seq_len=16384, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=auto_awq, quantization_config=None, enforce_eager=True, aux_output_config=AuxOutputConfig(enable_return_routed_experts=False, max_bytes=None), kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, custom_histogram_buckets=None, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=Qwen/Qwen2.5-7B-Instruct-AWQ, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': \u003cCompilationMode.NONE: 0\u003e, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'ir_enable_torch_wrap': False, 'splitting_ops': [], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'cudagraph_decoder_replay': True, 'decoder_replay_cudagraph_capture_sizes': [], 'decoder_replay_trim_threshold': 768, 'compile_sizes': [], 'compile_ranges_endpoints': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': \u003cCUDAGraphMode.NONE: 0\u003e, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': \u003cDynamicShapesType.BACKED: 'backed'\u003e, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['vllm_c', 'native'], fused_add_rms_norm=['vllm_c', 'native'], gelu_and_mul_sparse=['triton', 'native']), enable_flashinfer_autotune=True, enable_rocm_segmented_attn_autotune=False, enable_cutedsl_warmup=True, enable_jit_warmup=False, moe_backend='auto', sparse_indexer_topk_backend='auto', linear_backend='auto', linear_backend_per_quant=None)\n"}
+,{"stream_name":"stdout","time":554.975377322,"data":"(EngineCore pid=125) INFO 11-01 18:31:40 [parallel_state.py:1906] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_6668a950c79a4236882656dce68a3a59 backend=nccl\n"}
+,{"stream_name":"stdout","time":554.989430778,"data":"(EngineCore pid=125) INFO 11-01 18:31:40 [parallel_state.py:2350] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, ETP rank 0, EP rank N/A, EPLB rank N/A\n"}
+,{"stream_name":"stdout","time":554.9895184,"data":"(EngineCore pid=125) INFO 11-01 18:31:40 [gpu_worker.py:518] Using V2 Model Runner\n"}
+,{"stream_name":"stdout","time":556.638498996,"data":"(EngineCore pid=125) INFO 11-01 18:31:42 [model_runner.py:392] Loading model from scratch...\n"}
+,{"stream_name":"stdout","time":556.642368793,"data":"(EngineCore pid=125) INFO 11-01 18:31:42 [__init__.py:923] Using MarlinLinearKernel for mixed-precision linear\n"}
+,{"stream_name":"stdout","time":556.642465804,"data":"(EngineCore pid=125) INFO 11-01 18:31:42 [auto_awq.py:451] Using MarlinLinearKernel for AutoAWQMarlinLinearMethod\n"}
+,{"stream_name":"stdout","time":556.806736024,"data":"(EngineCore pid=125) ERROR 11-01 18:31:42 [fa_utils.py:212] Cannot use FA version 2 is not supported due to FA2 is only supported on devices with compute capability \u003e= 8\n"}
+,{"stream_name":"stdout","time":557.358448304,"data":"(EngineCore pid=125) INFO 11-01 18:31:42 [cuda.py:506] Using TRITON_ATTN attention backend out of potential backends: ['TRITON_ATTN', 'FLEX_ATTENTION'].\n"}
+,{"stream_name":"stdout","time":557.508556073,"data":"(EngineCore pid=125) INFO 11-01 18:31:43 [base_loader.py:82] Initializing model took 0.868735 seconds\n"}
+,{"stream_name":"stdout","time":590.645080738,"data":"(EngineCore pid=125) INFO 11-01 18:32:16 [weight_utils.py:532] Time spent downloading weights for Qwen/Qwen2.5-7B-Instruct-AWQ: 32.740599 seconds\n"}
+,{"stream_name":"stdout","time":590.65038935,"data":"(EngineCore pid=125) INFO 11-01 18:32:16 [weight_utils.py:1108] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 5.19 GiB. Available RAM: 3.56 GiB.\n"}
+,{"stream_name":"stdout","time":590.650430251,"data":"(EngineCore pid=125) INFO 11-01 18:32:16 [weight_utils.py:1138] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre) and the checkpoint size (5.19 GiB) exceeds 90% of available RAM (3.56 GiB).\n"}
+,{"stream_name":"stderr","time":590.651354236,"data":"\rLoading safetensors checkpoint shards:   0% Completed | 0/2 [00:00\u003c?, ?it/s]\n"}
+,{"stream_name":"stderr","time":592.040370625,"data":"\rLoading safetensors checkpoint shards:  50% Completed | 1/2 [00:01\u003c00:01,  1.39s/it]\n"}
+,{"stream_name":"stderr","time":592.506149219,"data":"\rLoading safetensors checkpoint shards: 100% Completed | 2/2 [00:01\u003c00:00,  1.18it/s]\n"}
+,{"stream_name":"stderr","time":592.5062167,"data":"\rLoading safetensors checkpoint shards: 100% Completed | 2/2 [00:01\u003c00:00,  1.08it/s]\n"}
+,{"stream_name":"stderr","time":592.506224457,"data":"\n"}
+,{"stream_name":"stdout","time":592.51572946,"data":"(EngineCore pid=125) INFO 11-01 18:32:18 [default_loader.py:501] Loading weights took 1.87 seconds\n"}
+,{"stream_name":"stdout","time":596.518456651,"data":"(EngineCore pid=125) INFO 11-01 18:32:22 [model_runner.py:424] Model loading took 5.29 GiB memory and 40.442120 seconds\n"}
+,{"stream_name":"stdout","time":596.601609605,"data":"(EngineCore pid=125) WARNING 11-01 18:32:22 [topk_topp_sampler.py:131] FlashInfer top-p/top-k sampling unavailable: unsupported compute capability 7.5; falling back. Set VLLM_USE_FLASHINFER_SAMPLER=0 to silence.\n"}
+,{"stream_name":"stdout","time":596.602084749,"data":"(EngineCore pid=125) INFO 11-01 18:32:22 [torch_utils.py:295] Reducing Torch threads from 2 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.\n"}
+,{"stream_name":"stdout","time":596.603763018,"data":"(EngineCore pid=125) INFO 11-01 18:32:22 [utils.py:347] Using LBNHC KV cache layout.\n"}
+,{"stream_name":"stdout","time":606.874801566,"data":"(EngineCore pid=125) INFO 11-01 18:32:32 [gpu_worker.py:759] Available KV cache memory: 6.44 GiB\n"}
+,{"stream_name":"stdout","time":606.877064504,"data":"(EngineCore pid=125) INFO 11-01 18:32:32 [kv_cache_utils.py:2327] GPU KV cache size: 120,576 tokens, Maximum concurrency for 16,384 tokens per request: 7.36x\n"}
+,{"stream_name":"stdout","time":606.987868341,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510] EngineCore failed to start.\r\n"}
+,{"stream_name":"stdout","time":606.987901327,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510] Traceback (most recent call last):\r\n"}
+,{"stream_name":"stdout","time":606.987907935,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 1482, in run_engine_core\r\n"}
+,{"stream_name":"stderr","time":606.987902936,"data":"Process EngineCore:\n"}
+,{"stream_name":"stdout","time":606.987925912,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.987944043,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\r\n"}
+,{"stream_name":"stdout","time":606.987960385,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     return func(*args, **kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.987964115,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 1194, in __init__\r\n"}
+,{"stream_name":"stdout","time":606.987968289,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     super().__init__(\r\n"}
+,{"stream_name":"stdout","time":606.987971887,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ~~~~~~~~~~~~~~~~^\r\n"}
+,{"stream_name":"stdout","time":606.987975449,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         vllm_config,\r\n"}
+,{"stream_name":"stdout","time":606.987978922,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         ^^^^^^^^^^^^\r\n"}
+,{"stream_name":"stdout","time":606.987982612,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ...\u003c3 lines\u003e...\r\n"}
+,{"stream_name":"stdout","time":606.987986719,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         internal_dp_balancing,\r\n"}
+,{"stream_name":"stdout","time":606.987990312,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         ^^^^^^^^^^^^^^^^^^^^^^\r\n"}
+,{"stream_name":"stdout","time":606.987993921,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.987997382,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ^\r\n"}
+,{"stream_name":"stdout","time":606.98800067,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 157, in __init__\r\n"}
+,{"stream_name":"stdout","time":606.988004885,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     kv_cache_config = self._initialize_kv_caches(vllm_config)\r\n"}
+,{"stream_name":"stdout","time":606.98800877,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\r\n"}
+,{"stream_name":"stdout","time":606.988014782,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     return func(*args, **kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.988018468,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 379, in _initialize_kv_caches\r\n"}
+,{"stream_name":"stdout","time":606.988022485,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     self.model_executor.compile_or_warm_up_model()\r\n"}
+,{"stream_name":"stdout","time":606.988026192,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\r\n"}
+,{"stream_name":"stdout","time":606.988029929,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/executor/abstract.py\", line 141, in compile_or_warm_up_model\r\n"}
+,{"stream_name":"stdout","time":606.988033926,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     compilation_times: list[CompilationTimes] = self.collective_rpc(\r\n"}
+,{"stream_name":"stdout","time":606.988047918,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]                                                 ~~~~~~~~~~~~~~~~~~~^\r\n"}
+,{"stream_name":"stdout","time":606.98805182,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         \"compile_or_warm_up_model\"\r\n"}
+,{"stream_name":"stdout","time":606.988055539,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         ^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n"}
+,{"stream_name":"stdout","time":606.988059122,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.988062587,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ^\r\n"}
+,{"stream_name":"stdout","time":606.988066144,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/executor/uniproc_executor.py\", line 103, in collective_rpc\r\n"}
+,{"stream_name":"stdout","time":606.988070147,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     result = run_method(self.driver_worker, method, args, kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.988073902,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/serial_utils.py\", line 508, in run_method\r\n"}
+,{"stream_name":"stdout","time":606.988077973,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     return func(*args, **kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.98808165,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\r\n"}
+,{"stream_name":"stdout","time":606.98808556,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     return func(*args, **kwargs)\r\n"}
+,{"stream_name":"stdout","time":606.988089519,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/worker/gpu_worker.py\", line 950, in compile_or_warm_up_model\r\n"}
+,{"stream_name":"stdout","time":606.98809349,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     kernel_warmup(self)\r\n"}
+,{"stream_name":"stdout","time":606.988096987,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ~~~~~~~~~~~~~^^^^^^\r\n"}
+,{"stream_name":"stdout","time":606.988100508,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/model_executor/warmup/kernel_warmup.py\", line 163, in kernel_warmup\r\n"}
+,{"stream_name":"stdout","time":606.988104498,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from vllm.model_executor.warmup.minimax_m3_msa_warmup import (\r\n"}
+,{"stream_name":"stdout","time":606.988108133,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]         minimax_m3_msa_warmup,\r\n"}
+,{"stream_name":"stdout","time":606.988111695,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.988115142,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/model_executor/warmup/minimax_m3_msa_warmup.py\", line 10, in \u003cmodule\u003e\r\n"}
+,{"stream_name":"stdout","time":606.988119398,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from vllm.models.minimax_m3.nvidia.model import MiniMaxM3SparseAttention\r\n"}
+,{"stream_name":"stdout","time":606.988123163,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/__init__.py\", line 17, in \u003cmodule\u003e\r\n"}
+,{"stream_name":"stdout","time":606.988130811,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from .nvidia.model import (\r\n"}
+,{"stream_name":"stdout","time":606.988134571,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ...\u003c2 lines\u003e...\r\n"}
+,{"stream_name":"stdout","time":606.988138335,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.988141738,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/nvidia/model.py\", line 78, in \u003cmodule\u003e\r\n"}
+,{"stream_name":"stdout","time":606.988145734,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from vllm.models.minimax_m3.common.mm_preprocess import (\r\n"}
+,{"stream_name":"stdout","time":606.988149448,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ...\u003c3 lines\u003e...\r\n"}
+,{"stream_name":"stdout","time":606.988153083,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.98815658,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/common/mm_preprocess.py\", line 42, in \u003cmodule\u003e\r\n"}
+,{"stream_name":"stdout","time":606.988160935,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from vllm.transformers_utils.processors.minimax_m3 import (\r\n"}
+,{"stream_name":"stdout","time":606.988164728,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     ...\u003c5 lines\u003e...\r\n"}
+,{"stream_name":"stdout","time":606.988168398,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     )\r\n"}
+,{"stream_name":"stdout","time":606.988171911,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]   File \"/usr/local/lib/python3.13/dist-packages/vllm/transformers_utils/processors/minimax_m3.py\", line 19, in \u003cmodule\u003e\r\n"}
+,{"stream_name":"stdout","time":606.988176021,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510]     from torchvision.transforms import InterpolationMode\r\n"}
+,{"stream_name":"stdout","time":606.988179723,"data":"(EngineCore pid=125) ERROR 11-01 18:32:32 [core.py:1510] ModuleNotFoundError: No module named 'torchvision'\n"}
+,{"stream_name":"stderr","time":606.989646169,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":606.991565018,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 313, in _bootstrap\n"}
+,{"stream_name":"stderr","time":606.991583696,"data":"    self.run()\n"}
+,{"stream_name":"stderr","time":606.991602072,"data":"    ~~~~~~~~^^\n"}
+,{"stream_name":"stderr","time":606.991606736,"data":"  File \"/usr/lib/python3.13/multiprocessing/process.py\", line 108, in run\n"}
+,{"stream_name":"stderr","time":606.991611046,"data":"    self._target(*self._args, **self._kwargs)\n"}
+,{"stream_name":"stderr","time":606.991614511,"data":"    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":606.991617648,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 1514, in run_engine_core\n"}
+,{"stream_name":"stderr","time":606.991621416,"data":"    raise e\n"}
+,{"stream_name":"stderr","time":606.991625366,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 1482, in run_engine_core\n"}
+,{"stream_name":"stderr","time":606.991629195,"data":"    engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)\n"}
+,{"stream_name":"stderr","time":606.991632617,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\n"}
+,{"stream_name":"stderr","time":606.991646105,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":606.99165036,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 1194, in __init__\n"}
+,{"stream_name":"stderr","time":606.991654623,"data":"    super().__init__(\n"}
+,{"stream_name":"stderr","time":606.991657871,"data":"    ~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":606.991661277,"data":"        vllm_config,\n"}
+,{"stream_name":"stderr","time":606.991664868,"data":"        ^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":606.99166837,"data":"    ...\u003c3 lines\u003e...\n"}
+,{"stream_name":"stderr","time":606.991693071,"data":"        internal_dp_balancing,\n"}
+,{"stream_name":"stderr","time":606.991696512,"data":"        ^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":606.991700525,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.991704452,"data":"    ^\n"}
+,{"stream_name":"stderr","time":606.991708006,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 157, in __init__\n"}
+,{"stream_name":"stderr","time":606.991712129,"data":"    kv_cache_config = self._initialize_kv_caches(vllm_config)\n"}
+,{"stream_name":"stderr","time":606.991715759,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\n"}
+,{"stream_name":"stderr","time":606.991719706,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":606.991723396,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core.py\", line 379, in _initialize_kv_caches\n"}
+,{"stream_name":"stderr","time":606.991727262,"data":"    self.model_executor.compile_or_warm_up_model()\n"}
+,{"stream_name":"stderr","time":606.991731023,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n"}
+,{"stream_name":"stderr","time":606.991734731,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/executor/abstract.py\", line 141, in compile_or_warm_up_model\n"}
+,{"stream_name":"stderr","time":606.99173873,"data":"    compilation_times: list[CompilationTimes] = self.collective_rpc(\n"}
+,{"stream_name":"stderr","time":606.991742258,"data":"                                                ~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":606.991746051,"data":"        \"compile_or_warm_up_model\"\n"}
+,{"stream_name":"stderr","time":606.991749832,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":606.991753449,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.991756987,"data":"    ^\n"}
+,{"stream_name":"stderr","time":606.99176051,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/executor/uniproc_executor.py\", line 103, in collective_rpc\n"}
+,{"stream_name":"stderr","time":606.991764509,"data":"    result = run_method(self.driver_worker, method, args, kwargs)\n"}
+,{"stream_name":"stderr","time":606.991780185,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/serial_utils.py\", line 508, in run_method\n"}
+,{"stream_name":"stderr","time":606.991784172,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":606.991787571,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\n"}
+,{"stream_name":"stderr","time":606.991791083,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":606.991794499,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/worker/gpu_worker.py\", line 950, in compile_or_warm_up_model\n"}
+,{"stream_name":"stderr","time":606.991798305,"data":"    kernel_warmup(self)\n"}
+,{"stream_name":"stderr","time":606.991806312,"data":"    ~~~~~~~~~~~~~^^^^^^\n"}
+,{"stream_name":"stderr","time":606.991809997,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/model_executor/warmup/kernel_warmup.py\", line 163, in kernel_warmup\n"}
+,{"stream_name":"stderr","time":606.991814157,"data":"    from vllm.model_executor.warmup.minimax_m3_msa_warmup import (\n"}
+,{"stream_name":"stderr","time":606.991817707,"data":"        minimax_m3_msa_warmup,\n"}
+,{"stream_name":"stderr","time":606.991821087,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.991824311,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/model_executor/warmup/minimax_m3_msa_warmup.py\", line 10, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":606.991828276,"data":"    from vllm.models.minimax_m3.nvidia.model import MiniMaxM3SparseAttention\n"}
+,{"stream_name":"stderr","time":606.991831795,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/__init__.py\", line 17, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":606.991835404,"data":"    from .nvidia.model import (\n"}
+,{"stream_name":"stderr","time":606.991838839,"data":"    ...\u003c2 lines\u003e...\n"}
+,{"stream_name":"stderr","time":606.991842331,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.991845612,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/nvidia/model.py\", line 78, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":606.99184945,"data":"    from vllm.models.minimax_m3.common.mm_preprocess import (\n"}
+,{"stream_name":"stderr","time":606.991853324,"data":"    ...\u003c3 lines\u003e...\n"}
+,{"stream_name":"stderr","time":606.99185687,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.992266008,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/models/minimax_m3/common/mm_preprocess.py\", line 42, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":606.992280563,"data":"    from vllm.transformers_utils.processors.minimax_m3 import (\n"}
+,{"stream_name":"stderr","time":606.992285137,"data":"    ...\u003c5 lines\u003e...\n"}
+,{"stream_name":"stderr","time":606.992289526,"data":"    )\n"}
+,{"stream_name":"stderr","time":606.992293816,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/transformers_utils/processors/minimax_m3.py\", line 19, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":606.992298099,"data":"    from torchvision.transforms import InterpolationMode\n"}
+,{"stream_name":"stderr","time":606.992301802,"data":"ModuleNotFoundError: No module named 'torchvision'\n"}
+,{"stream_name":"stdout","time":607.120578686,"data":"(MainProcess pid=7) INFO 11-01 18:32:32 [utils.py:628] [shutdown] Process manager: send sigterm to process EngineCore\n"}
+,{"stream_name":"stderr","time":607.261823762,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":607.264012842,"data":"  File \"/kaggle/src/script.py\", line 137, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":607.264050343,"data":"    main()\n"}
+,{"stream_name":"stderr","time":607.264055633,"data":"    ~~~~^^\n"}
+,{"stream_name":"stderr","time":607.264059961,"data":"  File \"/kaggle/src/script.py\", line 83, in main\n"}
+,{"stream_name":"stderr","time":607.264064485,"data":"    llm = LLM(\n"}
+,{"stream_name":"stderr","time":607.264068633,"data":"        model=args.model, quantization=\"awq\", dtype=\"float16\", max_model_len=args.max_model_len,\n"}
+,{"stream_name":"stderr","time":607.264073945,"data":"        gpu_memory_utilization=0.90, tensor_parallel_size=args.tp, enforce_eager=True,\n"}
+,{"stream_name":"stderr","time":607.264078511,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264082542,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/entrypoints/llm.py\", line 342, in __init__\n"}
+,{"stream_name":"stderr","time":607.264100365,"data":"    self.llm_engine = LLMEngine.from_engine_args(\n"}
+,{"stream_name":"stderr","time":607.264105014,"data":"                      ~~~~~~~~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":607.264108305,"data":"        engine_args=engine_args, usage_context=UsageContext.LLM_CLASS\n"}
+,{"stream_name":"stderr","time":607.264111797,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264115665,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264119168,"data":"    ^\n"}
+,{"stream_name":"stderr","time":607.264122567,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/llm_engine.py\", line 191, in from_engine_args\n"}
+,{"stream_name":"stderr","time":607.264126212,"data":"    return cls(\n"}
+,{"stream_name":"stderr","time":607.264129819,"data":"        vllm_config=vllm_config,\n"}
+,{"stream_name":"stderr","time":607.264133087,"data":"    ...\u003c4 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264136553,"data":"        multiprocess_mode=enable_multiprocessing,\n"}
+,{"stream_name":"stderr","time":607.264140051,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264143556,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/llm_engine.py\", line 116, in __init__\n"}
+,{"stream_name":"stderr","time":607.264148049,"data":"    self.engine_core = EngineCoreClient.make_client(\n"}
+,{"stream_name":"stderr","time":607.264152368,"data":"                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":607.264156667,"data":"        multiprocess_mode=multiprocess_mode,\n"}
+,{"stream_name":"stderr","time":607.264160552,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.26416474,"data":"    ...\u003c4 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264169049,"data":"        renderer=renderer,\n"}
+,{"stream_name":"stderr","time":607.264173069,"data":"        ^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264177367,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264181516,"data":"    ^\n"}
+,{"stream_name":"stderr","time":607.264185546,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core_client.py\", line 126, in make_client\n"}
+,{"stream_name":"stderr","time":607.264189651,"data":"    return SyncMPClient(\n"}
+,{"stream_name":"stderr","time":607.264193001,"data":"        vllm_config,\n"}
+,{"stream_name":"stderr","time":607.264196668,"data":"    ...\u003c2 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264200789,"data":"        renderer=renderer,\n"}
+,{"stream_name":"stderr","time":607.264204699,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.26420827,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper\n"}
+,{"stream_name":"stderr","time":607.26421303,"data":"    return func(*args, **kwargs)\n"}
+,{"stream_name":"stderr","time":607.264217282,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core_client.py\", line 925, in __init__\n"}
+,{"stream_name":"stderr","time":607.264221421,"data":"    super().__init__(\n"}
+,{"stream_name":"stderr","time":607.264234055,"data":"    ~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":607.264237538,"data":"        asyncio_mode=False,\n"}
+,{"stream_name":"stderr","time":607.26424143,"data":"        ^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264245745,"data":"    ...\u003c3 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264253979,"data":"        renderer=renderer,\n"}
+,{"stream_name":"stderr","time":607.264258363,"data":"        ^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264261953,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264266044,"data":"    ^\n"}
+,{"stream_name":"stderr","time":607.264269663,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/core_client.py\", line 682, in __init__\n"}
+,{"stream_name":"stderr","time":607.264274652,"data":"    with launch_core_engines(\n"}
+,{"stream_name":"stderr","time":607.26427877,"data":"         ~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":607.264282433,"data":"        vllm_config, executor_class, log_stats, addresses\n"}
+,{"stream_name":"stderr","time":607.264286656,"data":"        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264290702,"data":"    ) as engine_launch:\n"}
+,{"stream_name":"stderr","time":607.264294257,"data":"    ^\n"}
+,{"stream_name":"stderr","time":607.26429843,"data":"  File \"/usr/lib/python3.13/contextlib.py\", line 148, in __exit__\n"}
+,{"stream_name":"stderr","time":607.264302472,"data":"    next(self.gen)\n"}
+,{"stream_name":"stderr","time":607.264306123,"data":"    ~~~~^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264310557,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/utils.py\", line 1351, in launch_core_engines\n"}
+,{"stream_name":"stderr","time":607.264314797,"data":"    wait_for_engine_startup(\n"}
+,{"stream_name":"stderr","time":607.264318499,"data":"    ~~~~~~~~~~~~~~~~~~~~~~~^\n"}
+,{"stream_name":"stderr","time":607.264323109,"data":"        handshake_socket,\n"}
+,{"stream_name":"stderr","time":607.264327477,"data":"        ^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264331524,"data":"    ...\u003c4 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264335395,"data":"        launch,\n"}
+,{"stream_name":"stderr","time":607.26433955,"data":"        ^^^^^^^\n"}
+,{"stream_name":"stderr","time":607.264343455,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.264346937,"data":"    ^\n"}
+,{"stream_name":"stderr","time":607.26435043,"data":"  File \"/usr/local/lib/python3.13/dist-packages/vllm/v1/engine/utils.py\", line 1431, in wait_for_engine_startup\n"}
+,{"stream_name":"stderr","time":607.264354806,"data":"    raise RuntimeError(\n"}
+,{"stream_name":"stderr","time":607.264359317,"data":"    ...\u003c8 lines\u003e...\n"}
+,{"stream_name":"stderr","time":607.264363844,"data":"    )\n"}
+,{"stream_name":"stderr","time":607.2643678,"data":"RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}\n"}
+,{"stream_name":"stderr","time":612.827746089,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":612.82780833,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":613.065977791,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":613.066014072,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":614.161888079,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":615.249764007,"data":"[NbConvertApp] Writing 307048 bytes to __results__.html\n"}
+]
