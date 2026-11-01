@@ -36,3 +36,13 @@ the strength of the unit tests plus this approximate match. The knobs were fitte
 
 ## 2026-11-01 D8: No DCL code released
 Phase 3b will be a re-implementation from Appendix C / Table 7 and must be named "DCL-style".
+
+## 2026-11-02 D9: Embeddings computed on Kaggle GPU, cached locally
+A local full-corpus MiniLM run was killed by the OS for low memory (nothing lost, no shard was written). Embeddings are now produced by
+`scripts/kaggle_embed_minilm.py` (99,406 unique turn texts, 275 s on GPU), shards in `aegis/data/cache/` (gitignored), keyed by sha1 of the
+turn text. Every turn of train/val/test/who_when is covered (verified: 0 missing). Frozen all-MiniLM-L6-v2, max_seq_length 256.
+
+## 2026-11-02 D10: Decision rule and report conventions for Phase 4+
+Pair predicted iff p_agent >= t_a and p_mode >= t_m, at least one pair per trajectory (every record has a fault), thresholds tuned on val only.
+Every results table includes the trivial "predict everything" floor and the frequency baseline, because agent-level micro-F1 has a floor near 70
+(54-56% of agents are faulty) and error-level micro-F1 a floor near 28. Published DCL (22.9 / 24.7) is below both floors.
