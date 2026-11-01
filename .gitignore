@@ -47,3 +47,7 @@ model/checkpoints/
 # Uncomment the lines below if you prefer to gitignore them
 # btp-pipeline/logs/
 # btp-pipeline/results/
+
+# Aegis track: raw data, embedding caches, cloned third-party repo
+aegis/data/
+aegis/third_party/

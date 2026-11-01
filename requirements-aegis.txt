@@ -1,0 +1,12 @@
+# Aegis-Bench track. vllm is used only in Kaggle scripts, not listed here.
+torch
+torch_geometric
+sentence-transformers
+scikit-learn
+pandas
+numpy
+datasets
+pyyaml
+tqdm
+pytest
+huggingface_hub
