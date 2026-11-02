@@ -1,0 +1,20 @@
+[grouped] train traj 3865  val traj 940  layers 2
+[grouped] seed 0: epochs 16 params 328847 t_a 0.1 t_m 0.1  pair 26.20/19.78 agent 84.10/77.14 error 38.02/37.59  (95s)
+[grouped] seed 1: epochs 16 params 328847 t_a 0.3 t_m 0.1  pair 26.01/21.25 agent 84.47/76.82 error 37.66/37.33  (95s)
+[grouped] seed 2: epochs 15 params 328847 t_a 0.1 t_m 0.1  pair 27.21/21.97 agent 83.25/75.67 error 38.45/37.86  (86s)
+[grouped] pair  micro_f1: 26.47 +- 0.52
+[grouped] pair  macro_f1: 21.00 +- 0.91
+[grouped] agent micro_f1: 83.94 +- 0.51
+[grouped] agent macro_f1: 76.54 +- 0.63
+[grouped] error micro_f1: 38.04 +- 0.32
+[grouped] error macro_f1: 37.59 +- 0.21
+[paper] train traj 7146  val traj 1787  layers 2
+[paper] seed 0: epochs 25 params 328847 t_a 0.3 t_m 0.2  pair 37.20/24.16 agent 80.35/68.39 error 44.22/43.60  (255s)
+[paper] seed 1: epochs 26 params 328847 t_a 0.4 t_m 0.2  pair 36.96/25.94 agent 81.44/70.01 error 44.10/43.74  (266s)
+[paper] seed 2: epochs 24 params 328847 t_a 0.4 t_m 0.2  pair 36.50/24.17 agent 81.12/67.90 error 43.79/43.41  (244s)
+[paper] pair  micro_f1: 36.88 +- 0.29
+[paper] pair  macro_f1: 24.75 +- 0.84
+[paper] agent micro_f1: 80.97 +- 0.46
+[paper] agent macro_f1: 68.77 +- 0.90
+[paper] error micro_f1: 44.04 +- 0.18
+[paper] error macro_f1: 43.58 +- 0.13

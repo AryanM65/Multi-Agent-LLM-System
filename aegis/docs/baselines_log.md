@@ -93,3 +93,34 @@ Verdict: **small, consistent gain on the grouped split; inconclusive on the pape
 - Paper: pair micro +2.0, but the base seeds vary by 3.4 (seed 2 is the weak one), and agent micro drops 2.2, so I would not read this as a gain.
 - The gain on the grouped split is about 2 seed standard deviations on pair micro and far smaller than the gap to what a trained graph model would need to show. This is weak evidence that peer/query comparison carries a little signal. It does not by itself justify the graph; it sets the bar: a graph model should clearly beat 23.6 pair micro on the grouped split to be worth its complexity.
 - Test was not touched.
+
+## Turn-graph GNN (`gnn/turn_gnn.py`, `graph.py`, phase `5`), validation only
+
+Graph per trajectory: one node per turn (frozen MiniLM vector) plus a query node; edges for consecutive turns, consecutive turns of the same agent, and
+query-to-turn / turn-to-query (decision D3 plus the query node). 128-d, relation-specific mean aggregation, residual + LayerNorm. Agent vector = mean of its turn nodes,
+concatenated with the same framework / agent-name / count features as the flat MLP, then an MLP head. Same loss, decoder, early stopping and threshold tuning as the flat MLP.
+"0 layers" is the control: same projection and pooling but no message passing. 3 seeds, mean +- std, micro / macro F1 in percent.
+Raw logs: `aegis/results/runs/gnn_L2.log`, `gnn_L0.log`. Ledger: phase `5`. Test not touched. The GNN was run without the guide's approval of the dataset switch having been confirmed in this log; treat these as exploratory.
+
+| Split | Model | Params | Pair | Agent | Error |
+|---|---|---|---|---|---|
+| grouped | flat MLP | - | 23.05 +- 0.19 / 18.99 | 83.95 +- 0.20 / 77.53 | 36.01 +- 0.21 / 35.67 |
+| grouped | flat MLP + relational probe | - | 23.61 +- 0.27 / 19.35 | 84.16 +- 0.40 / 77.63 | 36.41 +- 0.11 / 35.68 |
+| grouped | pooled-projection, 0 layers | 164k | 25.63 +- 0.49 / 21.26 | 83.74 +- 0.22 / 75.74 | 37.46 +- 0.34 / 37.30 |
+| grouped | GNN, 2 layers | 329k | 26.47 +- 0.52 / 21.00 | 83.94 +- 0.51 / 76.54 | 38.04 +- 0.32 / 37.59 |
+| paper | flat MLP | - | 32.19 +- 3.36 / 24.04 | 82.33 +- 3.02 / 73.21 | 41.26 +- 1.40 / 41.11 |
+| paper | pooled-projection, 0 layers | 164k | 31.36 +- 2.92 / 22.59 | 84.05 +- 2.88 / 71.70 | 41.02 +- 0.95 / 40.96 |
+| paper | GNN, 2 layers | 329k | 36.88 +- 0.29 / 24.75 | 80.97 +- 0.46 / 68.77 | 44.04 +- 0.18 / 43.58 |
+
+### Reading the results
+1. **Most of the grouped-split gain over the flat MLP is not the graph.** The 0-layer control already gains +2.6 pair micro and +1.5 error micro over the flat MLP.
+   It differs from the flat MLP by projecting each turn before pooling (instead of pooling raw vectors) and having a different optimiser path, so the gain is credited to
+   per-turn nonlinear projection, not to message passing.
+2. **Message passing adds a small amount on grouped.** GNN vs 0 layers: pair micro +0.84 (higher in 2 of 3 seeds: 26.20 vs 26.28, 26.01 vs 25.11, 27.21 vs 25.52),
+   error micro +0.58 (higher in all 3 seeds), agent micro +0.20, pair macro -0.26, error macro +0.29. With 3 seeds and std about 0.5 this is suggestive, not established.
+3. **On the paper split the graph gap is larger** (pair +5.5, error +3.0 vs the 0-layer control) but that split has query leakage, so a model with more capacity to
+   memorise query-specific patterns gains more there. Do not use it as evidence for the graph; claims rest on grouped.
+4. **Agent-level micro is flat across all models** (about 84 on grouped), consistent with the trivial floor (73-84). Agent macro is slightly lower for the GNN than for the flat MLP.
+5. Caveats: the paper-split 0-layer seed 0 hit the 40-epoch cap, so that control may be under-trained; no hyper-parameter search was done for any model;
+   one graph design (D3 + query node) was tried; the encoder is frozen MiniLM.
+6. Next step before any claim: seeds 3 -> 5 on grouped for GNN vs 0 layers, an edge-type ablation (drop same-agent, drop query), then test once.
