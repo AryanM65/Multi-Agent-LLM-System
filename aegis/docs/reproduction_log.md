@@ -71,8 +71,8 @@ Micro / macro F1, percent. "paper-split" trains on the released train set; "grou
 
 ### Verdict: **not matched** (and not intended as a reproduction)
 
-- Our frozen-encoder model scores higher than the published DCL on 11 of 12 micro-F1 numbers; the exception is Who&When error micro-F1 on the
-  paper-split (10.6 vs 14.7), which the grouped model also narrowly misses (12.5).
+- Our frozen-encoder model scores higher than the published DCL on 10 of 12 micro-F1 numbers; the exceptions are Who&When error micro-F1 in both columns
+  (10.6 paper-split and 12.5 grouped vs 14.7 published).
 - The gap is largest at agent level (69.9 vs 22.9). The trivial floor on the same metric is about 70 (baselines_log.md), so the published
   DCL agent-level numbers sit far below a rule that predicts every present agent. We cannot explain this from the paper alone; plausible causes are that
   the published model predicts agent names in a different vocabulary than the labels, or restricts its outputs, or the published agent-level metric
