@@ -48,9 +48,41 @@ Run health: Aegis-Bench 8 of 600 outputs unparseable (counted as empty), 9 with 
 ### Optional follow-up
 Re-run on the repo's `evaluation/data/aegis.jsonl` to test explanation 1. This costs about 3.5 GPU-hours on Kaggle and was not run.
 
-## 3b. DCL (not started)
-No code or checkpoints were released (decision D8), so this will be a re-implementation named "DCL-style". It needs cached turn embeddings,
-which are blocked until the embedding job is rerun on a Kaggle GPU.
+## 3b. DCL-style (frozen encoder) re-implementation
+
+No DCL code or checkpoint was released (decision D8). `aegis/src/baselines/dcl_style.py` re-implements the published design from its
+description: bag of turns, projection to 128-d, agent-name and error-mode prototype banks (initialised from text embeddings),
+top-K=3 multiple-instance pooling per agent, asymmetric BCE + supervised contrastive (tau 0.07) + hierarchical-consistency losses
+(weights 1.0 / 0.4 / 0.6). It is **named DCL-style and is not DCL**: the encoder is frozen (cached MiniLM; the paper fine-tunes it), lr 1e-3
+with early stopping on val loss instead of lr 1e-4 for 2 x 500 steps, agent prototypes keyed by agent name, batch 64. About 0.2M trainable
+parameters. One decision threshold is tuned on validation; then test and Who&When are scored once per seed (3 seeds, mean shown).
+Ledger: phase `3b`.
+
+Micro / macro F1, percent. "paper-split" trains on the released train set; "grouped" trains on the query-disjoint train set (46% fewer records).
+
+| Benchmark, level | Published DCL | DCL-style, paper-split | DCL-style, grouped |
+|---|---|---|---|
+| Aegis-Bench pair | 8.33 / 5.30 | 15.06 / 8.56 | 11.59 / 6.01 |
+| Aegis-Bench agent | 22.93 / 20.23 | 69.88 / 57.22 | 66.47 / 51.82 |
+| Aegis-Bench error | 24.73 / 27.70 | 34.34 / 33.23 | 28.96 / 27.14 |
+| Who&When pair | 1.60 / 0.77 | 3.09 / 1.04 | 4.08 / 1.12 |
+| Who&When agent | 8.40 / 6.07 | 37.95 / 31.44 | 37.90 / 30.00 |
+| Who&When error | 14.67 / 10.57 | 10.61 / 6.98 | 12.50 / 8.46 |
+
+### Verdict: **not matched** (and not intended as a reproduction)
+
+- Our frozen-encoder model scores higher than the published DCL on 11 of 12 micro-F1 numbers; the exception is Who&When error micro-F1 on the
+  paper-split (10.6 vs 14.7), which the grouped model also narrowly misses (12.5).
+- The gap is largest at agent level (69.9 vs 22.9). The trivial floor on the same metric is about 70 (baselines_log.md), so the published
+  DCL agent-level numbers sit far below a rule that predicts every present agent. We cannot explain this from the paper alone; plausible causes are that
+  the published model predicts agent names in a different vocabulary than the labels, or restricts its outputs, or the published agent-level metric
+  differs from the released `evaluate.py` that we ported.
+- Because the published DCL cannot be matched or even bracketed by a simpler model on the same metrics, comparisons against the published DCL
+  number should be reported with the trivial floor and the flat-MLP baseline next to them, and the headline claims should rest on pair-level
+  and macro numbers on the grouped split.
+- On validation (grouped), the flat MLP (pair 23.1) beats this DCL-style model (pair 13.5): the prototype/top-K architecture does not
+  help over mean pooling here. This is evidence only about this frozen-encoder variant.
+- Test and Who&When were each scored once per seed with a configuration chosen on validation (no tuning on them).
 
 ## 3c. Aegis-SFT, Aegis-GRPO, proprietary models
 Not rerun. Quote the published numbers.
