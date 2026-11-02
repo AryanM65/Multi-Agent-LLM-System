@@ -74,3 +74,22 @@ every macro number (pair macro -2.3, agent macro -2.5, error macro -5.1). On the
 The hypothesis that a fixed per-framework agent count is a better decoder is not supported. The tuned t_extra sits at the lower grid edge (0.3) in every run,
 so the best settings add many extra modes per agent, which moves toward the "predict everything" floor. The threshold decoder stays the default for Phase 5.
 The two-feature probe (cosine similarity to the query and to peers) from `error_analysis.md` has not been run.
+
+## Relational probe (`baselines/flat_probe.py`, phase `4c`), validation only
+
+Flat MLP plus 4 extra features per (trajectory, agent): cosine of the agent's mean turn vector to the query, max turn-to-query cosine,
+cosine to the mean of the other agents' turns, min turn-to-peers cosine. Query vectors are cached MiniLM embeddings (1,457 new queries embedded locally,
+77 s). Same model, decoder and tuning as the flat MLP. 3 seeds, mean +- std, micro / macro F1 in percent.
+
+| Split | Features | Pair | Agent | Error |
+|---|---|---|---|---|
+| paper | base | 32.19 +- 3.36 / 24.04 | 82.33 +- 3.02 / 73.21 | 41.26 +- 1.40 / 41.11 |
+| paper | + relational | 34.17 +- 0.13 / 24.21 | 80.15 +- 1.11 / 70.64 | 41.50 +- 0.16 / 41.13 |
+| grouped | base | 23.05 +- 0.19 / 18.99 | 83.95 +- 0.20 / 77.53 | 36.01 +- 0.21 / 35.67 |
+| grouped | + relational | 23.61 +- 0.27 / 19.35 | 84.16 +- 0.40 / 77.63 | 36.41 +- 0.11 / 35.68 |
+
+Verdict: **small, consistent gain on the grouped split; inconclusive on the paper split.**
+- Grouped: pair micro rises in all three seeds (22.91 to 23.49, 23.31 to 23.98, 22.92 to 23.35), mean +0.56; error micro +0.40; agent micro +0.21 (within noise); macro numbers move by 0.1 to 0.4.
+- Paper: pair micro +2.0, but the base seeds vary by 3.4 (seed 2 is the weak one), and agent micro drops 2.2, so I would not read this as a gain.
+- The gain on the grouped split is about 2 seed standard deviations on pair micro and far smaller than the gap to what a trained graph model would need to show. This is weak evidence that peer/query comparison carries a little signal. It does not by itself justify the graph; it sets the bar: a graph model should clearly beat 23.6 pair micro on the grouped split to be worth its complexity.
+- Test was not touched.
