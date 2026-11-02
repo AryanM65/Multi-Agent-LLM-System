@@ -1,0 +1,12 @@
+[grouped] train traj 3865  val traj 940  layers 2
+[grouped] seed 0: epochs 17 params 328847 t_a 0.3 t_m 0.1  pair 25.57/20.62 agent 85.38/78.36 error 37.48/37.00  (83s)
+[grouped] seed 1: epochs 16 params 328847 t_a 0.1 t_m 0.1  pair 26.08/21.66 agent 84.18/77.60 error 37.87/37.73  (78s)
+[grouped] seed 2: epochs 13 params 328847 t_a 0.3 t_m 0.1  pair 25.81/19.25 agent 80.62/73.14 error 36.52/35.61  (62s)
+[grouped] seed 3: epochs 12 params 328847 t_a 0.1 t_m 0.1  pair 24.90/17.21 agent 81.08/74.64 error 35.79/34.45  (62s)
+[grouped] seed 4: epochs 15 params 328847 t_a 0.4 t_m 0.1  pair 25.37/20.32 agent 83.63/75.30 error 37.77/37.56  (79s)
+[grouped] pair  micro_f1: 25.55 +- 0.40
+[grouped] pair  macro_f1: 19.81 +- 1.51
+[grouped] agent micro_f1: 82.98 +- 1.83
+[grouped] agent macro_f1: 75.81 +- 1.92
+[grouped] error micro_f1: 37.08 +- 0.81
+[grouped] error macro_f1: 36.47 +- 1.26

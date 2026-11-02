@@ -124,3 +124,30 @@ Raw logs: `aegis/results/runs/gnn_L2.log`, `gnn_L0.log`. Ledger: phase `5`. Test
 5. Caveats: the paper-split 0-layer seed 0 hit the 40-epoch cap, so that control may be under-trained; no hyper-parameter search was done for any model;
    one graph design (D3 + query node) was tried; the encoder is frozen MiniLM.
 6. Next step before any claim: seeds 3 -> 5 on grouped for GNN vs 0 layers, an edge-type ablation (drop same-agent, drop query), then test once.
+
+## GNN ablation, grouped split, 5 seeds (`gnn/turn_gnn.py --drop`, phase `5`), validation only
+
+Seeds 0-4, mean +- std, micro / macro F1 in percent. "Drop X" removes that edge type from message passing in both layers
+(the unused weights still count in the parameter total). Logs: `aegis/results/runs/g5_*.log`. Test not touched.
+
+| Model | Pair | Agent | Error |
+|---|---|---|---|
+| flat MLP (3 seeds, from above) | 23.05 +- 0.19 / 18.99 | 83.95 / 77.53 | 36.01 / 35.67 |
+| 0 layers (no message passing) | 25.66 +- 0.40 / 21.35 | 84.10 +- 0.50 / 76.36 | 37.67 +- 0.38 / 37.56 |
+| GNN, all edges | 26.86 +- 0.61 / 21.40 | 84.05 +- 0.69 / 75.50 | 38.18 +- 0.56 / 37.73 |
+| GNN, drop same-agent edges | 26.56 +- 0.68 / 20.90 | 83.62 +- 0.97 / 76.16 | 38.45 +- 0.40 / 38.12 |
+| GNN, drop sequence edges | 26.62 +- 0.53 / 20.95 | 83.09 +- 0.64 / 75.69 | 38.43 +- 0.41 / 38.01 |
+| GNN, drop query node | 25.55 +- 0.40 / 19.81 | 82.98 +- 1.83 / 75.81 | 37.08 +- 0.81 / 36.47 |
+
+### Reading the results
+1. **The query node carries the graph's gain.** Removing it drops pair micro by 1.3 (26.86 to 25.55), which is below the 0-layer control (25.66). Removing the same-agent edges (-0.30) or the
+   sequence edges (-0.24) changes pair micro by less than one standard deviation, and error micro goes up slightly (38.18 to 38.45 / 38.43). So, in this design, the useful
+   message passing is "each turn sees the query", which is the same signal the earlier cosine-to-query probe suggested. Turn-order and same-agent structure show no measurable benefit here.
+2. **Graph vs control:** GNN is above the 0-layer control on pair micro in 5 of 5 seeds (+1.2 on average) but on error micro in only 3 of 5 (+0.5 on average, inside noise).
+   Agent-level numbers are the same everywhere (about 84 micro), and macro F1 does not separate the models.
+3. **Run-to-run noise is larger than the seed std suggests.** Seeds 0-2 of the full GNN gave pair micro 26.20 / 26.01 / 27.21 in the earlier 3-seed run and 27.62 / 26.94 / 27.13 in this
+   run with identical seeds and code (the 0-layer control reproduced exactly). The likely cause is non-deterministic summation order in the edge aggregation (`index_add_`) amplified by
+   early stopping, but this was not isolated. Treat differences below about 1 point as unresolved.
+4. **Honest summary for the write-up:** a frozen-encoder model that projects each turn and lets turns see the query beats the flat mean-pooled MLP by about 3.8 pair micro and 2.2 error micro
+   on the grouped split. About two thirds of that comes from the per-turn projection, the rest from query-aware message passing. There is no evidence here that turn-to-turn graph structure
+   (sequence, same-agent edges) helps. Agent-level micro-F1 remains at the trivial floor for every model.

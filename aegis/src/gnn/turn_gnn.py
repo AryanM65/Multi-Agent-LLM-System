@@ -28,8 +28,9 @@ from ..utils import log_run, set_seed
 
 
 class RelLayer(nn.Module):
-    def __init__(self, d: int, dropout: float):
+    def __init__(self, d: int, dropout: float, drop_rels: frozenset = frozenset()):
         super().__init__()
+        self.drop_rels = drop_rels
         self.self_lin = nn.Linear(d, d)
         self.rel_lin = nn.ModuleList([nn.Linear(d, d, bias=False) for _ in range(N_REL)])
         self.norm = nn.LayerNorm(d)
@@ -38,6 +39,8 @@ class RelLayer(nn.Module):
     def forward(self, h, src, dst, rel):
         out = self.self_lin(h)
         for r, lin in enumerate(self.rel_lin):
+            if r in self.drop_rels:
+                continue
             m = rel == r
             if not m.any():
                 continue
@@ -49,10 +52,11 @@ class RelLayer(nn.Module):
 
 
 class TurnGNN(nn.Module):
-    def __init__(self, d_meta: int, d: int = 128, layers: int = 2, hidden: int = 256, dropout: float = 0.3):
+    def __init__(self, d_meta: int, d: int = 128, layers: int = 2, hidden: int = 256, dropout: float = 0.3,
+                 drop_rels: frozenset = frozenset()):
         super().__init__()
         self.inp = nn.Sequential(nn.Linear(384, d), nn.ReLU(), nn.Dropout(dropout))
-        self.layers = nn.ModuleList([RelLayer(d, dropout) for _ in range(layers)])
+        self.layers = nn.ModuleList([RelLayer(d, dropout, drop_rels) for _ in range(layers)])
         self.head = nn.Sequential(nn.Linear(d + d_meta, hidden), nn.ReLU(), nn.Dropout(dropout),
                                   nn.Linear(hidden, hidden), nn.ReLU(), nn.Dropout(dropout),
                                   nn.Linear(hidden, len(ERROR_MODES) + 1))
@@ -90,11 +94,11 @@ def predict(model, items, mu, sd, bs=64):
     return np.concatenate(probs), loss_sum / n
 
 
-def train_gnn(tr_items, va_items, seed: int, layers: int, epochs: int = 40, patience: int = 6, bs: int = 32):
+def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset = frozenset(), epochs: int = 40, patience: int = 6, bs: int = 32):
     set_seed(seed)
     allm = np.concatenate([it["meta"] for it in tr_items])
     mu, sd = allm.mean(0), allm.std(0) + 1e-6
-    model = TurnGNN(allm.shape[1], layers=layers)
+    model = TurnGNN(allm.shape[1], layers=layers, drop_rels=drop_rels)
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     lossf = nn.BCEWithLogitsLoss()
     best, best_state, bad = 1e9, None, 0
@@ -119,7 +123,12 @@ def train_gnn(tr_items, va_items, seed: int, layers: int, epochs: int = 40, pati
     return probs, ep + 1, sum(p.numel() for p in model.parameters())
 
 
-def run(name: str, splits: dict, store: EmbStore, seeds: list, layers: int) -> None:
+REL_NAMES = {"seq": {0}, "same": {1}, "query": {2, 3}}
+
+
+def run(name: str, splits: dict, store: EmbStore, seeds: list, layers: int, drop: str = "") -> None:
+    drop_rels = frozenset(r for d in filter(None, drop.split("+")) for r in REL_NAMES[d])
+    tag = f"turn_gnn_L{layers}" + (f"_drop_{drop}" if drop else "")
     vocab = agent_vocab(splits["train"])
     queries = sorted({t.query for k in ("train", "val") for t in splits[k]})
     qvec = dict(zip(queries, get_embeddings(queries, verbose=False)))
@@ -132,16 +141,16 @@ def run(name: str, splits: dict, store: EmbStore, seeds: list, layers: int) -> N
     results = []
     for s in seeds:
         t0 = time.time()
-        probs, epochs, n_params = train_gnn(tr_items, va_items, s, layers)
+        probs, epochs, n_params = train_gnn(tr_items, va_items, s, layers, drop_rels)
         _, ta, tm, res = tune(probs, meta_va, splits["val"])
         results.append(res)
         print(f"[{name}] seed {s}: epochs {epochs} params {n_params} t_a {ta} t_m {tm}  "
               f"pair {100*res['pair']['micro_f1']:.2f}/{100*res['pair']['macro_f1']:.2f} "
               f"agent {100*res['agent']['micro_f1']:.2f}/{100*res['agent']['macro_f1']:.2f} "
               f"error {100*res['error']['micro_f1']:.2f}/{100*res['error']['macro_f1']:.2f}  ({time.time()-t0:.0f}s)", flush=True)
-        log_run(phase="5", model=f"turn_gnn_L{layers}", seed=s, split=f"val_{name}", n_params=n_params,
+        log_run(phase="5", model=tag, seed=s, split=f"val_{name}", n_params=n_params,
                 train_seconds=time.time() - t0,
-                config={"split": name, "layers": layers, "dim": 128, "edges": "seq+same-agent+query", "t_a": ta, "t_m": tm,
+                config={"split": name, "layers": layers, "dim": 128, "edges": "seq+same-agent+query", "dropped": drop, "t_a": ta, "t_m": tm,
                         "epochs_run": epochs},
                 metrics={"val": {l: res[l] for l in ("pair", "agent", "error")}},
                 notes="relational GNN over turn graph + flat metadata; val only; no test eval")
@@ -156,8 +165,9 @@ if __name__ == "__main__":
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--layers", type=int, default=2)
     ap.add_argument("--splits", default="grouped,paper")
+    ap.add_argument("--drop", default="", help="edge types to remove: seq, same, query (join with +)")
     args = ap.parse_args()
     store = EmbStore()
     loaders = {"paper": load_paper_splits, "grouped": load_grouped_splits}
     for name in args.splits.split(","):
-        run(name, loaders[name](), store, list(range(args.seeds)), args.layers)
+        run(name, loaders[name](), store, list(range(args.seeds)), args.layers, args.drop)
