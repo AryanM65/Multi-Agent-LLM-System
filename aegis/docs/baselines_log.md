@@ -55,3 +55,22 @@ MLP 2x256, dropout 0.3, AdamW 1e-3, BCE on 14 mode logits + 1 faulty-agent logit
 3. The flat MLP is the bar the graph model must clear in Phase 5. The floor and frequency rows go in the final table.
 4. Caveats: thresholds on the grouped split sit at the lower edge of the grid (0.1); a finer grid could add a little. Not tuned further
    to avoid overfitting val.
+
+## Flat MLP with top-k decoding (`baselines/flat_topk.py`, phase `4b`), validation only
+
+Same trained MLP and probabilities as above; only the decoder changes, using label structure from `error_analysis.md`
+(never-faulty roles masked, k faulty agents per framework taken from train, argmax mode per agent plus extra modes above t_extra tuned on val).
+3 seeds, mean +- std, micro / macro F1 in percent.
+
+| Split | Decoder | Pair | Agent | Error |
+|---|---|---|---|---|
+| paper | threshold | 32.19 / 24.04 | 82.33 / 73.21 | 41.26 / 41.11 |
+| paper | top-k | 31.04 / 20.84 | 82.32 / 66.08 | 38.50 / 37.70 |
+| grouped | threshold | 23.05 / 18.99 | 83.95 / 77.53 | 36.01 / 35.67 |
+| grouped | top-k | 24.06 / 16.68 | 84.46 / 75.01 | 32.66 / 30.55 |
+
+Verdict: **top-k does not help overall.** On the grouped split it gains +1.0 pair micro and +0.5 agent micro, but loses 3.4 error micro and
+every macro number (pair macro -2.3, agent macro -2.5, error macro -5.1). On the paper split it is worse or equal on all six micro and macro numbers.
+The hypothesis that a fixed per-framework agent count is a better decoder is not supported. The tuned t_extra sits at the lower grid edge (0.3) in every run,
+so the best settings add many extra modes per agent, which moves toward the "predict everything" floor. The threshold decoder stays the default for Phase 5.
+The two-feature probe (cosine similarity to the query and to peers) from `error_analysis.md` has not been run.
