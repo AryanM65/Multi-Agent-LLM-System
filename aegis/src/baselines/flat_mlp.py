@@ -79,6 +79,7 @@ def train_one(Xtr, Ytr, Xva, Yva, seed: int, epochs: int = 60, patience: int = 8
     xtr, xva = f(Xtr), f(Xva)
     ytr, yva = torch.tensor(make_targets(Ytr)), torch.tensor(make_targets(Yva))
     model = MLP(xtr.shape[1])
+    model.mu, model.sd = mu, sd   # kept so the same model can score other splits later
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     lossf = nn.BCEWithLogitsLoss()
     best_loss, best_state, bad = 1e9, None, 0

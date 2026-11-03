@@ -94,7 +94,8 @@ def predict(model, items, mu, sd, bs=64):
     return np.concatenate(probs), loss_sum / n
 
 
-def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset = frozenset(), epochs: int = 40, patience: int = 6, bs: int = 32):
+def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset = frozenset(), epochs: int = 40, patience: int = 6, bs: int = 32,
+              extra_items: dict | None = None):
     set_seed(seed)
     allm = np.concatenate([it["meta"] for it in tr_items])
     mu, sd = allm.mean(0), allm.std(0) + 1e-6
@@ -120,7 +121,10 @@ def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset =
                 break
     model.load_state_dict(best_state)
     probs, _ = predict(model, va_items, mu, sd)
-    return probs, ep + 1, sum(p.numel() for p in model.parameters())
+    n_params = sum(p.numel() for p in model.parameters())
+    if extra_items is None:
+        return probs, ep + 1, n_params
+    return probs, ep + 1, n_params, {k: predict(model, v, mu, sd)[0] for k, v in extra_items.items()}
 
 
 REL_NAMES = {"seq": {0}, "same": {1}, "query": {2, 3}}

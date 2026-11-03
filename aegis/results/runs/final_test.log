@@ -1,0 +1,24 @@
+
+===== train protocol: grouped =====
+  floor              test      pair 7.35/6.35 agent 68.58/61.98 error 27.14/26.99 
+  floor              who_when  pair 3.42/2.85 agent 38.32/38.41 error 13.33/12.34
+  frequency (k=15)   test      pair 12.15/5.38 agent 80.45/72.05 error 28.20/27.70 
+                     who_when  pair 0.00/0.00 agent 0.00/0.00 error 0.00/0.00
+  flat_mlp seed 0 test pair 19.69/13.17 agent 79.61/66.67 error 33.10/33.15  (25s)
+  flat_mlp seed 1 test pair 19.70/13.32 agent 79.77/68.35 error 32.72/32.61  (25s)
+  flat_mlp seed 2 test pair 19.49/12.62 agent 78.30/64.75 error 32.15/31.44  (23s)
+  flat_mlp seed 3 test pair 19.60/13.18 agent 79.69/67.21 error 32.75/32.47  (25s)
+  flat_mlp seed 4 test pair 20.03/13.61 agent 78.72/67.61 error 33.08/32.58  (22s)
+  flat_mlp           test     pair micro 19.70+-0.18 | pair macro 13.18+-0.32 | agen micro 79.22+-0.60 | agen macro 66.92+-1.21 | erro micro 32.76+-0.34 | erro macro 32.45+-0.56
+  flat_mlp           who_when pair micro 2.72+-0.00 | pair macro 1.55+-0.00 | agen micro 33.70+-0.00 | agen macro 32.87+-0.00 | erro micro 10.87+-0.00 | erro macro 1.78+-0.00
+  turn_gnn_L0 seed 0 test pair 21.65/14.48 agent 79.64/67.91 error 35.28/34.70  (56s)
+  turn_gnn_L0 seed 1 test pair 20.03/12.95 agent 79.84/70.46 error 34.12/33.53  (53s)
+  turn_gnn_L0 seed 2 test pair 21.01/14.58 agent 79.91/69.14 error 34.54/34.46  (64s)
+  turn_gnn_L0 seed 3 test pair 20.94/14.95 agent 80.05/65.48 error 34.70/34.59  (59s)
+  turn_gnn_L0 seed 4 test pair 21.74/14.63 agent 79.10/67.42 error 34.75/34.84  (59s)
+  turn_gnn_L0        test     pair micro 21.07+-0.62 | pair macro 14.32+-0.70 | agen micro 79.71+-0.33 | agen macro 68.08+-1.67 | erro micro 34.68+-0.37 | erro macro 34.43+-0.46
+  turn_gnn_L0        who_when pair micro 2.72+-0.00 | pair macro 1.55+-0.00 | agen micro 33.70+-0.00 | agen macro 32.87+-0.00 | erro micro 10.87+-0.00 | erro macro 1.78+-0.00
+  turn_gnn_L2 seed 0 test pair 22.28/14.63 agent 78.49/68.72 error 35.96/35.39  (104s)
+  turn_gnn_L2 seed 1 test pair 20.08/12.92 agent 78.69/68.45 error 34.23/33.77  (90s)
+  turn_gnn_L2 seed 2 test pair 21.56/15.44 agent 79.38/64.04 error 35.26/34.76  (114s)
+  turn_gnn_L2 seed 3 test pair 20.64/14.60 agent 78.49/68.00 error 34.30/34.43  (109s)
