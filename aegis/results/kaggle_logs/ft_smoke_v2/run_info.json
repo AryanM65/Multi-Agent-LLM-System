@@ -1,0 +1,16 @@
+{
+ "best_val_loss": 0.21367941325340198,
+ "epochs_run": 1,
+ "n_texts": 2000,
+ "train": 160,
+ "val": 40,
+ "args": {
+  "input_dir": "/kaggle/input",
+  "output_dir": "/kaggle/working",
+  "epochs": 1,
+  "patience": 2,
+  "bs": 8,
+  "limit": 160,
+  "seed": 0
+ }
+}
