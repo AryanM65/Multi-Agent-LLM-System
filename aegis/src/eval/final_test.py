@@ -40,9 +40,9 @@ def record(name, model, seed, res_test, res_ww, extra, n_params=0):
     if DRY:
         return
     for tag, res in (("test", res_test), ("who_when", res_ww)):
-        log_run(phase="6", model=model, seed=seed, split=f"{tag}_{name}", n_params=n_params,
+        log_run(phase="6r", model=model, seed=seed, split=f"{tag}_{name}", n_params=n_params,
                 config=extra, metrics={tag: {l: res[l] for l in LV}},
-                notes="final scoring; config and thresholds chosen on val only")
+                notes="final scoring RE-RUN after Who&When standardisation fix (supersedes phase 6 who_when rows); config and thresholds chosen on val only")
 
 
 def summarize(label, runs):
@@ -120,10 +120,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--dry-run", action="store_true", help="code-path check on slices of val; test/Who&When are not read")
+    ap.add_argument("--protocol", choices=["grouped", "paper", "both"], default="both", help="run one protocol at a time to limit memory")
     args = ap.parse_args()
     DRY = args.dry_run
     store = EmbStore()
     for name, loader in (("grouped", load_grouped_splits), ("paper", load_paper_splits)):
+        if args.protocol not in ("both", name):
+            continue
         sp = loader()
         if DRY:
             test, ww = sp["val"][:100], sp["val"][100:200]

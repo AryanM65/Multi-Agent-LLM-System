@@ -74,7 +74,8 @@ def tune(probs, meta, trajs):
 
 def train_one(Xtr, Ytr, Xva, Yva, seed: int, epochs: int = 60, patience: int = 8):
     set_seed(seed)
-    mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-6
+    mu, sd = Xtr.mean(0), Xtr.std(0)
+    sd = np.where(sd < 1e-3, 1.0, sd)   # constant-in-train columns (e.g. who_when one-hot) must not blow up to 1e6 on other sets
     f = lambda X: torch.tensor((X - mu) / sd, dtype=torch.float32)
     xtr, xva = f(Xtr), f(Xva)
     ytr, yva = torch.tensor(make_targets(Ytr)), torch.tensor(make_targets(Yva))

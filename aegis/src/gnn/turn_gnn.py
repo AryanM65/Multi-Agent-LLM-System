@@ -98,7 +98,8 @@ def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset =
               extra_items: dict | None = None):
     set_seed(seed)
     allm = np.concatenate([it["meta"] for it in tr_items])
-    mu, sd = allm.mean(0), allm.std(0) + 1e-6
+    mu, sd = allm.mean(0), allm.std(0)
+    sd = np.where(sd < 1e-3, 1.0, sd)   # see flat_mlp.train_one: avoid 1e6 z-scores on columns constant in train
     model = TurnGNN(allm.shape[1], layers=layers, drop_rels=drop_rels)
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     lossf = nn.BCEWithLogitsLoss()
