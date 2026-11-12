@@ -32,6 +32,7 @@ class EmbStore:
             vecs.append(z["vecs"])
         self.vecs = np.concatenate(vecs).astype(np.float32)
         self.index = {k: i for i, k in enumerate(keys)}
+        self.dim = self.vecs.shape[1]
 
     def lookup(self, text: str) -> np.ndarray:
         return self.vecs[self.index[text_key(text)]]
@@ -50,7 +51,8 @@ def build(trajs: list, store: EmbStore, vocab: list):
     """Return X (rows x D), Y (rows x 14), meta list of (traj_index, agent_name)."""
     vidx = {a: i for i, a in enumerate(vocab)}
     fw_idx = {f: i for i, f in enumerate(FRAMEWORKS)}
-    D = 384 + len(FRAMEWORKS) + len(vocab) + 1 + 4
+    E = store.dim
+    D = E + len(FRAMEWORKS) + len(vocab) + 1 + 4
     rows, ys, meta = [], [], []
     for ti, t in enumerate(trajs):
         n_total = len(t.turns)
@@ -61,9 +63,9 @@ def build(trajs: list, store: EmbStore, vocab: list):
         for rank, a in enumerate(order):
             vs = by_agent[a]
             x = np.zeros(D, dtype=np.float32)
-            x[:384] = np.mean(vs, axis=0)
-            x[384 + fw_idx[t.framework]] = 1.0
-            off = 384 + len(FRAMEWORKS)
+            x[:E] = np.mean(vs, axis=0)
+            x[E + fw_idx[t.framework]] = 1.0
+            off = E + len(FRAMEWORKS)
             x[off + vidx.get(a, len(vocab))] = 1.0          # last slot = UNK
             off += len(vocab) + 1
             x[off] = np.log1p(len(vs))

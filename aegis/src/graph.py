@@ -49,7 +49,7 @@ def make_items(trajs: list, store, qvec: dict, X: np.ndarray, Y: np.ndarray, met
             "q": qvec[t.query].astype(np.float32),
             "agent_of_turn": agent_of_turn,
             "edges": edges_for(agent_of_turn),
-            "meta": X[row: row + n_agents, 384:],
+            "meta": X[row: row + n_agents, store.dim:],
             "y": Y[row: row + n_agents],
             "n_agents": n_agents,
         })

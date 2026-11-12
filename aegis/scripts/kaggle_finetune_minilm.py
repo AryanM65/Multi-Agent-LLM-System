@@ -27,7 +27,7 @@ import numpy as np
 import torch
 from torch import nn
 
-MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+MODEL = "sentence-transformers/all-MiniLM-L6-v2"   # overridden by --model
 MODES = [f"FM-1.{i}" for i in range(1, 6)] + [f"FM-2.{i}" for i in range(1, 7)] + [f"FM-3.{i}" for i in range(1, 4)]
 MIDX = {m: i for i, m in enumerate(MODES)}
 FWS = ["agentverse", "dylan", "llm_debate", "macnet", "magentic_one", "smoagents", "who_when"]
@@ -87,13 +87,14 @@ def agent_rows(tr: dict, vocab: dict):
 
 
 class Net(nn.Module):
-    def __init__(self, d_meta: int):
+    def __init__(self, d_meta: int, model: str = MODEL):
         super().__init__()
         from transformers import AutoModel, AutoTokenizer
 
-        self.tok = AutoTokenizer.from_pretrained(MODEL)
-        self.enc = AutoModel.from_pretrained(MODEL)
-        self.head = nn.Sequential(nn.Linear(384 + d_meta, 256), nn.ReLU(), nn.Dropout(0.3),
+        self.tok = AutoTokenizer.from_pretrained(model)
+        self.enc = AutoModel.from_pretrained(model)
+        self.dim = self.enc.config.hidden_size
+        self.head = nn.Sequential(nn.Linear(self.dim + d_meta, 256), nn.ReLU(), nn.Dropout(0.3),
                                   nn.Linear(256, 256), nn.ReLU(), nn.Dropout(0.3), nn.Linear(256, len(MODES) + 1))
 
     def embed(self, texts: list, dev) -> torch.Tensor:
@@ -114,7 +115,7 @@ class Net(nn.Module):
             v = self.embed(flat, dev)
         v = v.float()
         owner_t = torch.tensor(owner, device=dev)
-        agg = torch.zeros(len(rows), 384, device=dev).index_add_(0, owner_t, v)
+        agg = torch.zeros(len(rows), self.dim, device=dev).index_add_(0, owner_t, v)
         cnt = torch.zeros(len(rows), device=dev).index_add_(0, owner_t, torch.ones(len(owner), device=dev))
         meta = torch.tensor((np.stack([r[1] for r in rows]) - mu) / sd, dtype=torch.float32, device=dev)
         return self.head(torch.cat([agg / cnt.unsqueeze(1), meta], dim=1))
@@ -171,6 +172,8 @@ def main() -> None:
     ap.add_argument("--patience", type=int, default=2)
     ap.add_argument("--bs", type=int, default=8, help="trajectories per batch")
     ap.add_argument("--limit", type=int, default=0, help="smoke test: use this many train/val trajectories")
+    ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--export-dir", default="ft_shards")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
@@ -200,7 +203,7 @@ def main() -> None:
     mu, sd = meta_all.mean(0), meta_all.std(0)
     sd = np.where(sd < 1e-3, 1.0, sd)
 
-    net = Net(meta_all.shape[1]).to(dev)
+    net = Net(meta_all.shape[1], args.model).to(dev)
     opt = torch.optim.AdamW([{"params": net.enc.parameters(), "lr": 2e-5},
                              {"params": net.head.parameters(), "lr": 1e-3}], weight_decay=1e-2)
     lossf = nn.BCEWithLogitsLoss()
@@ -243,7 +246,7 @@ def main() -> None:
     if args.limit:
         texts = dict(list(texts.items())[:2000])
     print(f"embedding {len(texts)} unique texts with the fine-tuned encoder", flush=True)
-    export(net, texts, out / "ft_shards", dev)
+    export(net, texts, out / args.export_dir, dev)
     (out / "run_info.json").write_text(json.dumps({"best_val_loss": best, "epochs_run": len(log), "n_texts": len(texts),
                                                     "train": len(tr), "val": len(va), "args": vars(args)}, indent=1))
     print("done", flush=True)
