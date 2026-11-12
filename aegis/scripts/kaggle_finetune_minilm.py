@@ -173,6 +173,7 @@ def main() -> None:
     ap.add_argument("--bs", type=int, default=8, help="trajectories per batch")
     ap.add_argument("--limit", type=int, default=0, help="smoke test: use this many train/val trajectories")
     ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--grad-ckpt", action="store_true", help="gradient checkpointing (needed for base-size encoders on a 15 GB T4)")
     ap.add_argument("--export-dir", default="ft_shards")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
@@ -204,6 +205,8 @@ def main() -> None:
     sd = np.where(sd < 1e-3, 1.0, sd)
 
     net = Net(meta_all.shape[1], args.model).to(dev)
+    if args.grad_ckpt:
+        net.enc.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     opt = torch.optim.AdamW([{"params": net.enc.parameters(), "lr": 2e-5},
                              {"params": net.head.parameters(), "lr": 1e-3}], weight_decay=1e-2)
     lossf = nn.BCEWithLogitsLoss()
