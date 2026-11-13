@@ -23,6 +23,8 @@ PATHS = {
     "val": RAW / "Aegis-Training" / "val.jsonl",
     "test": RAW / "Aegis-Bench" / "test.jsonl",
     "who_when": WHOWHEN_PATH,
+    # the repo's other 600-record file (no ids in common with the HF test file); used only for the zero-shot test-file check
+    "test_repo": AEGIS_ROOT / "third_party" / "AEGIS" / "evaluation" / "data" / "aegis.jsonl",
 }
 
 

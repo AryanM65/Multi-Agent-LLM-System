@@ -95,7 +95,19 @@ def predict(model, items, mu, sd, bs=64):
 
 
 def train_gnn(tr_items, va_items, seed: int, layers: int, drop_rels: frozenset = frozenset(), epochs: int = 40, patience: int = 6, bs: int = 32,
-              extra_items: dict | None = None):
+              extra_items: dict | None = None, deterministic: bool = True):
+    # Multi-threaded CPU float sums (index_add_) change order between runs, so same-seed runs drift by ~1e-7 per
+    # epoch and can flip early stopping. One thread gives bit-identical runs (verified: max abs diff 0.0).
+    prev_threads = torch.get_num_threads()
+    if deterministic:
+        torch.set_num_threads(1)
+    try:
+        return _train_gnn(tr_items, va_items, seed, layers, drop_rels, epochs, patience, bs, extra_items)
+    finally:
+        torch.set_num_threads(prev_threads)
+
+
+def _train_gnn(tr_items, va_items, seed, layers, drop_rels, epochs, patience, bs, extra_items):
     set_seed(seed)
     allm = np.concatenate([it["meta"] for it in tr_items])
     mu, sd = allm.mean(0), allm.std(0)

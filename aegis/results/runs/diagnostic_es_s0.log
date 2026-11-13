@@ -1,0 +1,10 @@
+seed 0 ta 0.4 tm 0.2 exact mode-set on found agents 323/1008
+seed 1 ta 0.3 tm 0.1 exact mode-set on found agents 183/1150
+seed 2 ta 0.4 tm 0.1 exact mode-set on found agents 183/1166
+
+=== grouped test, mean over seeds (micro/macro F1, percent) ===
+model          pair 27.79/18.18 | agen 81.37/67.84 | erro 38.66/39.02
+oracle_agents  pair 31.12/20.53 | agen 92.20/89.25 | erro 40.09/40.57
+oracle_modes   pair 56.06/44.54 | agen 72.05/60.95 | erro 79.90/79.67
+both           pair 62.87/57.88 | agen 79.88/78.53 | erro 79.57/79.34
+exact mode-set right on found faulty agents: 21.2%

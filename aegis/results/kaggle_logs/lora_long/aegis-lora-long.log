@@ -1,0 +1,69 @@
+[{"stream_name":"stdout","time":1.8236628480000001,"data":"Found existing installation: torchao 0.10.0\n"}
+,{"stream_name":"stdout","time":1.928477602,"data":"Uninstalling torchao-0.10.0:\n"}
+,{"stream_name":"stdout","time":2.305447795,"data":"  Successfully uninstalled torchao-0.10.0\n"}
+,{"stream_name":"stderr","time":34.157858848,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":35.166082295,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":58.699973348,"data":"\rLoading weights:   0%|          | 0/338 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/338 [00:00\u003c04:35,  1.22it/s]\rLoading weights:  58%|█████▊    | 196/338 [00:00\u003c00:00, 281.06it/s]\rLoading weights:  86%|████████▌ | 290/338 [00:01\u003c00:00, 288.84it/s]\rLoading weights: 100%|██████████| 338/338 [00:01\u003c00:00, 239.64it/s]\n"}
+,{"stream_name":"stdout","time":60.719022378,"data":"trainable params: 36,929,536 || all params: 1,580,643,840 || trainable%: 2.3364\n"}
+,{"stream_name":"stderr","time":63.775543017,"data":"[transformers] `use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.\n"}
+,{"stream_name":"stdout","time":314.03858667,"data":"step 10 loss 0.6264 (4.2 min)\n"}
+,{"stream_name":"stdout","time":585.74125021,"data":"step 20 loss 0.5381 (8.7 min)\n"}
+,{"stream_name":"stdout","time":874.808944875,"data":"step 30 loss 0.5012 (13.5 min)\n"}
+,{"stream_name":"stdout","time":1141.717417684,"data":"step 40 loss 0.4764 (18.0 min)\n"}
+,{"stream_name":"stdout","time":1416.031365017,"data":"step 50 loss 0.4608 (22.5 min)\n"}
+,{"stream_name":"stdout","time":1696.767624328,"data":"step 60 loss 0.4497 (27.2 min)\n"}
+,{"stream_name":"stdout","time":1946.529401,"data":"step 70 loss 0.4493 (31.4 min)\n"}
+,{"stream_name":"stdout","time":2227.291204456,"data":"step 80 loss 0.4446 (36.1 min)\n"}
+,{"stream_name":"stdout","time":2505.000071911,"data":"step 90 loss 0.4384 (40.7 min)\n"}
+,{"stream_name":"stdout","time":2768.488274558,"data":"step 100 loss 0.4352 (45.1 min)\n"}
+,{"stream_name":"stdout","time":3036.854657174,"data":"step 110 loss 0.4300 (49.6 min)\n"}
+,{"stream_name":"stdout","time":3293.976925579,"data":"step 120 loss 0.4253 (53.8 min)\n"}
+,{"stream_name":"stdout","time":3563.408634186,"data":"step 130 loss 0.4217 (58.3 min)\n"}
+,{"stream_name":"stdout","time":3819.810739485,"data":"step 140 loss 0.4186 (62.6 min)\n"}
+,{"stream_name":"stdout","time":4084.520517057,"data":"step 150 loss 0.4156 (67.0 min)\n"}
+,{"stream_name":"stdout","time":4351.019971562,"data":"step 160 loss 0.4137 (71.5 min)\n"}
+,{"stream_name":"stdout","time":4636.586108193,"data":"step 170 loss 0.4124 (76.2 min)\n"}
+,{"stream_name":"stdout","time":4913.344700628,"data":"step 180 loss 0.4111 (80.8 min)\n"}
+,{"stream_name":"stdout","time":5191.18060885,"data":"step 190 loss 0.4099 (85.5 min)\n"}
+,{"stream_name":"stdout","time":5464.423424776,"data":"step 200 loss 0.4086 (90.0 min)\n"}
+,{"stream_name":"stdout","time":5737.041715683,"data":"step 210 loss 0.4069 (94.6 min)\n"}
+,{"stream_name":"stdout","time":6025.293845869,"data":"step 220 loss 0.4059 (99.4 min)\n"}
+,{"stream_name":"stdout","time":6290.066404042,"data":"step 230 loss 0.4043 (103.8 min)\n"}
+,{"stream_name":"stdout","time":6568.498307987,"data":"step 240 loss 0.4038 (108.4 min)\n"}
+,{"stream_name":"stdout","time":6844.971030051,"data":"step 250 loss 0.4020 (113.0 min)\n"}
+,{"stream_name":"stdout","time":7122.153591036,"data":"step 260 loss 0.4011 (117.6 min)\n"}
+,{"stream_name":"stdout","time":7395.833888916,"data":"step 270 loss 0.3997 (122.2 min)\n"}
+,{"stream_name":"stdout","time":7686.157874921,"data":"step 280 loss 0.3985 (127.0 min)\n"}
+,{"stream_name":"stdout","time":7957.090408273,"data":"step 290 loss 0.3963 (131.6 min)\n"}
+,{"stream_name":"stdout","time":8239.751862286,"data":"step 300 loss 0.3946 (136.3 min)\n"}
+,{"stream_name":"stdout","time":8496.171963411,"data":"step 310 loss 0.3933 (140.5 min)\n"}
+,{"stream_name":"stdout","time":8753.227653748,"data":"step 320 loss 0.3917 (144.8 min)\n"}
+,{"stream_name":"stdout","time":9033.445659966,"data":"step 330 loss 0.3906 (149.5 min)\n"}
+,{"stream_name":"stdout","time":9300.465609862,"data":"step 340 loss 0.3891 (153.9 min)\n"}
+,{"stream_name":"stdout","time":9587.602978736,"data":"step 350 loss 0.3879 (158.7 min)\n"}
+,{"stream_name":"stdout","time":9855.494721192,"data":"step 360 loss 0.3869 (163.2 min)\n"}
+,{"stream_name":"stdout","time":10137.403200496,"data":"step 370 loss 0.3860 (167.9 min)\n"}
+,{"stream_name":"stdout","time":10405.931704787,"data":"step 380 loss 0.3850 (172.4 min)\n"}
+,{"stream_name":"stdout","time":10682.39689361,"data":"step 390 loss 0.3841 (177.0 min)\n"}
+,{"stream_name":"stdout","time":10953.054999178,"data":"step 400 loss 0.3830 (181.5 min)\n"}
+,{"stream_name":"stdout","time":11210.917976275,"data":"step 410 loss 0.3819 (185.8 min)\n"}
+,{"stream_name":"stdout","time":11489.884601535,"data":"step 420 loss 0.3813 (190.4 min)\n"}
+,{"stream_name":"stdout","time":11768.885207982,"data":"step 430 loss 0.3804 (195.1 min)\n"}
+,{"stream_name":"stdout","time":11984.311462027,"data":"  who_when: 4/184 (198.7 min)\n"}
+,{"stream_name":"stdout","time":12047.678760542,"data":"  who_when: 104/184 (199.7 min)\n"}
+,{"stream_name":"stdout","time":12122.066575684,"data":"  test: 4/600 (201.0 min)\n"}
+,{"stream_name":"stdout","time":12219.782445816,"data":"  test: 104/600 (202.6 min)\n"}
+,{"stream_name":"stdout","time":12327.857063771,"data":"  test: 204/600 (204.4 min)\n"}
+,{"stream_name":"stdout","time":12442.246478131,"data":"  test: 304/600 (206.3 min)\n"}
+,{"stream_name":"stdout","time":12545.088665259,"data":"  test: 404/600 (208.0 min)\n"}
+,{"stream_name":"stdout","time":12648.528352803,"data":"  test: 504/600 (209.7 min)\n"}
+,{"stream_name":"stdout","time":12757.377553118,"data":"  val: 4/200 (211.6 min)\n"}
+,{"stream_name":"stdout","time":12864.451469319,"data":"  val: 104/200 (213.3 min)\n"}
+,{"stream_name":"stdout","time":12967.731979112,"data":"done\n"}
+,{"stream_name":"stderr","time":12973.941776965,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":12973.941806026,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":12974.205747634,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":12974.205775477,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":12975.008550121,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":12976.063221215,"data":"[NbConvertApp] Writing 331222 bytes to __results__.html\n"}
+]

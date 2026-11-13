@@ -1,0 +1,51 @@
+[{"stream_name":"stdout","time":21.949536466,"data":"early-stopping slice: 631 train trajectories (115 queries) held out of training\n"}
+,{"stream_name":"stdout","time":21.949596861,"data":"grouped train 3234 early-stop 631 val(untouched if es-holdout) 940\n"}
+,{"stream_name":"stderr","time":61.035173188,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":66.676738306,"data":"\rLoading weights:   0%|          | 0/103 [00:00\u003c?, ?it/s]\rLoading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2511.78it/s]\n"}
+,{"stream_name":"stdout","time":100.957905138,"data":"  ep 0 batch 100 train loss 2.0101 (34s)\n"}
+,{"stream_name":"stdout","time":130.717083256,"data":"  ep 0 batch 200 train loss 1.9877 (63s)\n"}
+,{"stream_name":"stdout","time":160.800628929,"data":"  ep 0 batch 300 train loss 1.9772 (93s)\n"}
+,{"stream_name":"stdout","time":192.319239282,"data":"  ep 0 batch 400 train loss 1.9708 (125s)\n"}
+,{"stream_name":"stderr","time":193.830818833,"data":"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/transformer.py:531: UserWarning: The PyTorch API of nested tensors is in prototype stage and will change in the near future. We recommend specifying layout=torch.jagged when constructing a nested tensor, as this layout receives active development, has better operator coverage, and works with torch.compile. (Triggered internally at /pytorch/aten/src/ATen/NestedTensorImpl.cpp:178.)\n"}
+,{"stream_name":"stderr","time":193.830864613,"data":"  output = torch._nested_tensor_from_mask(\n"}
+,{"stream_name":"stdout","time":205.079955478,"data":"epoch 1: train 1.9688 val 0.1812 (138s)\n"}
+,{"stream_name":"stdout","time":236.388031463,"data":"  ep 1 batch 100 train loss 1.9503 (31s)\n"}
+,{"stream_name":"stdout","time":267.913987626,"data":"  ep 1 batch 200 train loss 1.9548 (63s)\n"}
+,{"stream_name":"stdout","time":298.539993739,"data":"  ep 1 batch 300 train loss 1.9520 (93s)\n"}
+,{"stream_name":"stdout","time":328.861472754,"data":"  ep 1 batch 400 train loss 1.9512 (124s)\n"}
+,{"stream_name":"stdout","time":341.544998101,"data":"epoch 2: train 1.9493 val 0.1787 (136s)\n"}
+,{"stream_name":"stdout","time":372.523913787,"data":"  ep 2 batch 100 train loss 1.9510 (31s)\n"}
+,{"stream_name":"stdout","time":403.610614895,"data":"  ep 2 batch 200 train loss 1.9502 (62s)\n"}
+,{"stream_name":"stdout","time":434.361232468,"data":"  ep 2 batch 300 train loss 1.9495 (93s)\n"}
+,{"stream_name":"stdout","time":464.93963596,"data":"  ep 2 batch 400 train loss 1.9483 (123s)\n"}
+,{"stream_name":"stdout","time":477.472832916,"data":"epoch 3: train 1.9463 val 0.1762 (136s)\n"}
+,{"stream_name":"stdout","time":509.53423756,"data":"  ep 3 batch 100 train loss 1.9493 (32s)\n"}
+,{"stream_name":"stdout","time":539.938959338,"data":"  ep 3 batch 200 train loss 1.9453 (62s)\n"}
+,{"stream_name":"stdout","time":569.875087423,"data":"  ep 3 batch 300 train loss 1.9478 (92s)\n"}
+,{"stream_name":"stdout","time":601.08685851,"data":"  ep 3 batch 400 train loss 1.9471 (124s)\n"}
+,{"stream_name":"stdout","time":613.63116496,"data":"epoch 4: train 1.9454 val 0.1767 (136s)\n"}
+,{"stream_name":"stdout","time":644.367427824,"data":"  ep 4 batch 100 train loss 1.9470 (31s)\n"}
+,{"stream_name":"stdout","time":675.337116401,"data":"  ep 4 batch 200 train loss 1.9457 (62s)\n"}
+,{"stream_name":"stdout","time":705.784234044,"data":"  ep 4 batch 300 train loss 1.9459 (92s)\n"}
+,{"stream_name":"stdout","time":736.806173384,"data":"  ep 4 batch 400 train loss 1.9455 (123s)\n"}
+,{"stream_name":"stdout","time":749.418090774,"data":"epoch 5: train 1.9438 val 0.1761 (136s)\n"}
+,{"stream_name":"stdout","time":779.84562431,"data":"  ep 5 batch 100 train loss 1.9408 (30s)\n"}
+,{"stream_name":"stdout","time":811.203059821,"data":"  ep 5 batch 200 train loss 1.9432 (62s)\n"}
+,{"stream_name":"stdout","time":841.968886338,"data":"  ep 5 batch 300 train loss 1.9453 (92s)\n"}
+,{"stream_name":"stdout","time":873.056951166,"data":"  ep 5 batch 400 train loss 1.9455 (124s)\n"}
+,{"stream_name":"stdout","time":885.60327646,"data":"epoch 6: train 1.9433 val 0.1751 (136s)\n"}
+,{"stream_name":"stdout","time":888.756431152,"data":"embedding 100863 unique texts with the fine-tuned encoder\n"}
+,{"stream_name":"stdout","time":904.137925133,"data":"exported 20000/100863\n"}
+,{"stream_name":"stdout","time":928.694329577,"data":"exported 40000/100863\n"}
+,{"stream_name":"stdout","time":956.03708955,"data":"exported 60000/100863\n"}
+,{"stream_name":"stdout","time":986.371627431,"data":"exported 80000/100863\n"}
+,{"stream_name":"stdout","time":1026.216230483,"data":"exported 100000/100863\n"}
+,{"stream_name":"stdout","time":1033.052373523,"data":"exported 100863/100863\n"}
+,{"stream_name":"stdout","time":1033.054385056,"data":"done\n"}
+,{"stream_name":"stderr","time":1043.465569608,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1043.465616989,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1043.906952134,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1043.906999465,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1044.977085914,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1046.692663706,"data":"[NbConvertApp] Writing 386124 bytes to __results__.html\n"}
+]

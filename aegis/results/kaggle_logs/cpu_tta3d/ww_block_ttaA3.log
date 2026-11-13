@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/kaggle/working/repo/aegis/src/eval/ww_block.py", line 178, in <module>
+    main()
+    ~~~~^^
+  File "/kaggle/working/repo/aegis/src/eval/ww_block.py", line 78, in main
+    store = EmbStore(enc_dir(enc))
+                     ~~~~~~~^^^^^
+  File "/kaggle/working/repo/aegis/src/eval/ww_focus.py", line 58, in enc_dir
+    raise FileNotFoundError(enc)
+FileNotFoundError: es_s0

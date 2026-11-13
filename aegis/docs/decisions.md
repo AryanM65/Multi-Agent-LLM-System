@@ -20,7 +20,7 @@ not case-folded, to stay identical to the authors' scoring. Unparseable predicti
 Unit tests in `aegis/tests/test_metrics.py`.
 
 ## 2026-11-01 D5: Who&When = `evaluation/data/whowhen.jsonl` (184 records)
-Already mapped to the 14 modes, so no local LLM mapping is needed. The paper says 127; unexplained, report the count honestly.
+Already mapped to the 14 modes, so no local LLM mapping is needed. Paper v6 gives 184 for Who&When and no evaluated-set size; the earlier "paper says 127" note was not supported by v6 (checked 2026-11-12). Report the count honestly.
 20/184 label agents do not occur in the turns, so those can never be predicted from the graph; report this ceiling.
 
 ## 2026-11-01 D6: Leakage whitelist

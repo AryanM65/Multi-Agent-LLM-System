@@ -1,0 +1,14 @@
+[{"stream_name":"stdout","time":9.981668074,"data":"grouped train 55 early-stop 9 val 16 layers 2 name_free False\n"}
+,{"stream_name":"stderr","time":28.821252257,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":32.405722171,"data":"\rLoading weights:   0%|          | 0/103 [00:00\u003c?, ?it/s]\rLoading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2922.29it/s]\n"}
+,{"stream_name":"stdout","time":36.703145051,"data":"epoch 1: train 0.5157 es 0.2331 (4s)\n"}
+,{"stream_name":"stdout","time":37.764878253,"data":"predicted test: 16 trajectories\n"}
+,{"stream_name":"stdout","time":38.101147711,"data":"predicted who_when: 16 trajectories\n"}
+,{"stream_name":"stdout","time":38.102871282,"data":"done\n"}
+,{"stream_name":"stderr","time":43.298160907,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":43.298190691,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":43.508641563,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":43.508666389,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":44.24599167,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":45.201371545,"data":"[NbConvertApp] Writing 372540 bytes to __results__.html\n"}
+]

@@ -66,6 +66,17 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="debug: only first N records per split")
     ap.add_argument("--splits", default="test,who_when")
     ap.add_argument("--tp", type=int, default=1, help="tensor parallel size (2 for 2xT4)")
+    # Authors'-setup options (defaults keep the original Phase 3a behaviour: AWQ, greedy, HF test file).
+    ap.add_argument("--quant", default="awq", choices=["awq", "none"], help="none = full-precision fp16 weights")
+    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--top-p", type=float, default=1.0)
+    ap.add_argument("--top-k", type=int, default=-1)
+    ap.add_argument("--rep-penalty", type=float, default=1.0)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--test-name", default="test.jsonl", help="file name of the test split (aegis.jsonl = the repo's other 600)")
+    ap.add_argument("--subset", type=int, default=0, help="random subset of N records per split (seeded by --subset-seed)")
+    ap.add_argument("--subset-seed", type=int, default=0)
+    ap.add_argument("--tag", default="", help="suffix for the output file names")
     args = ap.parse_args()
 
     from transformers import AutoTokenizer
@@ -74,26 +85,33 @@ def main() -> None:
     inp, out = Path(args.input_dir), Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
     prompt_tpl = find_file(inp, "prompt.txt").read_text(encoding="utf-8")
-    files = {"test": find_file(inp, "test.jsonl"), "who_when": find_file(inp, "whowhen.jsonl")}
+    files = {"test": find_file(inp, args.test_name), "who_when": find_file(inp, "whowhen.jsonl")}
 
     tok = AutoTokenizer.from_pretrained(args.model)
     llm = LLM(
-        model=args.model, quantization="awq", dtype="float16", max_model_len=args.max_model_len,
-        gpu_memory_utilization=0.90, tensor_parallel_size=args.tp, enforce_eager=True,
+        model=args.model, quantization=("awq" if args.quant == "awq" else None), dtype="float16",
+        max_model_len=args.max_model_len, gpu_memory_utilization=0.90, tensor_parallel_size=args.tp, enforce_eager=True,
     )
-    sp = SamplingParams(temperature=0.0, max_tokens=args.max_new_tokens)
+    sp = SamplingParams(temperature=args.temperature, top_p=args.top_p, top_k=args.top_k,
+                        repetition_penalty=args.rep_penalty, seed=(args.seed if args.temperature > 0 else None),
+                        max_tokens=args.max_new_tokens)
 
     # Budget for the conversation text: context minus generation, minus the fixed prompt/system overhead.
     overhead = len(tok(prompt_tpl.format(conversation_text="") + SYSTEM_MSG).input_ids) + 64
     conv_budget = args.max_model_len - args.max_new_tokens - overhead
     info = {"model": args.model, "max_model_len": args.max_model_len, "conv_token_budget": conv_budget,
-            "max_new_tokens": args.max_new_tokens, "splits": {}}
+            "max_new_tokens": args.max_new_tokens, "quant": args.quant, "temperature": args.temperature,
+            "top_p": args.top_p, "top_k": args.top_k, "rep_penalty": args.rep_penalty, "seed": args.seed,
+            "test_name": args.test_name, "subset": args.subset, "subset_seed": args.subset_seed, "splits": {}}
 
     for split in args.splits.split(","):
         recs = [json.loads(l) for l in files[split].read_text(encoding="utf-8").splitlines() if l.strip()]
+        if args.subset:
+            import random
+            recs = random.Random(args.subset_seed).sample(sorted(recs, key=lambda r: r["id"]), min(args.subset, len(recs)))
         if args.limit:
             recs = recs[: args.limit]
-        out_path = out / f"zeroshot_{split}.jsonl"
+        out_path = out / f"zeroshot_{split}{args.tag}.jsonl"
         done = set()
         if out_path.exists():
             done = {json.loads(l)["id"] for l in out_path.read_text(encoding="utf-8").splitlines() if l.strip()}
@@ -126,7 +144,7 @@ def main() -> None:
             print(f"[{split}] {min(i + args.batch, len(todo))}/{len(todo)}  {time.time() - t0:.0f}s", flush=True)
         info["splits"][split] = {"records": len(recs), "newly_run": len(todo), "truncated_this_run": n_trunc,
                                  "seconds": round(time.time() - t0)}
-    (out / "run_info.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
+    (out / f"run_info{args.tag}.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
     print(json.dumps(info, indent=2))
 
 

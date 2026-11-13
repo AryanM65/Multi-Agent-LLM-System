@@ -108,7 +108,7 @@ data, and it is a preprint. If you cite it, say so.
 ### 3.3 Splits [VERIFIED]
 - Test set "Aegis-Bench" = 100 trajectories sampled from each of the six task benchmarks
   (600 total). The remainder is split 80% train / 20% validation, with a fixed seed.
-- Out-of-distribution test: Who&When (127 trajectories, human-annotated). Its free-text
+- Out-of-distribution test: Who&When (184 annotated errors per paper v6; evaluated-set size not stated; human-annotated). Its free-text
   `mistake_reason` was mapped to the 14 modes with Gemini-2.5-Flash in the paper.
 - **[UNVERIFIED] Leakage risk:** each successful run has several faulty variants. If test
   and train variants share the same base task, scores are inflated. Check this in the audit.

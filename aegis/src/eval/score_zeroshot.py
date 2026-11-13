@@ -96,10 +96,12 @@ def main() -> None:
     ap.add_argument("outputs_dir")
     ap.add_argument("--log", action="store_true", help="append to results/metrics_history.jsonl")
     ap.add_argument("--model", default="qwen2.5-7b-instruct-awq_zeroshot")
+    ap.add_argument("--tag", default="", help="suffix of the output files (zeroshot_test<tag>.jsonl)")
+    ap.add_argument("--test-split", default="test", choices=["test", "test_repo"], help="which gold file the test ids come from")
     args = ap.parse_args()
     d = Path(args.outputs_dir)
     results = {}
-    for key, split, fn in (("aegis_bench", "test", "zeroshot_test.jsonl"), ("who_when", "who_when", "zeroshot_who_when.jsonl")):
+    for key, split, fn in (("aegis_bench", args.test_split, f"zeroshot_test{args.tag}.jsonl"), ("who_when", "who_when", f"zeroshot_who_when{args.tag}.jsonl")):
         if (d / fn).exists():
             results[key] = score_split(split, d / fn)
     for key, r in results.items():

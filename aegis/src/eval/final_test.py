@@ -24,12 +24,13 @@ from ..features import EmbStore, agent_vocab, build
 from ..gnn.turn_gnn import train_gnn
 from ..graph import make_items
 from ..loaders import load_grouped_splits, load_paper_splits, load_split
-from ..metrics import evaluate
+from ..metrics import avg12, evaluate
 from ..schema import ERROR_MODES
 from ..utils import log_run
 
 LV = ("pair", "agent", "error")
 FT = False    # --ft-dir: use fine-tuned vectors (rows logged as phase 6ft)
+TAG = ""      # --tag: suffix on ledger split names so different fine-tuned encoders do not mix
 DRY = False   # --dry-run: score slices of VAL instead of test/Who&When and do not write the ledger
 
 
@@ -41,7 +42,7 @@ def record(name, model, seed, res_test, res_ww, extra, n_params=0):
     if DRY:
         return
     for tag, res in (("test", res_test), ("who_when", res_ww)):
-        log_run(phase="6ft" if FT else "6r", model=model, seed=seed, split=f"{tag}_{name}", n_params=n_params,
+        log_run(phase="6ft" if FT else "6r", model=model, seed=seed, split=f"{tag}_{name}{TAG}", n_params=n_params,
                 config=extra, metrics={tag: {l: res[l] for l in LV}},
                 notes="final scoring RE-RUN after Who&When standardisation fix (supersedes phase 6 who_when rows); config and thresholds chosen on val only")
 
@@ -54,6 +55,8 @@ def summarize(label, runs):
                 v = [100 * r[tag][l][k] for r in runs]
                 parts.append(f"{l[:4]} {k[:5]} {np.mean(v):.2f}+-{np.std(v):.2f}")
         print(f"  {label:18s} {tag:8s} " + " | ".join(parts), flush=True)
+    a = [avg12(r["test"], r["who_when"]) for r in runs]
+    print(f"  {label:18s} avg12    {np.mean(a):.2f}+-{np.std(a):.2f}  (paper Table 1 Avg. definition; DCL 12.61, Aegis-SFT 26.51)", flush=True)
 
 
 def floor(trajs):
@@ -71,6 +74,7 @@ def run_split(name: str, splits: dict, ww: list, test: list, store: EmbStore, se
     # trivial floor and frequency (deterministic)
     rt, rw = floor(test), floor(ww)
     print("  floor              test     ", line(rt), "\n  floor              who_when ", line(rw))
+    print(f"  floor              avg12    {avg12(rt, rw):.2f}", flush=True)
     record(name, "floor_all_agents_all_modes", 0, rt, rw, {"split": name})
     ranking = frequency.fit(splits["train"])
     truth_val = [t.labels for t in splits["val"]]
@@ -79,6 +83,7 @@ def run_split(name: str, splits: dict, ww: list, test: list, store: EmbStore, se
     rt = evaluate([t.labels for t in test], frequency.predict(test, ranking, k))
     rw = evaluate([t.labels for t in ww], frequency.predict(ww, ranking, k))
     print(f"  frequency (k={k})   test     ", line(rt), "\n                     who_when ", line(rw))
+    print(f"  frequency          avg12    {avg12(rt, rw):.2f}", flush=True)
     record(name, "frequency", 0, rt, rw, {"split": name, "k": k})
 
     # flat MLP
@@ -122,9 +127,11 @@ if __name__ == "__main__":
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--dry-run", action="store_true", help="code-path check on slices of val; test/Who&When are not read")
     ap.add_argument("--ft-dir", default="", help="fine-tuned MiniLM shards; scores grouped protocol only, phase 6ft")
+    ap.add_argument("--tag", default="", help="ledger split-name suffix, e.g. _es_s0")
     ap.add_argument("--protocol", choices=["grouped", "paper", "both"], default="both", help="run one protocol at a time to limit memory")
     args = ap.parse_args()
     DRY = args.dry_run
+    TAG = ("_" + args.tag.lstrip("_")) if args.tag else ""
     if args.ft_dir:
         FT = True
         args.protocol = "grouped"

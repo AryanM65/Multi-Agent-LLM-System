@@ -1,0 +1,12 @@
+[ftg_l0] thresholds tuned on val only: t_a 0.3 t_m 0.1  val pair 30.74/26.14 agent 86.56/76.16 error 42.15/43.63
+[ftg_l0] test     pair 26.00/18.59 agent 80.88/65.88 error 38.38/39.44
+[ftg_l0] floor test     pair 7.35/6.35 agent 68.58/61.98 error 27.14/26.99
+[ftg_l0] who_when pair 2.40/1.03 agent 41.18/35.74 error 9.76/9.35
+[ftg_l0] floor who_when pair 3.42/2.85 agent 38.32/38.41 error 13.33/12.34
+[ftg_l0] avg12 30.72   (paper Table 1 Avg. definition; DCL 12.61, Aegis-SFT 26.51)
+[ftg_l0] test framework agentverse    n=143 pair 29.05/23.22 agent 88.96/83.86 error 44.10/43.76
+[ftg_l0] test framework dylan         n= 85 pair 18.25/17.42 agent 70.37/67.32 error 36.80/35.69
+[ftg_l0] test framework llm_debate    n=140 pair 28.89/26.50 agent 76.92/76.96 error 35.01/35.14
+[ftg_l0] test framework macnet        n=156 pair 28.63/30.06 agent 86.83/86.13 error 39.47/40.91
+[ftg_l0] test framework magentic_one  n= 28 pair 18.42/6.45 agent 60.71/28.35 error 18.42/7.79
+[ftg_l0] test framework smoagents     n= 48 pair 7.75/1.76 agent 60.55/60.59 error 9.52/3.48

@@ -1,0 +1,19 @@
+{
+ "best_val_loss": 0.13945495177600303,
+ "epochs_run": 4,
+ "n_texts": 100863,
+ "train": 3865,
+ "val": 940,
+ "args": {
+  "input_dir": "/kaggle/input",
+  "output_dir": "/kaggle/working",
+  "epochs": 4,
+  "patience": 2,
+  "bs": 2,
+  "limit": 0,
+  "model": "BAAI/bge-base-en-v1.5",
+  "grad_ckpt": true,
+  "export_dir": "ft_shards_bge",
+  "seed": 0
+ }
+}

@@ -20,7 +20,7 @@ Date: 2026-11-01. Sources: HF `Fancylalala/AEGIS` (232 MB, in `aegis/data/raw/`)
    129 train turns have `content = None` (treated as empty string). Mean 11.9 turns per trajectory (median 11, max 45).
    Characters per trajectory: mean 19.8k, median 17.2k, p95 36.5k, max 285k.
 5. **Who&When.** A processed file IS distributed: `evaluation/data/whowhen.jsonl`, 184 records, already mapped to the
-   14 modes, 1 label pair per record. The paper says 127 trajectories; the file has 184 (unexplained; see decisions D5).
+   14 modes, 1 label pair per record. The file has 184. Paper v6 (ICLR 2026) says Who&When has 184 annotated errors and never states how many records it scores, so the earlier "127" is not from v6 (see decisions D5).
    In 20 of 184 labels the faulty agent name does not appear in the turns.
 6. **Leakage in `metadata`/turns (important).**
    - `metadata.num_injected_agents` reveals the number of faulty agents: forbidden.

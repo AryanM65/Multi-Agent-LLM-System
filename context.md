@@ -46,7 +46,7 @@ files go in `aegis/data/` (also git-ignored).
 Other tools and models named in the work (these are third-party and are used as-is):
 - **Qwen2.5-7B-Instruct (AWQ 4-bit)** run with vLLM, for the zero-shot reproduction.
 - **all-MiniLM-L6-v2** (sentence-transformers) as the frozen text encoder for turn embeddings.
-- **Who&When**, a second benchmark of failed multi-agent runs, used through the authors' processed file (184 records here; the paper says 127, which is unexplained).
+- **Who&When**, a second benchmark of failed multi-agent runs, used through the authors' processed file (184 records here; paper v6 gives 184 and no evaluated-set size).
 - **Kaggle** free GPUs (T4) for the two jobs that need a GPU.
 
 ## 4. The data in one paragraph

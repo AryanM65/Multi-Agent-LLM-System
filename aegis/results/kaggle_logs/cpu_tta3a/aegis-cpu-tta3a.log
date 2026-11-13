@@ -1,0 +1,49 @@
+[{"stream_name":"stdout","time":1236.842145223,"data":"0%|          | 0/103 [00:00\u003c?, ?it/s]\n"}
+,{"stream_name":"stdout","time":1236.84219639,"data":"Loading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2758.04it/s]\n"}
+,{"stream_name":"stdout","time":1236.842201336,"data":"\n"}
+,{"stream_name":"stdout","time":1236.842219531,"data":"Loading weights:   0%|          | 0/103 [00:00\u003c?, ?it/s]\n"}
+,{"stream_name":"stdout","time":1236.842223942,"data":"Loading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2763.33it/s]\n"}
+,{"stream_name":"stdout","time":1236.842228526,"data":"\n"}
+,{"stream_name":"stdout","time":1236.842232265,"data":"Loading weights:   0%|          | 0/103 [00:00\u003c?, ?it/s]\n"}
+,{"stream_name":"stdout","time":1236.842236002,"data":"Loading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2779.26it/s]\n"}
+,{"stream_name":"stdout","time":1236.842240335,"data":"[es_s7] trained\n"}
+,{"stream_name":"stdout","time":1236.842244236,"data":"[es_s8] trained\n"}
+,{"stream_name":"stdout","time":1236.84224753,"data":"[es_s9] trained\n"}
+,{"stream_name":"stdout","time":1236.842250653,"data":"[es_s10] trained\n"}
+,{"stream_name":"stdout","time":1236.842253825,"data":"[es_s11] trained\n"}
+,{"stream_name":"stdout","time":1236.842257003,"data":"[es_s12] trained\n"}
+,{"stream_name":"stdout","time":1236.842260184,"data":"[es_s13] trained\n"}
+,{"stream_name":"stdout","time":1236.842263344,"data":"\n"}
+,{"stream_name":"stdout","time":1236.842266648,"data":"=== ttaB3: block-dropout model, ensemble of 7 encoders, mean+-std over 3 seeds (micro F1 percent; macro after slash) ===\n"}
+,{"stream_name":"stdout","time":1236.842270214,"data":"names+peer         test      pair 33.23+-0.80/18.96 | agen 79.01+-0.31/65.27 | erro 41.28+-0.80/39.92\n"}
+,{"stream_name":"stdout","time":1236.842273713,"data":"names+peer         who_when  pair 5.24+-0.38/3.01 | agen 43.03+-0.66/33.48 | erro 11.52+-0.47/8.02\n"}
+,{"stream_name":"stdout","time":1236.842277087,"data":"names+peer  +shift who_when  pair 7.76+-0.47/4.37 | agen 46.82+-0.80/37.10 | erro 17.99+-2.51/6.56\n"}
+,{"stream_name":"stdout","time":1236.842280516,"data":"names              test      pair 29.91+-3.29/17.60 | agen 78.97+-2.90/64.03 | erro 38.73+-0.55/37.55\n"}
+,{"stream_name":"stdout","time":1236.842283929,"data":"names              who_when  pair 5.48+-1.87/2.88 | agen 43.85+-1.18/35.17 | erro 14.03+-2.75/9.66\n"}
+,{"stream_name":"stdout","time":1236.842287413,"data":"names       +shift who_when  pair 7.24+-0.43/4.55 | agen 46.96+-0.68/39.18 | erro 17.33+-2.32/6.60\n"}
+,{"stream_name":"stdout","time":1236.842292506,"data":"peer               test      pair 29.31+-2.80/14.92 | agen 74.43+-3.38/52.68 | erro 39.93+-0.36/38.75\n"}
+,{"stream_name":"stdout","time":1236.842299888,"data":"peer               who_when  pair 4.08+-0.39/2.05 | agen 40.55+-3.32/32.64 | erro 9.18+-0.95/6.57\n"}
+,{"stream_name":"stdout","time":1236.842302255,"data":"peer        +shift who_when  pair 2.24+-0.80/1.09 | agen 43.79+-3.81/35.85 | erro 5.92+-2.67/3.53\n"}
+,{"stream_name":"stdout","time":1236.842304706,"data":"neither            test      pair 25.23+-0.45/12.66 | agen 75.94+-0.59/53.32 | erro 38.37+-0.28/38.40\n"}
+,{"stream_name":"stdout","time":1236.842307719,"data":"neither            who_when  pair 3.00+-0.38/1.61 | agen 41.84+-1.35/37.95 | erro 9.52+-1.24/8.00\n"}
+,{"stream_name":"stdout","time":1236.842323048,"data":"neither     +shift who_when  pair 1.06+-0.60/0.43 | agen 43.18+-1.01/39.57 | erro 3.98+-1.18/2.07\n"}
+,{"stream_name":"stdout","time":1236.842327,"data":"tta_names+peer        test      pair 34.06+-0.29/19.48 | agen 78.31+-0.07/65.40 | erro 42.18+-0.15/40.81\n"}
+,{"stream_name":"stdout","time":1236.842350558,"data":"tta_names+peer        who_when  pair 6.55+-0.91/2.79 | agen 42.41+-2.05/29.04 | erro 10.34+-1.02/7.39\n"}
+,{"stream_name":"stdout","time":1236.842374008,"data":"tta_names+peer +shift who_when  pair 5.54+-1.16/1.77 | agen 46.75+-2.13/31.49 | erro 8.90+-1.86/4.72\n"}
+,{"stream_name":"stdout","time":1236.842378668,"data":"tta_names          test      pair 26.89+-0.31/17.96 | agen 82.79+-0.26/68.33 | erro 39.11+-0.38/40.24\n"}
+,{"stream_name":"stdout","time":1236.842383041,"data":"tta_names          who_when  pair 7.07+-0.29/2.67 | agen 46.84+-2.38/33.25 | erro 12.95+-0.41/9.22\n"}
+,{"stream_name":"stdout","time":1236.842387862,"data":"tta_names   +shift who_when  pair 5.42+-1.17/1.84 | agen 48.50+-1.54/35.73 | erro 11.01+-2.07/4.92\n"}
+,{"stream_name":"stdout","time":1236.842392058,"data":"tta_peer           test      pair 29.89+-2.71/15.61 | agen 74.55+-3.26/53.63 | erro 40.28+-0.18/39.34\n"}
+,{"stream_name":"stdout","time":1236.842396342,"data":"tta_peer           who_when  pair 5.75+-0.80/2.53 | agen 41.89+-2.64/29.58 | erro 10.43+-1.92/7.46\n"}
+,{"stream_name":"stdout","time":1236.842400344,"data":"tta_peer    +shift who_when  pair 4.18+-0.48/1.08 | agen 44.66+-0.25/31.11 | erro 7.10+-0.63/3.72\n"}
+,{"stream_name":"stdout","time":1236.842404475,"data":"tta_neither        test      pair 26.11+-0.11/13.11 | agen 76.59+-0.58/55.00 | erro 39.28+-0.38/39.23\n"}
+,{"stream_name":"stdout","time":1236.842409144,"data":"tta_neither        who_when  pair 4.22+-0.35/1.82 | agen 42.62+-2.17/33.06 | erro 9.23+-1.02/6.78\n"}
+,{"stream_name":"stdout","time":1236.842413363,"data":"tta_neither +shift who_when  pair 2.07+-0.58/0.43 | agen 42.20+-3.53/32.42 | erro 5.87+-0.96/2.91\n"}
+,{"stream_name":"stdout","time":1236.842417598,"data":"\n"}
+,{"stream_name":"stderr","time":1239.007974574,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1239.008003931,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1239.301006193,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1239.301028384,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1240.112294182,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1241.192075389,"data":"[NbConvertApp] Writing 292541 bytes to __results__.html\n"}
+]

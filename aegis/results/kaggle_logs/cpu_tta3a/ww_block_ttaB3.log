@@ -1,0 +1,39 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2408.73it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2847.98it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2758.04it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2763.33it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2779.26it/s]
+[es_s7] trained
+[es_s8] trained
+[es_s9] trained
+[es_s10] trained
+[es_s11] trained
+[es_s12] trained
+[es_s13] trained
+
+=== ttaB3: block-dropout model, ensemble of 7 encoders, mean+-std over 3 seeds (micro F1 percent; macro after slash) ===
+names+peer         test      pair 33.23+-0.80/18.96 | agen 79.01+-0.31/65.27 | erro 41.28+-0.80/39.92
+names+peer         who_when  pair 5.24+-0.38/3.01 | agen 43.03+-0.66/33.48 | erro 11.52+-0.47/8.02
+names+peer  +shift who_when  pair 7.76+-0.47/4.37 | agen 46.82+-0.80/37.10 | erro 17.99+-2.51/6.56
+names              test      pair 29.91+-3.29/17.60 | agen 78.97+-2.90/64.03 | erro 38.73+-0.55/37.55
+names              who_when  pair 5.48+-1.87/2.88 | agen 43.85+-1.18/35.17 | erro 14.03+-2.75/9.66
+names       +shift who_when  pair 7.24+-0.43/4.55 | agen 46.96+-0.68/39.18 | erro 17.33+-2.32/6.60
+peer               test      pair 29.31+-2.80/14.92 | agen 74.43+-3.38/52.68 | erro 39.93+-0.36/38.75
+peer               who_when  pair 4.08+-0.39/2.05 | agen 40.55+-3.32/32.64 | erro 9.18+-0.95/6.57
+peer        +shift who_when  pair 2.24+-0.80/1.09 | agen 43.79+-3.81/35.85 | erro 5.92+-2.67/3.53
+neither            test      pair 25.23+-0.45/12.66 | agen 75.94+-0.59/53.32 | erro 38.37+-0.28/38.40
+neither            who_when  pair 3.00+-0.38/1.61 | agen 41.84+-1.35/37.95 | erro 9.52+-1.24/8.00
+neither     +shift who_when  pair 1.06+-0.60/0.43 | agen 43.18+-1.01/39.57 | erro 3.98+-1.18/2.07
+tta_names+peer        test      pair 34.06+-0.29/19.48 | agen 78.31+-0.07/65.40 | erro 42.18+-0.15/40.81
+tta_names+peer        who_when  pair 6.55+-0.91/2.79 | agen 42.41+-2.05/29.04 | erro 10.34+-1.02/7.39
+tta_names+peer +shift who_when  pair 5.54+-1.16/1.77 | agen 46.75+-2.13/31.49 | erro 8.90+-1.86/4.72
+tta_names          test      pair 26.89+-0.31/17.96 | agen 82.79+-0.26/68.33 | erro 39.11+-0.38/40.24
+tta_names          who_when  pair 7.07+-0.29/2.67 | agen 46.84+-2.38/33.25 | erro 12.95+-0.41/9.22
+tta_names   +shift who_when  pair 5.42+-1.17/1.84 | agen 48.50+-1.54/35.73 | erro 11.01+-2.07/4.92
+tta_peer           test      pair 29.89+-2.71/15.61 | agen 74.55+-3.26/53.63 | erro 40.28+-0.18/39.34
+tta_peer           who_when  pair 5.75+-0.80/2.53 | agen 41.89+-2.64/29.58 | erro 10.43+-1.92/7.46
+tta_peer    +shift who_when  pair 4.18+-0.48/1.08 | agen 44.66+-0.25/31.11 | erro 7.10+-0.63/3.72
+tta_neither        test      pair 26.11+-0.11/13.11 | agen 76.59+-0.58/55.00 | erro 39.28+-0.38/39.23
+tta_neither        who_when  pair 4.22+-0.35/1.82 | agen 42.62+-2.17/33.06 | erro 9.23+-1.02/6.78
+tta_neither +shift who_when  pair 2.07+-0.58/0.43 | agen 42.20+-3.53/32.42 | erro 5.87+-0.96/2.91

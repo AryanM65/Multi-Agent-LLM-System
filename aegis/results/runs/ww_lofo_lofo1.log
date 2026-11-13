@@ -1,0 +1,36 @@
+frameworks: {'agentverse': 1084, 'dylan': 408, 'llm_debate': 1075, 'macnet': 1125, 'magentic_one': 101, 'smoagents': 72}
+[es_s0] done
+[es_s1] done
+[es_s2] done
+
+=== lofo1: leave-one-framework-out, encoders es_s0,es_s1,es_s2 (held-out framework rows from val+test; micro F1 percent) ===
+agentverse     names+peer  pair 24.66 | agen 74.05 | erro 34.06
+agentverse     names       pair 21.55 | agen 72.91 | erro 32.05
+agentverse     peer        pair 26.22 | agen 76.62 | erro 37.22
+agentverse     neither     pair 27.17 | agen 78.49 | erro 36.90
+dylan          names+peer  pair 19.61 | agen 61.43 | erro 32.53
+dylan          names       pair 19.77 | agen 64.03 | erro 33.12
+dylan          peer        pair 19.07 | agen 56.73 | erro 30.90
+dylan          neither     pair 18.28 | agen 69.26 | erro 37.34
+llm_debate     names+peer  pair 23.77 | agen 81.66 | erro 31.88
+llm_debate     names       pair 22.77 | agen 78.16 | erro 30.41
+llm_debate     peer        pair 28.02 | agen 73.19 | erro 35.12
+llm_debate     neither     pair 23.57 | agen 67.70 | erro 32.96
+macnet         names+peer  pair 22.69 | agen 66.82 | erro 38.25
+macnet         names       pair 14.83 | agen 62.74 | erro 33.70
+macnet         peer        pair 19.30 | agen 68.55 | erro 36.92
+macnet         neither     pair 21.07 | agen 67.86 | erro 37.95
+magentic_one   names+peer  pair 8.55 | agen 77.50 | erro 8.59
+magentic_one   names       pair 15.18 | agen 72.71 | erro 15.65
+magentic_one   peer        pair 5.33 | agen 57.16 | erro 6.50
+magentic_one   neither     pair 7.36 | agen 50.62 | erro 13.42
+smoagents      names+peer  pair 9.66 | agen 61.90 | erro 15.18
+smoagents      names       pair 10.52 | agen 68.03 | erro 15.55
+smoagents      peer        pair 8.52 | agen 45.14 | erro 18.75
+smoagents      neither     pair 8.26 | agen 46.62 | erro 20.77
+
+--- mean over held-out frameworks ---
+names+peer  pair 18.16 | agen 70.56 | erro 26.75
+names       pair 17.44 | agen 69.76 | erro 26.75
+peer        pair 17.74 | agen 62.90 | erro 27.57
+neither     pair 17.62 | agen 63.42 | erro 29.89

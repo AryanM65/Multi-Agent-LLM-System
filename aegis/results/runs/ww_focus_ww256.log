@@ -1,0 +1,23 @@
+[es_s0] trained
+[es_s1] trained
+[es_s2] trained
+[es_s3] trained
+[es_s4] trained
+[es_s5] trained
+[es_s6] trained
+[nd] seed 0 ens-size 7 ta 0.1 tm 0.1 | ensemble test pair 25.53/17.24 agen 82.58/68.65 erro 37.58/38.15 | WW pair 6.33/3.46 agen 43.45/35.26 erro 17.00/11.96 | WW +shift pair 8.95/6.28 agen 43.52/38.18 erro 19.56/6.06
+[nd] seed 1 ens-size 7 ta 0.2 tm 0.1 | ensemble test pair 28.05/19.01 agen 82.83/67.67 erro 40.14/40.95 | WW pair 7.30/3.70 agen 46.90/37.43 erro 15.96/10.96 | WW +shift pair 7.03/3.37 agen 47.34/38.86 erro 13.30/5.62
+[nd] seed 2 ens-size 7 ta 0.4 tm 0.1 | ensemble test pair 27.05/17.58 agen 83.19/70.08 erro 39.23/39.82 | WW pair 6.77/3.59 agen 47.00/36.88 erro 15.40/11.60 | WW +shift pair 9.41/6.36 agen 48.41/38.32 erro 18.38/6.19
+
+=== ww256 nd: mean over seeds, ensemble of 7 encoders (micro/macro F1, percent) ===
+nd      ensemble  test      pair 26.88+-1.04/17.94 | agen 82.87+-0.25/68.80 | erro 38.98+-1.06/39.64
+nd      ensemble  who_when  pair 6.80+-0.39/3.58 | agen 45.78+-1.65/36.52 | erro 16.12+-0.66/11.51
+nd      shift     who_when  pair 8.46+-1.03/5.34 | agen 46.42+-2.10/38.45 | erro 17.08+-2.72/5.96
+[peernd] seed 0 ens-size 7 ta 0.1 tm 0.2 | ensemble test pair 33.39/20.15 agen 79.73/70.76 erro 40.73/39.95 | WW pair 4.04/2.57 agen 40.62/32.15 erro 10.88/8.07 | WW +shift pair 1.15/0.28 agen 40.26/36.69 erro 6.14/2.13
+[peernd] seed 1 ens-size 7 ta 0.3 tm 0.2 | ensemble test pair 34.09/20.00 agen 80.00/63.40 erro 41.47/39.17 | WW pair 6.30/3.33 agen 44.27/35.48 erro 13.14/8.25 | WW +shift pair 3.36/1.92 agen 47.49/38.17 erro 13.36/5.88
+[peernd] seed 2 ens-size 7 ta 0.1 tm 0.2 | ensemble test pair 34.19/19.89 agen 77.67/64.99 erro 42.71/41.26 | WW pair 5.75/3.21 agen 41.94/33.82 erro 12.48/8.90 | WW +shift pair 6.10/2.57 agen 46.64/37.84 erro 13.25/7.13
+
+=== ww256 peernd: mean over seeds, ensemble of 7 encoders (micro/macro F1, percent) ===
+peernd  ensemble  test      pair 33.89+-0.36/20.01 | agen 79.13+-1.04/66.38 | erro 41.64+-0.82/40.13
+peernd  ensemble  who_when  pair 5.37+-0.96/3.04 | agen 42.27+-1.51/33.82 | erro 12.17+-0.95/8.41
+peernd  shift     who_when  pair 3.54+-2.03/1.59 | agen 44.80+-3.23/37.57 | erro 10.92+-3.38/5.05

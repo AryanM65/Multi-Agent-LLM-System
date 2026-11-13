@@ -1,0 +1,20 @@
+[{"stream_name":"stdout","time":89.368124065,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stdout","time":89.368187173,"data":"  File \"\u003cfrozen runpy\u003e\", line 203, in _run_module_as_main\n"}
+,{"stream_name":"stdout","time":89.368195407,"data":"  File \"\u003cfrozen runpy\u003e\", line 88, in _run_code\n"}
+,{"stream_name":"stdout","time":89.368199956,"data":"  File \"/kaggle/working/repo/aegis/src/eval/ww_block.py\", line 178, in \u003cmodule\u003e\n"}
+,{"stream_name":"stdout","time":89.368204308,"data":"    main()\n"}
+,{"stream_name":"stdout","time":89.368208092,"data":"    ~~~~^^\n"}
+,{"stream_name":"stdout","time":89.368211812,"data":"  File \"/kaggle/working/repo/aegis/src/eval/ww_block.py\", line 78, in main\n"}
+,{"stream_name":"stdout","time":89.368215905,"data":"    store = EmbStore(enc_dir(enc))\n"}
+,{"stream_name":"stdout","time":89.36821999,"data":"                     ~~~~~~~^^^^^\n"}
+,{"stream_name":"stdout","time":89.36822979,"data":"  File \"/kaggle/working/repo/aegis/src/eval/ww_focus.py\", line 58, in enc_dir\n"}
+,{"stream_name":"stdout","time":89.368233219,"data":"    raise FileNotFoundError(enc)\n"}
+,{"stream_name":"stdout","time":89.368235926,"data":"FileNotFoundError: es_s0\n"}
+,{"stream_name":"stdout","time":89.368238618,"data":"\n"}
+,{"stream_name":"stderr","time":91.46998855,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":91.470049624,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":91.719159287,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":91.719187839,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":92.473045252,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":93.423716423,"data":"[NbConvertApp] Writing 292537 bytes to __results__.html\n"}
+]

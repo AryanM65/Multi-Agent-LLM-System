@@ -41,7 +41,7 @@ Run health: Aegis-Bench 8 of 600 outputs unparseable (counted as empty), 9 with 
 - AWQ 4-bit quantized model, greedy decoding (temperature 0), `max_new_tokens` 512.
 - 16,384-token context; prompts over the budget (14,874 conversation tokens) are cut to the first 30% and last 70% with a marker.
   This hit 25 of 600 test and 25 of 184 Who&When prompts. The authors do not truncate.
-- HF `Aegis-Bench/test.jsonl` as the test set (decision D1); Who&When from the repo's processed `whowhen.jsonl` (184 records, the paper says 127).
+- HF `Aegis-Bench/test.jsonl` as the test set (decision D1); Who&When from the repo's processed `whowhen.jsonl` (184 records; paper v6 states no evaluated-set size).
 - Unparseable output counts as an empty prediction (the authors skip it).
 - Test data was used for this reproduction only; nothing was tuned on it.
 

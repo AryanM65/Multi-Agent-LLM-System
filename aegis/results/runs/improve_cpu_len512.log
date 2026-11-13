@@ -1,0 +1,74 @@
+[base/prod] seed 0 val pair 40.3 | test pair 34.9 agen 80.8 erro 43.1 | WW pair 5.3 agen 41.3 erro 13.5
+[base/pm] seed 0 val pair 40.2 | test pair 34.8 agen 80.6 erro 43.1 | WW pair 5.3 agen 40.9 erro 13.2
+[base/min] seed 0 val pair 40.3 | test pair 34.8 agen 80.7 erro 43.1 | WW pair 5.3 agen 41.1 erro 13.5
+[base/perclass] seed 0 val pair 38.0 | test pair 33.0 agen 82.5 erro 42.8 | WW pair 5.4 agen 41.7 erro 12.8
+[base/prod] seed 1 val pair 39.5 | test pair 33.9 agen 77.1 erro 39.0 | WW pair 3.4 agen 37.2 erro 9.7
+[base/pm] seed 1 val pair 39.5 | test pair 33.8 agen 77.0 erro 38.8 | WW pair 3.4 agen 36.4 erro 10.0
+[base/min] seed 1 val pair 39.5 | test pair 33.7 agen 76.9 erro 38.7 | WW pair 3.4 agen 36.8 erro 10.0
+[base/perclass] seed 1 val pair 37.8 | test pair 32.5 agen 81.2 erro 40.9 | WW pair 4.9 agen 39.5 erro 12.4
+[base/prod] seed 2 val pair 39.9 | test pair 34.5 agen 78.3 erro 40.3 | WW pair 4.7 agen 41.7 erro 11.2
+[base/pm] seed 2 val pair 39.7 | test pair 34.5 agen 78.0 erro 40.2 | WW pair 4.7 agen 41.4 erro 10.9
+[base/min] seed 2 val pair 39.7 | test pair 34.5 agen 78.0 erro 40.2 | WW pair 4.7 agen 41.4 erro 10.9
+[base/perclass] seed 2 val pair 37.7 | test pair 32.3 agen 82.8 erro 42.0 | WW pair 4.4 agen 42.3 erro 11.4
+[peer/prod] seed 0 val pair 41.9 | test pair 35.5 agen 80.4 erro 44.1 | WW pair 2.7 agen 37.6 erro 9.1
+[peer/pm] seed 0 val pair 41.9 | test pair 35.5 agen 80.4 erro 44.1 | WW pair 2.7 agen 37.6 erro 9.1
+[peer/min] seed 0 val pair 41.9 | test pair 35.5 agen 80.4 erro 44.0 | WW pair 2.7 agen 37.7 erro 9.1
+[peer/perclass] seed 0 val pair 41.1 | test pair 35.6 agen 81.8 erro 44.4 | WW pair 2.2 agen 37.0 erro 7.3
+[peer/prod] seed 1 val pair 43.2 | test pair 37.3 agen 82.0 erro 45.0 | WW pair 4.9 agen 37.2 erro 9.2
+[peer/pm] seed 1 val pair 43.2 | test pair 37.3 agen 82.1 erro 45.1 | WW pair 4.9 agen 37.3 erro 9.2
+[peer/min] seed 1 val pair 43.1 | test pair 37.2 agen 82.2 erro 44.9 | WW pair 4.9 agen 37.0 erro 9.2
+[peer/perclass] seed 1 val pair 43.2 | test pair 37.0 agen 82.0 erro 45.0 | WW pair 3.9 agen 36.3 erro 7.8
+[peer/prod] seed 2 val pair 41.3 | test pair 36.0 agen 80.3 erro 44.2 | WW pair 3.1 agen 38.3 erro 9.1
+[peer/pm] seed 2 val pair 41.3 | test pair 36.0 agen 80.5 erro 44.2 | WW pair 2.8 agen 38.1 erro 8.4
+[peer/min] seed 2 val pair 41.4 | test pair 36.0 agen 80.6 erro 44.2 | WW pair 2.8 agen 37.9 erro 8.4
+[peer/perclass] seed 2 val pair 40.2 | test pair 34.2 agen 81.9 erro 42.7 | WW pair 2.8 agen 37.2 erro 8.0
+[peernd/prod] seed 0 val pair 41.0 | test pair 34.5 agen 80.5 erro 41.9 | WW pair 4.1 agen 42.0 erro 8.6
+[peernd/pm] seed 0 val pair 41.0 | test pair 34.5 agen 80.2 erro 42.0 | WW pair 3.9 agen 42.0 erro 8.3
+[peernd/min] seed 0 val pair 41.0 | test pair 34.4 agen 80.2 erro 41.8 | WW pair 3.9 agen 42.1 erro 8.3
+[peernd/perclass] seed 0 val pair 39.7 | test pair 32.8 agen 81.6 erro 41.3 | WW pair 7.1 agen 42.6 erro 17.0
+[peernd/prod] seed 1 val pair 41.2 | test pair 34.4 agen 79.3 erro 41.9 | WW pair 7.6 agen 46.4 erro 12.6
+[peernd/pm] seed 1 val pair 41.2 | test pair 34.3 agen 79.1 erro 41.8 | WW pair 7.9 agen 47.5 erro 12.9
+[peernd/min] seed 1 val pair 41.2 | test pair 34.3 agen 79.1 erro 41.7 | WW pair 7.9 agen 47.5 erro 12.9
+[peernd/perclass] seed 1 val pair 40.8 | test pair 33.5 agen 80.2 erro 42.8 | WW pair 6.3 agen 45.0 erro 9.3
+[peernd/prod] seed 2 val pair 42.2 | test pair 35.0 agen 80.4 erro 43.1 | WW pair 5.2 agen 46.9 erro 10.6
+[peernd/pm] seed 2 val pair 42.2 | test pair 35.0 agen 80.4 erro 43.1 | WW pair 5.2 agen 47.2 erro 10.5
+[peernd/min] seed 2 val pair 42.2 | test pair 35.1 agen 80.6 erro 43.1 | WW pair 5.3 agen 48.7 erro 10.1
+[peernd/perclass] seed 2 val pair 41.2 | test pair 33.5 agen 82.1 erro 42.9 | WW pair 5.5 agen 44.9 erro 10.7
+
+=== len512: mean over seeds (micro F1, percent) ===
+base      prod      val       pair 39.89+-0.32 | agen 80.17+-0.95 | erro 46.50+-0.47
+base      prod      test      pair 34.41+-0.42 | agen 78.74+-1.52 | erro 40.76+-1.72
+base      prod      who_when  pair 4.45+-0.80 | agen 40.07+-2.03 | erro 11.46+-1.58
+base      pm        val       pair 39.84+-0.30 | agen 80.07+-1.02 | erro 46.53+-0.42
+base      pm        test      pair 34.36+-0.43 | agen 78.52+-1.55 | erro 40.69+-1.78
+base      pm        who_when  pair 4.44+-0.79 | agen 39.59+-2.24 | erro 11.37+-1.33
+base      min       val       pair 39.85+-0.30 | agen 80.10+-0.99 | erro 46.51+-0.43
+base      min       test      pair 34.35+-0.46 | agen 78.52+-1.58 | erro 40.67+-1.80
+base      min       who_when  pair 4.45+-0.80 | agen 39.77+-2.09 | erro 11.48+-1.49
+base      perclass  val       pair 37.82+-0.13 | agen 85.55+-0.56 | erro 47.00+-0.44
+base      perclass  test      pair 32.63+-0.30 | agen 82.17+-0.70 | erro 41.90+-0.79
+base      perclass  who_when  pair 4.90+-0.39 | agen 41.17+-1.22 | erro 12.20+-0.61
+peer      prod      val       pair 42.14+-0.79 | agen 84.96+-0.38 | erro 49.54+-0.72
+peer      prod      test      pair 36.27+-0.74 | agen 80.93+-0.78 | erro 44.45+-0.42
+peer      prod      who_when  pair 3.56+-0.95 | agen 37.68+-0.44 | erro 9.13+-0.04
+peer      pm        val       pair 42.17+-0.79 | agen 84.84+-0.39 | erro 49.66+-0.70
+peer      pm        test      pair 36.28+-0.76 | agen 81.01+-0.79 | erro 44.46+-0.45
+peer      pm        who_when  pair 3.44+-1.00 | agen 37.66+-0.35 | erro 8.89+-0.33
+peer      min       val       pair 42.12+-0.73 | agen 84.84+-0.34 | erro 49.50+-0.68
+peer      min       test      pair 36.25+-0.74 | agen 81.08+-0.82 | erro 44.38+-0.40
+peer      min       who_when  pair 3.47+-1.03 | agen 37.52+-0.37 | erro 8.92+-0.34
+peer      perclass  val       pair 41.47+-1.26 | agen 86.16+-0.32 | erro 49.96+-0.79
+peer      perclass  test      pair 35.61+-1.17 | agen 81.93+-0.09 | erro 44.00+-0.99
+peer      perclass  who_when  pair 2.97+-0.69 | agen 36.83+-0.36 | erro 7.72+-0.29
+peernd    prod      val       pair 41.50+-0.54 | agen 84.24+-0.89 | erro 48.94+-0.59
+peernd    prod      test      pair 34.63+-0.28 | agen 80.07+-0.55 | erro 42.29+-0.57
+peernd    prod      who_when  pair 5.65+-1.43 | agen 45.09+-2.18 | erro 10.61+-1.64
+peernd    pm        val       pair 41.49+-0.53 | agen 84.23+-0.89 | erro 49.02+-0.55
+peernd    pm        test      pair 34.59+-0.30 | agen 79.90+-0.57 | erro 42.30+-0.56
+peernd    pm        who_when  pair 5.65+-1.68 | agen 45.57+-2.51 | erro 10.59+-1.91
+peernd    min       val       pair 41.47+-0.51 | agen 84.28+-0.87 | erro 48.90+-0.56
+peernd    min       test      pair 34.58+-0.34 | agen 79.95+-0.62 | erro 42.21+-0.63
+peernd    min       who_when  pair 5.70+-1.67 | agen 46.10+-2.87 | erro 10.45+-1.92
+peernd    perclass  val       pair 40.55+-0.62 | agen 86.61+-0.53 | erro 49.14+-0.57
+peernd    perclass  test      pair 33.28+-0.36 | agen 81.27+-0.81 | erro 42.31+-0.74
+peernd    perclass  who_when  pair 6.30+-0.68 | agen 44.16+-1.12 | erro 12.30+-3.35

@@ -1,0 +1,46 @@
+[{"stream_name":"stdout","time":1.93314571,"data":"Found existing installation: torchao 0.10.0\n"}
+,{"stream_name":"stdout","time":2.035502055,"data":"Uninstalling torchao-0.10.0:\n"}
+,{"stream_name":"stdout","time":2.411214747,"data":"  Successfully uninstalled torchao-0.10.0\n"}
+,{"stream_name":"stderr","time":34.761810553,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":35.844623136,"data":"[transformers] `torch_dtype` is deprecated! Use `dtype` instead!\n"}
+,{"stream_name":"stderr","time":60.698842104,"data":"\rLoading weights:   0%|          | 0/338 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/338 [00:00\u003c04:05,  1.37it/s]\rLoading weights:  51%|█████     | 171/338 [00:00\u003c00:00, 279.47it/s]\rLoading weights:  80%|████████  | 271/338 [00:01\u003c00:00, 274.98it/s]\rLoading weights: 100%|██████████| 338/338 [00:01\u003c00:00, 287.75it/s]\rLoading weights: 100%|██████████| 338/338 [00:01\u003c00:00, 240.01it/s]\n"}
+,{"stream_name":"stdout","time":62.622301629,"data":"trainable params: 18,464,768 || all params: 1,562,179,072 || trainable%: 1.1820\n"}
+,{"stream_name":"stderr","time":65.927107254,"data":"[transformers] `use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.\n"}
+,{"stream_name":"stdout","time":298.666260375,"data":"step 10 loss 0.6042 (3.9 min)\n"}
+,{"stream_name":"stdout","time":557.530046198,"data":"step 20 loss 0.5332 (8.2 min)\n"}
+,{"stream_name":"stdout","time":795.967293158,"data":"step 30 loss 0.5113 (12.2 min)\n"}
+,{"stream_name":"stdout","time":1044.841503645,"data":"step 40 loss 0.4873 (16.3 min)\n"}
+,{"stream_name":"stdout","time":1288.548448506,"data":"step 50 loss 0.4742 (20.4 min)\n"}
+,{"stream_name":"stdout","time":1537.171070806,"data":"step 60 loss 0.4628 (24.5 min)\n"}
+,{"stream_name":"stdout","time":1779.143844748,"data":"step 70 loss 0.4543 (28.6 min)\n"}
+,{"stream_name":"stdout","time":2021.017419053,"data":"step 80 loss 0.4472 (32.6 min)\n"}
+,{"stream_name":"stdout","time":2257.16796868,"data":"step 90 loss 0.4407 (36.5 min)\n"}
+,{"stream_name":"stdout","time":2495.601419606,"data":"step 100 loss 0.4357 (40.5 min)\n"}
+,{"stream_name":"stdout","time":2732.208458215,"data":"step 110 loss 0.4291 (44.4 min)\n"}
+,{"stream_name":"stdout","time":2987.625256446,"data":"step 120 loss 0.4253 (48.7 min)\n"}
+,{"stream_name":"stdout","time":3231.762719753,"data":"step 130 loss 0.4221 (52.8 min)\n"}
+,{"stream_name":"stdout","time":3488.848010226,"data":"step 140 loss 0.4189 (57.0 min)\n"}
+,{"stream_name":"stdout","time":3722.78627615,"data":"step 150 loss 0.4161 (60.9 min)\n"}
+,{"stream_name":"stdout","time":3963.565610577,"data":"step 160 loss 0.4141 (65.0 min)\n"}
+,{"stream_name":"stdout","time":4213.967188261,"data":"step 170 loss 0.4119 (69.1 min)\n"}
+,{"stream_name":"stdout","time":4460.152339929,"data":"step 180 loss 0.4091 (73.2 min)\n"}
+,{"stream_name":"stdout","time":4698.864331448,"data":"step 190 loss 0.4077 (77.2 min)\n"}
+,{"stream_name":"stdout","time":4936.918510607,"data":"step 200 loss 0.4057 (81.2 min)\n"}
+,{"stream_name":"stdout","time":4940.605723144,"data":"  who_when: 4/184 (81.2 min)\n"}
+,{"stream_name":"stdout","time":5018.895903564,"data":"  who_when: 104/184 (82.6 min)\n"}
+,{"stream_name":"stdout","time":5100.810756785,"data":"  test: 4/600 (83.9 min)\n"}
+,{"stream_name":"stdout","time":5198.36079036,"data":"  test: 104/600 (85.5 min)\n"}
+,{"stream_name":"stdout","time":5305.001204722,"data":"  test: 204/600 (87.3 min)\n"}
+,{"stream_name":"stdout","time":5419.311854473,"data":"  test: 304/600 (89.2 min)\n"}
+,{"stream_name":"stdout","time":5516.420062087,"data":"  test: 404/600 (90.8 min)\n"}
+,{"stream_name":"stdout","time":5615.510090613,"data":"  test: 504/600 (92.5 min)\n"}
+,{"stream_name":"stdout","time":5719.281350807,"data":"  val: 4/200 (94.2 min)\n"}
+,{"stream_name":"stdout","time":5822.928826453,"data":"  val: 104/200 (96.0 min)\n"}
+,{"stream_name":"stdout","time":5923.082503101,"data":"done\n"}
+,{"stream_name":"stderr","time":5929.523483352,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":5929.523519597,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":5929.790300234,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":5929.790328585,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":5930.595967027,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":5931.703946496,"data":"[NbConvertApp] Writing 330887 bytes to __results__.html\n"}
+]

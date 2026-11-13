@@ -1,0 +1,26 @@
+[base] seed 0 ta 0.1 tm 0.1 | WW thr pair 5.0/2.9 agen 42.2/34.8 erro 12.7/9.2 | WW top1 pair 1.6/1.2 agen 32.1/21.6 erro 8.7/5.0 | test thr pair 25.7/16.6 agen 81.4/64.9 erro 38.4/38.8
+[base] seed 1 ta 0.4 tm 0.1 | WW thr pair 4.1/2.2 agen 41.4/34.6 erro 11.9/9.2 | WW top1 pair 0.0/0.0 agen 32.6/22.6 erro 7.1/4.1 | test thr pair 25.5/15.8 agen 81.0/66.5 erro 38.2/37.9
+[base] seed 2 ta 0.2 tm 0.1 | WW thr pair 4.9/2.6 agen 41.0/32.9 erro 13.2/10.8 | WW top1 pair 1.1/0.5 agen 33.7/24.4 erro 10.3/9.2 | test thr pair 25.8/16.3 agen 81.0/66.4 erro 38.6/38.8
+[base] seed 3 ta 0.1 tm 0.1 | WW thr pair 3.4/1.8 agen 42.4/35.5 erro 11.8/9.2 | WW top1 pair 0.5/0.4 agen 32.1/21.6 erro 7.6/5.2 | test thr pair 25.8/17.0 agen 81.5/59.0 erro 38.3/39.3
+[base] seed 4 ta 0.4 tm 0.1 | WW thr pair 5.2/2.8 agen 44.4/35.4 erro 12.2/9.8 | WW top1 pair 2.7/0.8 agen 38.0/25.5 erro 7.6/5.7 | test thr pair 26.1/16.9 agen 81.8/64.2 erro 38.8/38.7
+[namefree] seed 0 ta 0.5 tm 0.1 | WW thr pair 5.7/3.1 agen 43.2/36.2 erro 13.6/8.9 | WW top1 pair 2.7/1.8 agen 34.8/24.6 erro 8.2/5.0 | test thr pair 25.1/13.1 agen 78.1/57.9 erro 37.8/38.1
+[namefree] seed 1 ta 0.4 tm 0.1 | WW thr pair 3.9/2.2 agen 40.7/31.7 erro 13.2/9.8 | WW top1 pair 1.6/1.3 agen 32.6/24.7 erro 8.2/4.3 | test thr pair 24.7/12.9 agen 77.3/59.7 erro 38.2/38.0
+[namefree] seed 2 ta 0.4 tm 0.1 | WW thr pair 5.4/2.5 agen 42.3/33.3 erro 13.6/9.0 | WW top1 pair 3.8/1.8 agen 35.3/25.6 erro 9.2/5.0 | test thr pair 25.3/13.3 agen 77.1/53.1 erro 38.3/38.8
+[namefree] seed 3 ta 0.3 tm 0.2 | WW thr pair 4.0/2.3 agen 42.9/32.7 erro 11.3/6.8 | WW top1 pair 2.7/1.8 agen 35.3/23.7 erro 9.2/5.5 | test thr pair 28.4/13.9 agen 72.3/51.4 erro 37.0/35.2
+[namefree] seed 4 ta 0.5 tm 0.1 | WW thr pair 5.2/2.4 agen 47.7/39.3 erro 13.1/9.1 | WW top1 pair 2.2/1.0 agen 37.5/25.2 erro 6.0/4.0 | test thr pair 25.0/13.7 agen 78.1/56.6 erro 37.3/37.7
+[nameemb] seed 0 ta 0.1 tm 0.1 | WW thr pair 6.7/3.6 agen 40.0/35.3 erro 16.9/12.3 | WW top1 pair 3.3/2.3 agen 26.6/18.7 erro 10.9/6.9 | test thr pair 27.0/18.5 agen 83.2/70.5 erro 39.6/40.7
+[nameemb] seed 1 ta 0.4 tm 0.1 | WW thr pair 6.1/3.3 agen 42.8/39.4 erro 15.9/11.3 | WW top1 pair 1.6/1.4 agen 25.0/17.3 erro 8.7/6.0 | test thr pair 25.9/17.0 agen 83.0/69.8 erro 38.2/38.7
+[nameemb] seed 2 ta 0.1 tm 0.2 | WW thr pair 5.4/2.8 agen 41.0/34.3 erro 17.0/12.9 | WW top1 pair 2.2/1.1 agen 27.2/19.4 erro 11.4/7.7 | test thr pair 30.3/18.3 agen 76.8/64.1 erro 38.5/37.6
+[nameemb] seed 3 ta 0.2 tm 0.2 | WW thr pair 5.3/2.7 agen 41.1/35.2 erro 18.0/13.5 | WW top1 pair 2.7/1.9 agen 23.9/14.9 erro 12.0/5.8 | test thr pair 31.3/18.4 agen 77.2/58.8 erro 38.5/37.8
+[nameemb] seed 4 ta 0.1 tm 0.2 | WW thr pair 5.0/2.5 agen 41.4/35.1 erro 14.5/10.6 | WW top1 pair 1.1/0.9 agen 26.1/17.7 erro 9.8/7.2 | test thr pair 33.2/19.3 agen 77.9/63.4 erro 41.0/39.4
+
+=== mean over seeds (micro/macro F1, percent) ===
+base      test     thr   pair 25.80+-0.20/16.54 | agen 81.34+-0.32/64.22 | erro 38.45+-0.21/38.70
+base      who_when thr   pair 4.53+-0.67/2.47 | agen 42.28+-1.19/34.66 | erro 12.37+-0.51/9.66
+base      who_when top1  pair 1.20+-0.94/0.59 | agen 33.70+-2.25/23.11 | erro 8.26+-1.16/5.87
+namefree  test     thr   pair 25.72+-1.38/13.37 | agen 76.59+-2.16/55.73 | erro 37.71+-0.50/37.54
+namefree  who_when thr   pair 4.83+-0.74/2.50 | agen 43.37+-2.32/34.65 | erro 12.96+-0.86/8.73
+namefree  who_when top1  pair 2.61+-0.72/1.54 | agen 35.11+-1.56/24.76 | erro 8.15+-1.19/4.74
+nameemb   test     thr   pair 29.56+-2.71/18.28 | agen 79.62+-2.83/65.34 | erro 39.16+-1.06/38.83
+nameemb   who_when thr   pair 5.69+-0.61/2.96 | agen 41.26+-0.89/35.84 | erro 16.46+-1.18/12.14
+nameemb   who_when top1  pair 2.17+-0.77/1.52 | agen 25.76+-1.17/17.59 | erro 10.54+-1.17/6.71

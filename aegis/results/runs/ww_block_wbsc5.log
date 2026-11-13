@@ -1,0 +1,20 @@
+[supcon5] trained
+[supcon5_s1] trained
+[supcon5_s2] trained
+[supcon5_s3] trained
+[supcon5_s4] trained
+[supcon5_s5] trained
+
+=== wbsc5: block-dropout model, ensemble of 6 encoders, mean+-std over 3 seeds (micro F1 percent; macro after slash) ===
+names+peer         test      pair 36.15+-0.43/22.82 | agen 79.49+-0.77/65.43 | erro 43.88+-0.56/43.14
+names+peer         who_when  pair 6.01+-0.54/2.89 | agen 47.39+-0.31/36.76 | erro 10.07+-1.08/6.15
+names+peer  +shift who_when  pair 3.88+-0.92/2.24 | agen 45.60+-0.87/37.54 | erro 8.76+-3.16/3.01
+names              test      pair 32.31+-0.43/18.48 | agen 76.10+-0.81/61.19 | erro 39.42+-0.92/38.00
+names              who_when  pair 4.49+-0.69/2.14 | agen 46.70+-2.77/35.53 | erro 11.85+-1.25/7.93
+names       +shift who_when  pair 7.66+-2.14/4.54 | agen 45.46+-3.59/37.47 | erro 18.74+-3.80/6.73
+peer               test      pair 33.63+-0.17/17.71 | agen 76.30+-0.88/54.95 | erro 42.65+-0.32/41.42
+peer               who_when  pair 3.69+-0.68/1.79 | agen 43.49+-0.95/35.86 | erro 8.27+-0.64/5.19
+peer        +shift who_when  pair 4.15+-0.44/2.22 | agen 43.81+-0.55/39.08 | erro 9.20+-2.32/2.70
+neither            test      pair 27.11+-2.17/14.42 | agen 77.28+-2.93/55.83 | erro 38.04+-0.09/37.85
+neither            who_when  pair 4.14+-0.23/2.16 | agen 41.62+-0.49/35.93 | erro 11.82+-0.87/8.12
+neither     +shift who_when  pair 5.25+-1.19/3.46 | agen 43.23+-0.49/38.69 | erro 17.58+-2.72/6.32

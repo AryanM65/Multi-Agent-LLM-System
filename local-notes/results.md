@@ -1,0 +1,6927 @@
+# Results of the 3-day improvement push (started 2026-11-12 evening)
+
+LOCAL ONLY (`local-notes/`, git-excluded). Never commit or push. This file collects only NEW results from this push. Older results: `results_master.md`. What each approach means: `timeline.md`.
+Format rule from the user: bullet points, no tables.
+FULL VALUES: every run and every seed (micro and macro, all three levels) is at the bottom of this file in the appendix between the FULL_VALUES markers; regenerate with `python local-notes/gen_full_values.py`.
+
+Numbers are percent, micro-F1, order pair / agent / error, unless stated.
+- Floors: AEGIS test 7.35 / 68.58 / 27.14; Who&When 3.42 / 38.32 / 13.33.
+- Baseline to beat (average of 2 clean encoders, name-embedding flat MLP): AEGIS test 29.41 / 79.78 / 39.09; Who&When 5.04 / 40.85 / 15.04.
+- Rule: thresholds tuned on grouped validation only; every row says how many seeds; all variants are reported, nothing is picked by test.
+
+## 0. Diagnostic (done)
+Name-embedding flat MLP, clean encoder es_s0 vectors, 3 seeds, grouped test (`aegis/results/runs/diagnostic_es_s0.log`):
+- model: pair 27.79, agent 81.37, error 38.66
+- oracle agents (true faulty-agent indicator): pair 31.12, agent 92.20, error 40.09
+- oracle modes (modes masked to the trajectory's true modes): pair 56.06, agent 72.05, error 79.90
+- Exact mode set right on found faulty agents: 21.2%. Mode identification is the bottleneck.
+
+## 1. GPU wave 1: encoder jobs (status updated every 5-minute tick)
+- aegis-es-s2 (account A): COMPLETE, saved to `aegis/results/kaggle_logs/es_s2/`; best epoch 4, early-stop-slice loss 0.1415 (epochs 1-6: 0.1611, 0.1527, 0.1424, 0.1415, 0.1465, 0.1466)
+- aegis-es-s3 (account A): COMPLETE, saved to `aegis/results/kaggle_logs/es_s3/`; best epoch 5, loss 0.1403 (0.1627, 0.1502, 0.1449, 0.1419, 0.1403, 0.1451)
+- aegis-es-s4 (account B): COMPLETE, saved to `aegis/results/kaggle_logs/es_s4/`; best epoch 4, loss 0.1398 (0.1633, 0.1519, 0.1424, 0.1398, 0.1416, 0.1524)
+- aegis-len512 (account B): COMPLETE, saved to `aegis/results/kaggle_logs/len512/`; best epoch 3, loss 0.1378 (the lowest of all our encoders; MiniLM seeds 0.1398 to 0.1415); epochs 1-5: 0.1539, 0.1432, 0.1378, 0.1383, 0.1408
+- aegis-l12 (account C): COMPLETE, saved to `aegis/results/kaggle_logs/l12/` ; best epoch 4, loss 0.1391 (0.1592, 0.1465, 0.1443, 0.1391, 0.1395, 0.1448)
+- aegis-bgesmall (account C): COMPLETE, saved to `aegis/results/kaggle_logs/bgesmall/`; best epoch 4, loss 0.1415 (0.1565, 0.1459, 0.1448, 0.1415, 0.1444, 0.1469)
+- aegis-chunk (account B): COMPLETE, saved to `aegis/results/kaggle_logs/chunk/`; best epoch 4, loss 0.13949 (worse than plain len512 0.1378: chunking did not help the loss); epochs 0.1548, 0.1434, 0.144, 0.1395, 0.1426, 0.1477 (512 tokens per piece, long messages split into up to 3 pieces of 1800 characters, pieces averaged; bs 4; short name chunk)
+- aegis-len512-s1 (account C): COMPLETE, saved to `aegis/results/kaggle_logs/len512_s1/`; best epoch 4, loss 0.1385 (len512 seed 0 was 0.1378: the loss gain replicates); epochs 0.1581, 0.142, 0.1403, 0.1385, 0.1418, 0.149
+- aegis-es-s6 (account B): COMPLETE, saved to `aegis/results/kaggle_logs/es_s6/`; best epoch 4, loss 0.1392 (0.1628, 0.1481, 0.1438, 0.1392, 0.1454, 0.1519)
+- aegis-l12len512 (account B): COMPLETE, saved to `aegis/results/kaggle_logs/l12len512/`; best epoch 4, loss 0.13346 (the lowest of all encoders); epochs: 0.1543, 0.1395, 0.1361, 0.1335, 0.1399, 0.1382
+- aegis-l12len512-s1 (account B) and aegis-l12len512-s2 (account C): RUNNING, launched ~22:05 (two more seeds of the lowest-loss encoder)
+- aegis-es-s5 (account A): COMPLETE, saved to `aegis/results/kaggle_logs/es_s5/`; best epoch 4, loss 0.1438 (0.1651, 0.152, 0.1445, 0.1438, 0.1445, 0.149)
+- aegis-len512-s2 (account A): RUNNING (len512 with seed 2; short name len512_s2) (two more encoder seeds, for a 7-seed ensemble)
+- Reference: es_s0 best val loss 0.1414 (6 epochs run, early stopping); es_s1 similar.
+- Logs will be saved to `aegis/results/kaggle_logs/<es_s2|es_s3|es_s4|len512|l12|bgesmall>/` as each kernel completes.
+
+## 2. Downstream results on the new encoders (to fill in)
+- (one bullet per encoder: name-embedding flat MLP, 5 seeds, AEGIS test and Who&When; GNN and control where run)
+
+## 3. CPU experiments on the clean encoders (improve_cpu; es_s0 vectors, 3 seeds, mean +- std; log `aegis/results/runs/improve_cpu_es_s0.log`, ledger phase 9)
+Base = name-embedding flat MLP with the current decoder (two global thresholds). All variants tuned on val only; test and Who&When reported for every row (nothing picked by test).
+- Base (prod decoder): val pair 32.94 +- 3.03; test 27.79 / 81.37 / 38.66 (pair std 2.90); Who&When 5.14 / 41.00 / 14.01.
+- Peer-contrast features (agent minus the other agents, agent minus the question, plus 4 cosines):
+  - Test 31.56 / 78.99 / 40.13 (pair std 0.43). Gain over base: pair +3.77, error +1.47, agent -2.38.
+  - Val pair 38.78 (+5.84 over base). Who&When 4.75 / 37.60 / 14.18 (pair -0.39, agent -3.40, error +0.17).
+  - Verdict: clear in-domain gain on both val and test, far lower seed variance than the base; slightly hurts Who&When agent. Next: replicate on es_s1, combine with name-dropout.
+- Name-dropout training (training set doubled with a copy that hides the name embedding):
+  - Test 26.00 / 82.03 / 38.08 (pair -1.79 vs base, agent +0.66, error -0.58).
+  - Who&When 6.04 / 47.04 / 14.54 (pair +0.90, agent +6.04, error +0.53). Val pair 30.70 (-2.24).
+  - Verdict: trades about 1.8 in-domain pair for a clear Who&When agent gain (47.0 versus 41.0, and this is the best Who&When agent number we have from a name-using model). Worth combining with peer.
+- Decoder: pair if p_mode >= tm only ("pm") and the min-rule ("min") gave the same results (pm = min): base test 29.87 / 79.59 / 39.09 (pair +2.08, agent -1.78), Who&When 4.18 / 40.11 / 13.17 (worse). Verdict: mixed; not adopted.
+- Decoder: one threshold per mode ("perclass"): base test 29.39 / 81.30 / 39.65 (pair +1.60, agent -0.07, error +0.99), pair std 1.15 (lower variance), Who&When 4.79 / 40.81 / 13.91 (pair -0.35). On peer it HURT pair (test 30.09 vs 31.56, agent +2.2). Verdict: small gain on the base only; keep as an option, not clearly worth it.
+- Replication on the second clean encoder es_s1 (3 seeds; log `improve_cpu_es_s1.log`), prod decoder, test pair / agent / error and Who&W pair / agent / error:
+  - base: test 27.76 / 80.98 / 38.76; Who&W 6.06 / 41.27 / 16.57
+  - peer: test 32.20 / 78.46 / 40.20 (pair +4.44 over base, std 0.38); Who&W 5.31 / 39.72 / 15.70. Replicates the es_s0 gain (+3.77): peer-contrast is a real in-domain gain on both encoders.
+  - namedrop: test 27.71 / 80.09 / 38.60 (in-domain about unchanged here); Who&W 6.71 / 45.47 / 16.04 (agent +4.20, pair +0.65). Replicates the es_s0 Who&W agent gain (+6.04).
+  - peer + namedrop (peernd): test 32.35 / 78.26 / 39.93; Who&W 4.64 / 43.50 / 14.65.
+  - perclass decoder on es_s1: base test pair 29.50 (+1.74), peer 31.26 (-0.94 vs peer prod); same pattern as es_s0.
+- es_s0, peer + namedrop (peernd; 3 seeds; log `improve_cpu_es_s0_peernd.log`): test 32.38 / 79.02 / 40.58; Who&W 4.92 / 41.09 / 13.63.
+- Means over the two encoders (prod decoder; test pair / agent / error, then Who&W pair / agent / error):
+  - base (name-embedding): test 27.78 / 81.18 / 38.71; Who&W 5.60 / 41.14 / 15.29
+  - peer: test 31.88 / 78.73 / 40.17; Who&W 5.03 / 38.66 / 14.94
+  - namedrop: test 26.86 / 81.06 / 38.34; Who&W 6.38 / 46.26 / 15.29
+  - peernd: test 32.37 / 78.64 / 40.26; Who&W 4.78 / 42.30 / 14.14
+- len512 encoder (reads 512 tokens per message; seed 0; improve_cpu 3 seeds; log `improve_cpu_len512.log`), prod decoder, mean +- std:
+  - base: val pair 39.89 +- 0.32; test 34.41 / 78.74 / 40.76 (pair std 0.42); Who&W 4.45 / 40.07 / 11.46
+  - peer: val pair 42.14; test 36.27 / 80.93 / 44.45 (pair std 0.74); Who&W 3.56 / 37.68 / 9.13
+  - peernd: val pair 41.50; test 34.63 / 80.07 / 42.29; Who&W 5.65 / 45.09 / 10.61
+  - Versus the 256-token clean encoders (mean of es_s0 and es_s1): base test pair 34.41 vs 27.78 (+6.63), peer 36.27 vs 31.88 (+4.39). Error +2.1 to +4.3 as well. Who&W error drops to 9 to 11 (floor 13.33) for base and peer.
+  - Verdict: reading longer messages is the biggest in-domain gain of this push so far (one encoder seed; len512-s1 and aegis-chunk are checking it).
+- bge-small-en-v1.5 encoder (seed 0; 3 seeds; log `improve_cpu_bgesmall.log`), prod decoder:
+  - base: val pair 30.59; test 26.26 / 82.65 / 38.13; Who&W 5.84 / 45.54 / 14.01
+  - peer: val pair 37.84; test 32.28 / 79.50 / 40.28; Who&W 5.11 / 42.65 / 12.08
+  - peernd: val pair 37.34; test 32.11 / 79.53 / 39.74; Who&W 5.35 / 46.25 / 10.88
+  - Verdict: a different encoder family gives about the same as the MiniLM-256 encoders (base 26.3 vs 27.8, peer 32.3 vs 31.9); the peer-contrast gain (+6.0 test pair here) replicates on a third encoder. No benefit from switching encoder family.
+- More 256-token MiniLM encoders (3 seeds each; prod decoder; test pair / agent / error; Who&W pair / agent / error):
+  - es_s2: base 30.21 / 80.09 / 39.06, WW 4.45 / 38.44 / 12.89; peer 32.21 / 79.22 / 40.95, WW 4.65 / 37.25 / 13.08; peernd 32.40 / 79.31 / 40.79, WW 4.21 / 41.07 / 10.81
+  - es_s3: base 27.91 / 80.44 / 38.46, WW 6.31 / 38.99 / 16.11; peer 31.57 / 78.19 / 40.01, WW 6.15 / 39.23 / 14.90; peernd 31.55 / 78.86 / 40.18, WW 6.56 / 44.30 / 13.47
+  - es_s4: base 28.81 / 82.16 / 39.18, WW 6.17 / 40.62 / 17.39; peer 31.87 / 78.55 / 39.96, WW 5.45 / 37.58 / 14.94; peernd 32.61 / 79.50 / 40.32, WW 6.16 / 43.68 / 13.07
+  - es_s6: base 28.26 / 81.41 / 38.72, WW 5.08 / 40.45 / 14.00; peer 32.00 / 79.48 / 40.35, WW 4.93 / 39.22 / 14.19; peernd 32.27 / 80.04 / 40.17, WW 5.17 / 40.29 / 13.00
+  - MiniLM-L12 (l12, 256 tokens): base 32.34 / 78.74 / 39.03, WW 3.16 / 40.88 / 10.03; peer 32.88 / 80.29 / 41.33, WW 3.55 / 36.70 / 13.02; peernd 32.69 / 79.40 / 40.42, WW 4.43 / 41.89 / 13.71
+- Mean over the six MiniLM-256 encoders es_s0, es_s1, es_s2, es_s3, es_s4, es_s6 (prod decoder):
+  - base: test pair 28.46; Who&W 5.53 / 40.13 / 15.16
+  - peer: test pair 31.90 (+3.44); Who&W 5.21 / 38.43 / 14.50
+  - peernd: test pair 32.26 (+3.80); Who&W 5.28 / 42.32 / 13.10 (agent +2.19 over base, error -2.06, pair -0.25)
+  - Reading: peer-contrast is a solid in-domain gain on every encoder (+3 to +6); it does not help Who&W. peernd keeps the in-domain gain and recovers some Who&W agent, but Who&W pair and error do not improve. namedrop alone (2 encoders only so far) is better for Who&W than peernd.
+- l12len512 encoder (MiniLM-L12, 512 tokens; seed 0; 3 seeds; prod decoder; test pair / agent / error; Who&W pair / agent / error):
+  - base: test 35.72 / 80.72 / 42.41; WW 3.63 / 40.65 / 11.32
+  - peer: test 37.26 / 82.35 / 44.99; WW 3.77 / 39.51 / 11.98 (best AEGIS result so far)
+  - peernd: test 36.42 / 81.38 / 43.31; WW 4.26 / 41.85 / 11.92
+  - Verdict: AEGIS best so far, but Who&W stays at or below the floor on pair and error; long-message encoders do not transfer to Who&W.
+- len512 seed 1 (log `improve_cpu_len512_s1.log`; 3 seeds): base test 32.40 / 79.94 / 40.45, WW 4.16 / 39.25 / 12.29; peer test 34.45 / 80.46 / 41.94, WW 5.34 / 38.60 / 13.44; peernd test 33.99 / 80.09 / 40.87, WW 7.09 / 44.75 / 14.12 (best Who&W of any single encoder so far; above floor on all three levels).
+- chunk encoder (512-token-equivalent via 3 pieces per message; log `improve_cpu_chunk.log`; 3 seeds): base test 35.04 / 78.87 / 41.66, WW 2.14 / 38.03 / 8.55; peer test 36.52 / 81.06 / 44.72, WW 3.90 / 40.39 / 10.43; peernd test 36.44 / 81.13 / 44.18, WW 3.73 / 42.87 / 9.99. Same AEGIS level as len512, worse Who&W: chunking not worth it.
+- es_s5 (256 tokens; 3 seeds): base test 29.72 / 80.10 / 39.39, WW 5.27 / 42.70 / 13.87; peer test 30.38 / 80.86 / 40.92, WW 5.19 / 39.47 / 14.49; peernd test 32.91 / 79.16 / 40.54, WW 6.23 / 44.49 / 13.05. Now all seven 256-token encoders are scored.
+- Attention pooling smoke (CPU, es_s0, 1 seed, name-dropout recipe, attn variant): test 27.65 / 82.00 / 38.88; Who&W 7.04 / 42.20 / 16.80. Wiring check only; the 3-seed mean-versus-attention comparison is queued (chain7).
+- RUNNING GPU jobs now: len512-s3 (A), l12len512-s1 (B), l12len512-s2 (C), attn (D = aryanomgh65, end-to-end attention pooling fine-tune, launched ~22:55).
+- GPU jobs finished and saved (this round):
+  - len512-s2 (A): `aegis/results/kaggle_logs/len512_s2/`; best epoch 4, loss 0.13969 (0.1522, 0.1414, 0.1398, 0.1397, 0.1424, 0.1406)
+  - l12len512-s1 (B): `aegis/results/kaggle_logs/l12len512_s1/` (vectors in `ft_shards_l12len512-s1`, with a hyphen); best epoch 4, loss 0.13579 (0.1517, 0.1399, 0.14, 0.1358, 0.1413, 0.1457)
+  - l12len512-s2 (C): `aegis/results/kaggle_logs/l12len512_s2/` (vectors in `ft_shards_l12len512-s2`); best epoch 4, loss 0.13685 (0.1513, 0.1398, 0.1371, 0.1369, 0.1382, 0.1407)
+  - Loss reading: the L12 + 512 tokens encoder replicates as the lowest-loss recipe on 3 seeds (0.1335, 0.1358, 0.1369); plain 512-token MiniLM is 0.1378 / 0.1385 / 0.1397.
+- Still running: len512-s3 (A), attn (D). Queued CPU: chain6 (ww_focus 256-token ensemble; es_s4 trained), chain7 (ww_attn es_s0; improve_cpu len512_s2; ww_attn len512_s1), chain8 (improve_cpu base,peernd on l12len512_s1 and _s2).
+- ww_focus on the seven 256-token MiniLM encoders (es_s0..es_s6), 3 seeds, thresholds tuned on AEGIS grouped validation, no Who&W label used (log `aegis/results/runs/ww_focus_ww256.log`, ledger phase 10). Micro F1 pair / agent / error; macro after the slash for pair only where noted:
+  - nd (name-dropout, no peer features), ensemble of 7: AEGIS test 26.88 / 82.87 / 38.98 (pair std 1.04); Who&W 6.80 (std 0.39) / 45.78 (std 1.65) / 16.12 (std 0.66)
+  - nd ensemble plus label-shift correction: Who&W 8.46 (std 1.03; macro 5.34) / 46.42 (std 2.10) / 17.08 (std 2.72; macro 5.96, down from 11.51)
+  - peernd (name-dropout plus peer features), ensemble of 7: AEGIS test 33.89 (std 0.36) / 79.13 / 41.64; Who&W 5.37 (std 0.96) / 42.27 (std 1.51) / 12.17 (std 0.95)
+  - peernd plus label-shift: Who&W 3.54 / 44.80 / 10.92 (worse)
+  - Per-seed nd: seed 0 WW 6.33 / 43.45 / 17.00 (+shift 8.95 / 43.52 / 19.56); seed 1 7.30 / 46.90 / 15.96 (+shift 7.03 / 47.34 / 13.30); seed 2 6.77 / 47.00 / 15.40 (+shift 9.41 / 48.41 / 18.38)
+  - Verdicts:
+    - Ensembling steadies Who&W but adds little over the best single encoder: nd pair 6.80 vs about 6.4 single, error 16.12 vs about 15.3, agent 45.8 (about the same).
+    - Label-shift correction on nd lifts micro pair to 8.46 and error to 17.08, above the paper's best Who&W pair (o3 7.41) and error (o3 14.88); agent stays 46.4 against the paper's 51 to 54. Caveat: macro error falls from 11.5 to 6.0, so the gain comes from predicting the dominant Who&W modes (FM-2.6, FM-3.3) more, not from better coverage of all modes. Seed spread is large (pair 7.03 to 9.41). Still unlabeled (prior estimated by EM from the model's own predictions), so it is legitimate zero-shot, but the variant list was built after seeing Who&W results.
+    - Label-shift hurts peernd, so peer-contrast and shift do not combine.
+    - THE TRADE-OFF: nd alone has the best Who&W but AEGIS test pair 26.9, below the base 28.5 (peer-contrast is what restores AEGIS to about 32 to 34). peernd keeps AEGIS 33.9 but Who&W pair 5.4. No single recipe wins both yet.
+- attn encoder (end-to-end attention pooling, account D): COMPLETE, saved `aegis/results/kaggle_logs/attn/`; best epoch 4, loss 0.14185 (0.1633, 0.1482, 0.1429, 0.1419, 0.1438, 0.149) vs es_s0 0.1414: no loss gain; downstream scoring queued (chain9).
+- Attention pooling over turns, CPU version (es_s0 vectors, name-dropout recipe, 3 seeds; log `aegis/results/runs/ww_attn_es_s0.log`; ledger phase 10). Pair / agent / error micro (macro after the slash):
+  - mean-pooling control: AEGIS test 26.00 (std 0.97) / 82.03 / 38.08; Who&W 6.04 (std 0.60) / 47.04 (std 2.12) / 14.54 (std 0.54). It reproduces the earlier es_s0 namedrop row exactly, so the pipeline is consistent.
+  - gated attention pooling: AEGIS test 28.64 (std 2.57) / 80.62 / 38.70; Who&W 6.40 (std 1.38) / 44.99 (std 2.14) / 14.41 (std 2.83)
+  - Verdict: attention pooling does NOT improve Who&W: pair +0.36 (inside noise), agent -2.05, error -0.13. AEGIS pair +2.6 but with std 2.6, so not reliable. The end-to-end version (attn encoder, loss 0.1419 vs 0.1414) showed no encoder gain either. Attention pooling is dropped as a Who&W lever unless the attn encoder's downstream scoring says otherwise.
+- More GPU jobs finished and saved (23:3x): 
+  - len512-s3 (A): `kaggle_logs/len512_s3/`; best epoch 4, loss 0.13809 (0.1571, 0.1427, 0.1407, 0.1381, 0.1401, 0.1477); fourth 512-token seed (losses 0.1378, 0.1385, 0.1397, 0.1381: stable)
+  - nonames (B): `kaggle_logs/nonames/`; encoder fine-tuned with framework and agent-name columns zeroed in the head; best epoch 4, loss 0.15091 (0.176, 0.1607, 0.1573, 0.1509, 0.1512, 0.1535). Loss is not comparable with es_s0 (0.1414) because the head had no name information; what matters is the downstream Who&W score (queued, chain11).
+  - nometa (C): `kaggle_logs/nometa/`; names AND count scalars zeroed in the head; best epoch 4, loss 0.15889 (0.1795, 0.1685, 0.1642, 0.1589, 0.1629, 0.1613).
+- Launched: nometa-s1 (A), nonames512 (B; MiniLM-L12, 512 tokens, no names), nonames-s1 (D, running). C idle (kept for the next complex job).
+- len512_s2 (3 seeds; prod decoder; test pair / agent / error; Who&W): base 34.94 / 79.90 / 41.86, WW 3.52 / 38.11 / 10.41; peer 34.74 / 80.16 / 42.71, WW 2.97 / 38.76 / 12.01; peernd 34.20 / 80.21 / 42.60, WW 4.36 / 42.43 / 11.89 (peernd Who&W pair is lower than len512_s1's 7.09, so that single result was partly seed luck).
+- Attention pooling on len512_s1 (CPU, name-dropout recipe, 3 seeds; log `ww_attn_len512_s1.log`): mean control AEGIS test 31.74 (std 3.04) / 79.08 / 39.59, Who&W 6.17 / 42.99 / 13.93; attention AEGIS test 34.62 (std 0.30) / 79.50 / 40.93, Who&W 6.74 / 43.44 / 13.75.
+  - Combined with es_s0 (AEGIS +2.6) the pattern is: attention pooling gives a consistent AEGIS pair gain of +2.6 to +2.9 and much smaller spread, with Who&W unchanged within noise (pair +0.4 / +0.6, agent -2.0 / +0.5). So it is an AEGIS-friendly change that does not hurt Who&W: useful as a component of the final recipe, not as a Who&W lever.
+- nonames-s1 (D): saved `kaggle_logs/nonames_s1/`; best loss in file.md line (23:3x).
+- l12len512_s1 (3 seeds; prod decoder; test pair / agent / error; Who&W): base 36.18 / 81.35 / 43.70, WW 3.52 / 39.86 / 13.51; peernd 35.69 / 82.35 / 43.83, WW 4.73 / 43.31 / 11.84. Same pattern as seed 0: strong AEGIS (35.7 to 36.2), Who&W pair 4.7 and error 11.8 at or below floor.
+- l12len512_s2 (3 seeds; prod decoder): base test 35.53 / 79.27 / 42.30, WW 2.42 / 40.42 / 8.94; peernd test 35.88 / 81.59 / 43.83, WW 4.29 / 44.92 / 10.70. Across the three L12+512 encoders (seeds 0, 1, 2) AEGIS test pair is 35.5 to 36.4 and Who&W pair 4.3 to 4.7 with error 10.7 to 11.9: stable, strong in-domain, below the Who&W floor on error. Not a Who&W lever.
+- Launched (23:5x): advfw (C, framework-adversarial encoder), supcon (D, contrastive encoder); running: nometa-s1 (A), nonames512 (B).
+- nometa-s1 (A): COMPLETE, saved `kaggle_logs/nometa_s1/` (vectors in `ft_shards_nometa-s1`, hyphen); best epoch 4, loss 0.16005 (0.1832, 0.1692, 0.165, 0.1601, 0.1602, 0.1613). Downstream scoring not yet queued (nometa seed 0 first).
+- Launched aegis-seq (A, 23:50): order-aware small transformer over an agent's turns, end-to-end encoder fine-tune; compare with es_s0.
+- attn encoder CPU scoring (3 seeds, prod decoder; log `improve_cpu_attn.log`; test pair / agent / error; Who&W): base 28.56 / 80.81 / 38.75, WW 5.89 / 41.78 / 15.11; namedrop 29.76 / 79.81 / 38.32, WW 4.55 / 44.33 / 12.87; peernd 32.59 / 79.21 / 40.33, WW 4.49 / 43.35 / 11.82. Not better than the plain es_s0 encoder on Who&W: end-to-end attention pooling is dropped.
+- The big lever is message length and encoder depth, not the encoder family: loss ranking (lower is better): l12len512 0.1335, len512 0.1378 / 0.1385, l12 0.1391, es_s6 0.1392, chunk 0.1395, es_s4 0.1398, es_s3 0.1403, es_s0 0.1414, bgesmall 0.1415, es_s2 0.1415, es_s5 0.1438.
+- Running now (CPU): `chain5.sh` = improve_cpu on l12len512, len512_s1, chunk, es_s5; then `chain6.sh` = ww_focus on the seven 256-token MiniLM encoders (ensemble, name-dropout and label-shift correction for Who&W). Status lines CHAIN5_DONE_<tag>, CHAIN6_DONE_ww256 in `aegis/results/runs/chain_status.log`.
+
+## 4. Ensembles (to fill in)
+
+## 5. Verdicts so far
+- Peer-contrast features are the first real in-domain gain from this push (+3.8 test pair on es_s0); needs replication on es_s1.
+- Peer-contrast replicated on both encoders: +3.8 and +4.4 test pair over base, with much lower seed variance. It costs 2 to 3 points of Who&W agent. It is a genuine new gain beyond the paper recipe, but note it is still a small, standard-style feature addition, not a novel method.
+- Name-dropout replicated on both encoders for Who&W agent (+6.0 and +4.2; mean 46.26 vs 41.14) and pair (6.38 vs 5.60), with no clear in-domain cost on es_s1 and -1.8 on es_s0.
+- NEW best in-domain: len512 encoder + peer features, test pair 36.27 / agent 80.93 / error 44.45 (3 seeds, one encoder).
+- The best 256-token in-domain model is peer (about 31.9 test pair mean); the best Who&W model is namedrop (6.38 / 46.26 / 15.29 mean).
+
+<!-- FULL_VALUES_START -->
+## Appendix: full values of this push (every run and seed, micro AND macro F1, not only averages)
+Generated from the ledger by `local-notes/gen_full_values.py`. Phase 9 = improve_cpu runs; each line is one seed, pair / agent / error as micro/macro percent, on grouped validation, grouped test and Who&When.
+
+### CPU improvement experiments (phase 9; variants base / peer / namedrop / peernd; decoders prod / pm / min / perclass; tag = encoder)
+- flat_mlp_base_min | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.69/13.59, agent 79.62/69.37, error 32.58/32.34
+  - seed 1: pair 19.23/12.68, agent 78.50/69.63, error 32.80/32.55
+  - seed 2: pair 19.72/12.83, agent 78.38/68.18, error 32.06/31.75
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.22/13.72, agent 79.81/66.47, error 32.87/32.21
+  - seed 1: pair 19.24/12.45, agent 78.92/67.83, error 32.57/32.23
+  - seed 2: pair 19.95/13.09, agent 77.70/64.78, error 32.13/31.45
+- flat_mlp_base_pm | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.69/13.59, agent 79.62/69.37, error 32.58/32.34
+  - seed 1: pair 19.23/12.68, agent 78.50/69.63, error 32.80/32.55
+  - seed 2: pair 19.72/12.83, agent 78.38/68.18, error 32.06/31.75
+- flat_mlp_base_prod | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.63/13.35, agent 80.37/66.90, error 32.50/32.25
+  - seed 1: pair 19.10/12.65, agent 78.99/68.28, error 32.56/32.33
+  - seed 2: pair 19.64/12.68, agent 79.00/66.01, error 31.82/31.57
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.85/14.20, agent 77.45/72.15, error 32.48/32.19
+  - seed 1: pair 18.73/12.71, agent 78.29/72.25, error 31.32/30.60
+  - seed 2: pair 19.84/12.63, agent 77.84/67.45, error 32.36/31.97
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.19/13.13, agent 76.82/70.28, error 32.12/30.62
+  - seed 1: pair 18.71/12.44, agent 78.39/72.51, error 31.00/29.64
+  - seed 2: pair 19.85/12.19, agent 77.87/67.06, error 32.36/31.75
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.85/14.20, agent 77.45/72.15, error 32.48/32.19
+  - seed 1: pair 18.73/12.71, agent 78.29/72.25, error 31.32/30.60
+  - seed 2: pair 19.83/12.63, agent 77.79/67.44, error 32.35/31.96
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.84/14.15, agent 77.67/70.77, error 32.41/32.13
+  - seed 1: pair 18.73/12.71, agent 78.42/72.45, error 31.27/30.55
+  - seed 2: pair 19.66/12.35, agent 77.90/67.11, error 32.33/31.93
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.69/13.59, agent 80.50/74.04, error 32.39/32.19
+  - seed 1: pair 18.88/13.74, agent 80.07/71.08, error 33.28/32.83
+  - seed 2: pair 18.58/12.36, agent 78.61/69.60, error 33.05/32.70
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.51/13.53, agent 79.18/71.99, error 32.69/32.83
+  - seed 1: pair 19.46/14.19, agent 79.38/70.53, error 32.41/32.44
+  - seed 2: pair 19.33/12.19, agent 78.11/68.37, error 33.06/32.57
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.69/13.59, agent 80.48/73.91, error 32.38/32.18
+  - seed 1: pair 18.87/13.74, agent 80.00/71.06, error 33.31/32.85
+  - seed 2: pair 18.58/12.36, agent 78.61/69.60, error 33.05/32.70
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.73/13.57, agent 80.98/73.83, error 32.33/32.14
+  - seed 1: pair 18.86/13.74, agent 80.26/71.09, error 33.25/32.80
+  - seed 2: pair 18.59/12.33, agent 78.90/68.97, error 33.08/32.73
+- flat_mlp_base_min | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.22/12.85, agent 78.75/71.10, error 32.17/32.11
+  - seed 1: pair 19.27/12.85, agent 77.81/67.14, error 32.83/33.00
+  - seed 2: pair 19.70/13.73, agent 78.88/71.37, error 32.11/32.23
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.89/11.98, agent 78.66/69.62, error 31.98/31.11
+  - seed 1: pair 19.32/12.61, agent 78.18/66.06, error 32.66/31.92
+  - seed 2: pair 19.67/12.93, agent 79.07/69.55, error 31.56/30.42
+- flat_mlp_base_pm | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.22/12.85, agent 78.75/71.10, error 32.17/32.11
+  - seed 1: pair 19.27/12.85, agent 77.81/67.14, error 32.83/33.00
+  - seed 2: pair 19.70/13.73, agent 78.88/71.37, error 32.11/32.23
+- flat_mlp_base_prod | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.19/12.77, agent 79.03/69.68, error 32.03/31.93
+  - seed 1: pair 19.35/13.17, agent 78.40/66.66, error 32.93/33.06
+  - seed 2: pair 19.73/13.72, agent 79.17/70.65, error 32.16/32.26
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.17/11.37, agent 77.77/66.30, error 32.63/32.59
+  - seed 1: pair 19.76/13.08, agent 77.03/63.22, error 32.76/32.59
+  - seed 2: pair 19.34/12.17, agent 76.13/65.21, error 32.95/32.45
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.35/11.00, agent 78.39/66.51, error 32.76/31.32
+  - seed 1: pair 19.80/12.67, agent 77.31/65.30, error 32.54/31.09
+  - seed 2: pair 19.31/12.01, agent 76.64/63.90, error 32.99/32.47
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.17/11.37, agent 77.77/66.30, error 32.63/32.59
+  - seed 1: pair 19.76/13.08, agent 77.03/63.22, error 32.76/32.59
+  - seed 2: pair 19.34/12.17, agent 76.13/65.21, error 32.95/32.45
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.15/11.34, agent 78.26/65.55, error 32.56/32.55
+  - seed 1: pair 19.74/13.03, agent 77.29/65.32, error 32.68/32.49
+  - seed 2: pair 19.31/12.01, agent 76.64/63.90, error 32.99/32.47
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.20/13.95, agent 79.91/71.64, error 34.47/33.99
+  - seed 1: pair 18.95/13.25, agent 79.54/66.60, error 33.20/32.76
+  - seed 2: pair 20.46/14.30, agent 79.25/68.32, error 33.38/33.23
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.48/12.61, agent 78.73/70.93, error 34.14/32.12
+  - seed 1: pair 19.35/12.67, agent 78.40/66.91, error 32.74/30.53
+  - seed 2: pair 20.21/14.04, agent 78.09/66.60, error 33.29/32.62
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.20/13.95, agent 79.88/71.63, error 34.47/33.99
+  - seed 1: pair 18.95/13.25, agent 79.54/66.60, error 33.20/32.76
+  - seed 2: pair 20.46/14.30, agent 79.25/68.32, error 33.38/33.23
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.21/13.94, agent 80.00/71.82, error 34.47/33.99
+  - seed 1: pair 18.92/13.22, agent 79.83/68.07, error 33.15/32.71
+  - seed 2: pair 20.47/14.31, agent 79.27/68.20, error 33.38/33.25
+- flat_mlp_base_min | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.35/13.85, agent 80.45/71.38, error 32.90/32.71
+  - seed 1: pair 20.39/13.69, agent 79.59/70.63, error 34.36/34.29
+  - seed 2: pair 20.16/12.70, agent 78.87/68.87, error 32.88/32.31
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.85/12.74, agent 80.16/71.14, error 32.89/31.58
+  - seed 1: pair 20.48/12.57, agent 79.31/68.07, error 33.98/32.25
+  - seed 2: pair 20.44/12.48, agent 78.36/65.16, error 33.44/32.63
+- flat_mlp_base_pm | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.35/13.85, agent 80.45/71.38, error 32.90/32.71
+  - seed 1: pair 20.39/13.69, agent 79.59/70.63, error 34.36/34.29
+  - seed 2: pair 20.16/12.70, agent 78.87/68.87, error 32.88/32.31
+- flat_mlp_base_prod | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.35/13.87, agent 80.41/71.38, error 32.91/32.72
+  - seed 1: pair 20.32/13.47, agent 79.80/69.76, error 34.20/34.06
+  - seed 2: pair 20.05/12.45, agent 78.74/65.36, error 32.69/32.05
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.15/12.38, agent 78.50/70.07, error 33.38/33.05
+  - seed 1: pair 18.86/11.42, agent 75.17/63.91, error 31.96/32.17
+  - seed 2: pair 19.57/12.43, agent 78.61/67.63, error 33.31/33.43
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.19/12.44, agent 78.27/67.69, error 33.45/33.51
+  - seed 1: pair 19.35/10.48, agent 75.85/59.04, error 31.50/30.34
+  - seed 2: pair 19.20/11.28, agent 78.89/64.04, error 31.76/29.21
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.15/12.38, agent 78.50/70.07, error 33.38/33.05
+  - seed 1: pair 18.86/11.42, agent 75.17/63.91, error 31.96/32.17
+  - seed 2: pair 19.57/12.43, agent 78.61/67.63, error 33.31/33.43
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.07/12.20, agent 78.83/67.95, error 33.29/32.95
+  - seed 1: pair 18.90/11.14, agent 75.86/60.77, error 31.64/31.89
+  - seed 2: pair 19.53/12.40, agent 78.86/65.96, error 33.27/33.38
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.38/13.35, agent 80.19/71.06, error 33.61/33.63
+  - seed 1: pair 20.50/12.99, agent 80.03/73.12, error 34.29/34.17
+  - seed 2: pair 19.40/12.93, agent 79.44/69.59, error 34.00/33.92
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.81/12.66, agent 79.64/71.28, error 33.91/32.85
+  - seed 1: pair 21.39/13.09, agent 79.41/71.83, error 35.03/34.40
+  - seed 2: pair 19.67/12.38, agent 79.36/68.19, error 34.59/33.26
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.37/13.33, agent 80.10/70.62, error 33.60/33.62
+  - seed 1: pair 20.50/12.99, agent 80.03/73.12, error 34.29/34.17
+  - seed 2: pair 19.40/12.93, agent 79.39/69.57, error 34.00/33.92
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.42/13.37, agent 80.51/71.06, error 33.64/33.65
+  - seed 1: pair 20.49/12.97, agent 80.34/72.01, error 34.35/34.23
+  - seed 2: pair 19.40/12.73, agent 80.11/68.35, error 34.02/33.95
+- flat_mlp_base_min | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.65/13.66, agent 80.58/70.92, error 34.20/34.17
+  - seed 1: pair 20.89/13.65, agent 80.82/69.69, error 33.61/33.65
+  - seed 2: pair 20.31/13.64, agent 80.38/72.83, error 33.67/33.44
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.12/13.45, agent 80.59/65.88, error 35.23/34.73
+  - seed 1: pair 22.32/14.18, agent 80.21/63.94, error 34.06/33.11
+  - seed 2: pair 20.56/12.51, agent 80.04/66.02, error 33.29/31.15
+- flat_mlp_base_pm | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.64/13.66, agent 80.59/70.93, error 34.20/34.17
+  - seed 1: pair 20.89/13.65, agent 80.82/69.69, error 33.61/33.65
+  - seed 2: pair 20.31/13.64, agent 80.36/72.82, error 33.67/33.44
+- flat_mlp_base_prod | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.61/13.62, agent 81.00/66.04, error 34.11/34.10
+  - seed 1: pair 21.07/13.45, agent 81.09/65.17, error 33.31/33.35
+  - seed 2: pair 20.24/13.61, agent 80.58/68.44, error 33.58/33.34
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.25/13.47, agent 79.47/67.02, error 33.62/33.90
+  - seed 1: pair 20.66/14.44, agent 79.91/70.72, error 33.73/34.11
+  - seed 2: pair 20.11/13.53, agent 80.69/69.74, error 34.38/34.22
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 21.73/12.82, agent 78.39/61.47, error 33.93/32.97
+  - seed 1: pair 21.10/13.71, agent 79.86/71.19, error 33.79/32.38
+  - seed 2: pair 20.66/13.54, agent 80.85/70.28, error 34.41/33.68
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.23/13.45, agent 79.31/66.90, error 33.66/33.93
+  - seed 1: pair 20.66/14.44, agent 79.91/70.72, error 33.73/34.11
+  - seed 2: pair 20.11/13.53, agent 80.69/69.74, error 34.38/34.22
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.30/13.33, agent 79.78/63.45, error 33.49/33.80
+  - seed 1: pair 20.69/14.41, agent 80.17/71.25, error 33.81/34.17
+  - seed 2: pair 20.15/13.55, agent 81.12/70.73, error 34.40/34.24
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.61/12.39, agent 80.39/72.22, error 33.70/33.28
+  - seed 1: pair 19.74/12.90, agent 80.62/70.39, error 33.50/33.36
+  - seed 2: pair 19.13/12.44, agent 79.90/70.63, error 33.51/33.49
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.84/12.15, agent 79.57/69.09, error 33.84/33.61
+  - seed 1: pair 20.10/11.80, agent 78.82/70.42, error 32.67/30.89
+  - seed 2: pair 21.04/12.55, agent 78.68/69.86, error 33.54/32.22
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.61/12.39, agent 80.39/72.22, error 33.70/33.28
+  - seed 1: pair 19.74/12.90, agent 80.62/70.39, error 33.50/33.36
+  - seed 2: pair 19.13/12.44, agent 79.90/70.63, error 33.51/33.49
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.74/12.27, agent 81.08/70.41, error 33.66/33.27
+  - seed 1: pair 19.76/12.90, agent 80.83/72.36, error 33.54/33.41
+  - seed 2: pair 19.26/12.55, agent 80.64/71.43, error 33.44/33.42
+- flat_mlp_base_min | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.04/13.54, agent 78.76/70.37, error 32.40/32.18
+  - seed 1: pair 19.11/12.92, agent 78.83/69.68, error 32.60/32.41
+  - seed 2: pair 19.47/12.99, agent 77.68/68.07, error 32.46/31.76
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.94/13.03, agent 78.81/71.32, error 32.35/31.92
+  - seed 1: pair 19.45/12.22, agent 78.82/65.51, error 32.42/29.69
+  - seed 2: pair 18.82/12.03, agent 77.18/67.33, error 31.73/30.03
+- flat_mlp_base_pm | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.04/13.54, agent 78.76/70.37, error 32.40/32.18
+  - seed 1: pair 19.11/12.92, agent 78.83/69.68, error 32.60/32.41
+  - seed 2: pair 19.47/12.99, agent 77.68/68.07, error 32.46/31.76
+- flat_mlp_base_prod | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.06/13.60, agent 78.99/71.44, error 32.40/32.18
+  - seed 1: pair 19.02/12.66, agent 79.11/64.75, error 32.52/32.33
+  - seed 2: pair 19.47/13.01, agent 77.73/68.10, error 32.37/31.68
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.22/12.65, agent 76.39/68.14, error 33.42/32.73
+  - seed 1: pair 19.66/13.02, agent 78.13/66.73, error 32.59/32.21
+  - seed 2: pair 19.41/12.25, agent 77.78/70.44, error 32.79/32.40
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.89/12.27, agent 76.92/64.54, error 33.27/32.52
+  - seed 1: pair 19.68/12.80, agent 78.34/64.88, error 32.61/31.55
+  - seed 2: pair 19.40/12.28, agent 77.62/67.80, error 32.91/32.64
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.22/12.65, agent 76.39/68.14, error 33.42/32.73
+  - seed 1: pair 19.66/12.96, agent 78.10/66.73, error 32.63/32.26
+  - seed 2: pair 19.41/12.24, agent 77.75/70.33, error 32.78/32.39
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.13/12.50, agent 76.92/64.54, error 33.32/32.55
+  - seed 1: pair 19.65/12.99, agent 78.04/65.90, error 32.61/32.21
+  - seed 2: pair 19.44/12.26, agent 77.79/69.61, error 32.81/32.41
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 17.92/11.70, agent 79.69/71.10, error 32.34/31.60
+  - seed 1: pair 17.91/11.88, agent 79.20/70.79, error 31.85/31.50
+  - seed 2: pair 19.10/13.93, agent 80.10/72.94, error 33.60/33.07
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 18.94/11.02, agent 79.08/71.34, error 32.57/30.50
+  - seed 1: pair 17.78/11.46, agent 79.17/70.46, error 31.47/30.24
+  - seed 2: pair 19.26/12.30, agent 79.39/70.72, error 32.88/30.08
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 17.92/11.70, agent 79.69/71.10, error 32.34/31.60
+  - seed 1: pair 17.91/11.88, agent 79.20/70.79, error 31.85/31.50
+  - seed 2: pair 19.10/13.93, agent 80.10/72.94, error 33.60/33.07
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 17.93/11.67, agent 80.18/71.75, error 32.30/31.58
+  - seed 1: pair 17.88/11.86, agent 79.19/70.69, error 31.81/31.46
+  - seed 2: pair 18.94/13.69, agent 80.01/71.72, error 33.44/32.94
+- flat_mlp_base_min | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.39/18.25, agent 82.59/72.24, error 39.19/40.15
+  - seed 1: pair 27.06/18.02, agent 81.88/67.97, error 38.20/38.98
+  - seed 2: pair 31.19/19.03, agent 76.82/60.86, error 39.09/38.36
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.90/19.54, agent 81.37/63.44, error 40.18/39.18
+  - seed 1: pair 29.88/18.82, agent 80.94/64.79, error 38.57/38.42
+  - seed 2: pair 29.66/19.14, agent 81.60/68.56, error 40.45/40.34
+- flat_mlp_base_pm | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.42/18.27, agent 82.60/72.24, error 39.19/40.15
+  - seed 1: pair 27.06/18.02, agent 81.81/67.94, error 38.20/38.98
+  - seed 2: pair 31.18/19.03, agent 76.79/60.85, error 39.09/38.36
+- flat_mlp_base_prod | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.41/18.30, agent 82.91/67.07, error 39.21/40.19
+  - seed 1: pair 27.12/18.03, agent 82.20/68.99, error 38.13/38.94
+  - seed 2: pair 31.14/19.17, agent 77.31/61.25, error 38.92/38.26
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.85/16.32, agent 82.32/69.32, error 36.62/37.32
+  - seed 1: pair 32.78/20.07, agent 79.11/63.79, error 39.76/39.25
+  - seed 2: pair 31.52/18.43, agent 78.05/57.19, error 38.73/36.82
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.80/18.03, agent 80.67/65.44, error 38.90/37.06
+  - seed 1: pair 29.72/18.48, agent 82.23/66.82, error 39.82/39.44
+  - seed 2: pair 30.07/17.51, agent 81.30/62.55, error 39.37/36.99
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.85/16.32, agent 82.32/69.32, error 36.62/37.32
+  - seed 1: pair 32.78/20.07, agent 79.11/63.79, error 39.76/39.25
+  - seed 2: pair 31.50/18.36, agent 77.98/57.19, error 38.70/36.80
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.85/16.34, agent 82.18/68.17, error 36.62/37.32
+  - seed 1: pair 32.85/20.14, agent 78.95/62.74, error 39.83/39.30
+  - seed 2: pair 31.58/18.28, agent 78.29/57.91, error 38.52/36.64
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.56/19.73, agent 79.97/70.69, error 40.30/40.00
+  - seed 1: pair 32.88/19.69, agent 79.54/63.31, error 40.09/39.08
+  - seed 2: pair 32.31/18.47, agent 78.11/66.45, error 40.80/39.95
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.91/20.02, agent 81.34/66.80, error 41.20/41.44
+  - seed 1: pair 31.93/20.43, agent 80.83/65.98, error 41.50/40.81
+  - seed 2: pair 30.67/18.72, agent 81.90/70.87, error 41.36/41.06
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.56/19.73, agent 79.97/70.69, error 40.30/40.00
+  - seed 1: pair 32.94/19.71, agent 79.58/63.33, error 40.14/39.12
+  - seed 2: pair 32.28/18.46, agent 78.09/67.01, error 40.84/39.97
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.57/19.76, agent 80.00/66.76, error 40.31/39.99
+  - seed 1: pair 32.82/19.62, agent 79.54/63.48, error 39.87/38.79
+  - seed 2: pair 32.38/18.51, agent 78.11/66.17, error 40.80/39.98
+- flat_mlp_base_min | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.18/11.64, agent 79.55/72.57, error 30.56/29.98
+  - seed 0: pair 17.18/11.64, agent 79.55/72.57, error 30.56/29.98
+  - seed 1: pair 17.68/11.53, agent 79.55/72.34, error 31.68/31.58
+  - seed 1: pair 17.68/11.53, agent 79.55/72.34, error 31.68/31.58
+  - seed 2: pair 17.12/10.76, agent 78.86/69.38, error 30.81/30.18
+  - seed 2: pair 17.12/10.76, agent 78.86/69.38, error 30.81/30.18
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.83/11.93, agent 79.10/69.87, error 30.99/29.71
+  - seed 0: pair 17.83/11.93, agent 79.10/69.87, error 30.99/29.71
+  - seed 1: pair 17.68/11.56, agent 79.67/72.77, error 31.64/31.53
+  - seed 1: pair 17.68/11.56, agent 79.67/72.77, error 31.64/31.53
+  - seed 2: pair 17.22/10.78, agent 79.33/69.68, error 31.13/30.43
+  - seed 2: pair 17.22/10.78, agent 79.33/69.68, error 31.13/30.43
+- flat_mlp_base_pm | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.18/11.64, agent 79.55/72.57, error 30.56/29.98
+  - seed 0: pair 17.18/11.64, agent 79.55/72.57, error 30.56/29.98
+  - seed 1: pair 17.68/11.53, agent 79.55/72.34, error 31.68/31.58
+  - seed 1: pair 17.68/11.53, agent 79.55/72.34, error 31.68/31.58
+  - seed 2: pair 17.12/10.76, agent 78.86/69.38, error 30.81/30.18
+  - seed 2: pair 17.12/10.76, agent 78.86/69.38, error 30.81/30.18
+- flat_mlp_base_prod | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.20/11.73, agent 79.67/70.09, error 30.53/29.96
+  - seed 0: pair 17.20/11.73, agent 79.67/70.09, error 30.53/29.96
+  - seed 1: pair 17.68/11.56, agent 79.67/72.77, error 31.64/31.53
+  - seed 1: pair 17.68/11.56, agent 79.67/72.77, error 31.64/31.53
+  - seed 2: pair 17.06/10.79, agent 79.27/69.58, error 30.78/30.17
+  - seed 2: pair 17.06/10.79, agent 79.27/69.58, error 30.78/30.17
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.64/10.48, agent 78.79/69.78, error 32.11/31.04
+  - seed 0: pair 17.64/10.48, agent 78.79/69.78, error 32.11/31.04
+  - seed 1: pair 17.90/10.42, agent 77.59/67.81, error 31.10/30.61
+  - seed 1: pair 17.90/10.42, agent 77.59/67.81, error 31.10/30.61
+  - seed 2: pair 17.52/10.32, agent 79.01/68.64, error 31.33/30.80
+  - seed 2: pair 17.52/10.32, agent 79.01/68.64, error 31.33/30.80
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.58/10.38, agent 79.03/69.47, error 32.03/31.01
+  - seed 0: pair 17.58/10.38, agent 79.03/69.47, error 32.03/31.01
+  - seed 1: pair 17.88/10.30, agent 77.63/65.72, error 30.88/30.13
+  - seed 1: pair 17.88/10.30, agent 77.63/65.72, error 30.88/30.13
+  - seed 2: pair 17.30/10.58, agent 78.63/68.73, error 31.07/30.99
+  - seed 2: pair 17.30/10.58, agent 78.63/68.73, error 31.07/30.99
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.64/10.48, agent 78.79/69.78, error 32.11/31.04
+  - seed 0: pair 17.64/10.48, agent 78.79/69.78, error 32.11/31.04
+  - seed 1: pair 17.90/10.42, agent 77.59/67.81, error 31.10/30.61
+  - seed 1: pair 17.90/10.42, agent 77.59/67.81, error 31.10/30.61
+  - seed 2: pair 17.52/10.29, agent 78.95/68.23, error 31.33/30.80
+  - seed 2: pair 17.52/10.29, agent 78.95/68.23, error 31.33/30.80
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.58/10.38, agent 79.03/69.47, error 32.03/31.01
+  - seed 0: pair 17.58/10.38, agent 79.03/69.47, error 32.03/31.01
+  - seed 1: pair 17.78/10.27, agent 77.62/65.71, error 30.80/30.35
+  - seed 1: pair 17.78/10.27, agent 77.62/65.71, error 30.80/30.35
+  - seed 2: pair 17.54/10.29, agent 79.10/68.91, error 31.30/30.78
+  - seed 2: pair 17.54/10.29, agent 79.10/68.91, error 31.30/30.78
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.20/11.71, agent 80.11/74.22, error 30.62/29.76
+  - seed 0: pair 17.20/11.71, agent 80.11/74.22, error 30.62/29.76
+  - seed 1: pair 18.11/11.58, agent 80.33/73.35, error 31.48/31.15
+  - seed 1: pair 18.11/11.58, agent 80.33/73.35, error 31.48/31.15
+  - seed 2: pair 17.23/11.30, agent 80.40/69.60, error 31.31/30.97
+  - seed 2: pair 17.23/11.30, agent 80.40/69.60, error 31.31/30.97
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.68/11.81, agent 79.61/73.43, error 30.98/29.83
+  - seed 0: pair 17.68/11.81, agent 79.61/73.43, error 30.98/29.83
+  - seed 1: pair 18.88/11.17, agent 79.29/69.07, error 31.64/29.60
+  - seed 1: pair 18.88/11.17, agent 79.29/69.07, error 31.64/29.60
+  - seed 2: pair 17.27/11.21, agent 80.44/68.39, error 30.97/30.30
+  - seed 2: pair 17.27/11.21, agent 80.44/68.39, error 30.97/30.30
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.20/11.71, agent 80.06/73.75, error 30.65/29.79
+  - seed 0: pair 17.20/11.71, agent 80.06/73.75, error 30.65/29.79
+  - seed 1: pair 18.11/11.62, agent 80.27/70.98, error 31.48/31.15
+  - seed 1: pair 18.11/11.62, agent 80.27/70.98, error 31.48/31.15
+  - seed 2: pair 17.23/11.30, agent 80.40/69.60, error 31.31/30.97
+  - seed 2: pair 17.23/11.30, agent 80.40/69.60, error 31.31/30.97
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 17.25/11.71, agent 80.40/73.74, error 30.57/29.70
+  - seed 0: pair 17.25/11.71, agent 80.40/73.74, error 30.57/29.70
+  - seed 1: pair 18.20/11.49, agent 80.28/70.22, error 31.43/31.12
+  - seed 1: pair 18.20/11.49, agent 80.28/70.22, error 31.43/31.12
+  - seed 2: pair 17.20/11.27, agent 80.60/68.23, error 31.27/30.91
+  - seed 2: pair 17.20/11.27, agent 80.60/68.23, error 31.27/30.91
+- flat_mlp_base_min | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/20.17, agent 79.65/66.11, error 39.97/38.76
+  - seed 1: pair 30.86/17.88, agent 77.36/59.70, error 38.22/35.92
+  - seed 2: pair 31.23/19.02, agent 78.19/59.70, error 39.36/38.01
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.87/21.68, agent 81.95/68.10, error 41.38/40.60
+  - seed 1: pair 29.88/18.15, agent 81.80/67.10, error 39.45/36.40
+  - seed 2: pair 30.74/18.38, agent 80.44/63.45, error 40.28/37.60
+- flat_mlp_base_pm | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/20.17, agent 79.65/66.11, error 39.97/38.76
+  - seed 1: pair 30.86/17.88, agent 77.36/59.70, error 38.22/35.92
+  - seed 2: pair 31.23/19.02, agent 78.19/59.70, error 39.36/38.01
+- flat_mlp_base_prod | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.78/20.18, agent 79.89/66.43, error 39.83/38.58
+  - seed 1: pair 30.86/17.79, agent 77.68/60.81, error 38.15/35.83
+  - seed 2: pair 31.30/19.05, agent 78.74/60.60, error 39.43/38.09
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.51/17.54, agent 82.64/71.77, error 37.49/37.95
+  - seed 1: pair 29.51/17.75, agent 78.77/63.75, error 37.86/36.35
+  - seed 2: pair 31.12/18.45, agent 76.99/61.78, error 38.59/36.08
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.91/17.45, agent 81.61/71.22, error 37.76/34.33
+  - seed 1: pair 29.84/19.09, agent 80.83/66.48, error 39.92/38.49
+  - seed 2: pair 29.09/18.19, agent 81.00/67.97, error 39.23/36.43
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.51/17.54, agent 82.64/71.77, error 37.49/37.95
+  - seed 1: pair 29.51/17.75, agent 78.77/63.75, error 37.86/36.35
+  - seed 2: pair 31.12/18.45, agent 76.99/61.78, error 38.59/36.08
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.56/17.56, agent 82.70/71.54, error 37.45/37.93
+  - seed 1: pair 29.39/17.81, agent 78.96/64.08, error 37.81/36.29
+  - seed 2: pair 31.12/18.42, agent 77.32/62.35, error 38.74/36.25
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.13/21.14, agent 81.24/67.30, error 41.85/41.46
+  - seed 1: pair 32.38/21.31, agent 80.72/64.20, error 41.38/40.69
+  - seed 2: pair 32.36/21.79, agent 80.15/64.85, error 42.03/42.10
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.85/20.66, agent 82.37/67.19, error 42.34/40.74
+  - seed 1: pair 32.81/21.08, agent 80.47/63.74, error 41.65/40.24
+  - seed 2: pair 31.80/21.24, agent 81.05/66.75, error 41.22/41.17
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.13/21.14, agent 81.24/67.30, error 41.85/41.46
+  - seed 1: pair 32.40/21.29, agent 80.68/64.11, error 41.43/40.75
+  - seed 2: pair 32.33/21.78, agent 79.98/64.79, error 42.02/42.09
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.13/21.17, agent 81.46/67.63, error 41.85/41.44
+  - seed 1: pair 32.50/21.38, agent 80.83/63.88, error 41.37/40.68
+  - seed 2: pair 32.47/21.77, agent 80.33/64.06, error 42.12/42.17
+- flat_mlp_base_min | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.80/18.83, agent 76.24/59.82, error 39.26/37.08
+  - seed 1: pair 31.85/19.31, agent 78.52/62.48, error 39.17/38.29
+  - seed 2: pair 31.32/18.95, agent 79.11/63.43, error 39.53/39.22
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.22/20.23, agent 80.52/65.62, error 40.79/39.74
+  - seed 1: pair 31.43/19.90, agent 80.49/65.30, error 40.64/39.78
+  - seed 2: pair 29.99/18.85, agent 80.63/68.01, error 39.74/38.59
+- flat_mlp_base_pm | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.86/18.85, agent 76.29/59.83, error 39.32/37.16
+  - seed 1: pair 31.83/19.31, agent 78.49/62.19, error 39.15/38.28
+  - seed 2: pair 31.32/18.95, agent 79.11/63.43, error 39.53/39.22
+- flat_mlp_base_prod | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.79/18.83, agent 76.21/59.77, error 39.48/37.25
+  - seed 1: pair 31.77/19.29, agent 78.80/62.59, error 39.08/38.19
+  - seed 2: pair 31.32/18.95, agent 79.03/63.59, error 39.67/39.38
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.64/18.81, agent 78.04/64.38, error 39.23/38.88
+  - seed 1: pair 31.11/18.11, agent 75.86/59.62, error 38.58/37.23
+  - seed 2: pair 30.28/17.90, agent 75.36/61.78, error 37.34/34.96
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.23/18.88, agent 79.97/68.63, error 39.99/39.58
+  - seed 1: pair 28.91/18.88, agent 80.15/66.78, error 39.29/39.00
+  - seed 2: pair 27.97/18.45, agent 80.67/69.08, error 38.14/38.19
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.64/18.81, agent 78.04/64.38, error 39.23/38.88
+  - seed 1: pair 31.11/18.11, agent 75.86/59.62, error 38.58/37.23
+  - seed 2: pair 30.28/17.90, agent 75.36/61.78, error 37.34/34.96
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.64/18.94, agent 78.61/65.76, error 39.23/38.94
+  - seed 1: pair 31.11/18.10, agent 76.28/60.49, error 38.65/37.30
+  - seed 2: pair 30.06/17.80, agent 75.61/62.11, error 37.11/34.58
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.29/19.55, agent 80.59/68.61, error 40.01/39.05
+  - seed 1: pair 32.80/21.10, agent 78.82/61.48, error 40.11/39.32
+  - seed 2: pair 31.55/19.63, agent 80.32/65.09, error 39.65/38.75
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.02/19.36, agent 80.44/67.55, error 40.54/39.57
+  - seed 1: pair 32.49/21.05, agent 80.02/63.83, error 41.33/40.15
+  - seed 2: pair 31.33/19.60, agent 81.88/67.94, error 40.64/39.67
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.28/19.55, agent 80.56/68.60, error 40.00/39.04
+  - seed 1: pair 32.79/21.09, agent 78.79/61.46, error 40.10/39.31
+  - seed 2: pair 31.54/19.62, agent 80.29/64.99, error 39.63/38.75
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.45/19.58, agent 80.87/68.16, error 40.13/39.19
+  - seed 1: pair 32.89/21.13, agent 78.91/61.77, error 40.21/39.46
+  - seed 2: pair 31.55/19.55, agent 80.48/65.47, error 39.65/38.76
+- flat_mlp_base_min | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.57/19.46, agent 82.35/69.97, error 39.19/40.20
+  - seed 1: pair 25.96/17.20, agent 82.53/71.95, error 37.42/38.09
+  - seed 2: pair 26.13/18.05, agent 82.54/69.40, error 37.81/38.35
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.90/19.16, agent 80.87/64.81, error 40.64/39.74
+  - seed 1: pair 29.73/17.42, agent 81.24/70.50, error 39.65/36.77
+  - seed 2: pair 28.35/18.14, agent 80.37/63.91, error 38.55/38.04
+- flat_mlp_base_pm | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.55/19.31, agent 82.29/69.88, error 39.18/40.19
+  - seed 1: pair 25.96/17.18, agent 82.50/71.83, error 37.42/38.09
+  - seed 2: pair 26.12/18.04, agent 82.48/68.70, error 37.80/38.34
+- flat_mlp_base_prod | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.57/19.44, agent 82.40/67.28, error 39.13/40.15
+  - seed 1: pair 26.06/17.44, agent 82.59/72.22, error 37.48/38.14
+  - seed 2: pair 26.15/18.13, agent 82.97/68.48, error 37.79/38.34
+- flat_mlp_peer_min | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.87/19.36, agent 80.34/66.16, error 40.17/38.92
+  - seed 1: pair 32.75/19.88, agent 79.53/64.57, error 40.92/39.87
+  - seed 2: pair 32.26/19.61, agent 78.55/64.14, error 40.01/38.56
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.55/19.91, agent 81.35/66.92, error 40.75/40.39
+  - seed 1: pair 31.84/19.83, agent 81.67/65.04, error 41.88/40.82
+  - seed 2: pair 30.60/19.77, agent 81.93/65.65, error 40.41/39.34
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.96/19.31, agent 80.30/65.86, error 40.26/39.06
+  - seed 1: pair 32.73/19.81, agent 79.55/64.74, error 40.90/39.84
+  - seed 2: pair 32.26/19.61, agent 78.55/64.14, error 40.01/38.56
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.85/19.27, agent 80.05/64.75, error 40.14/38.95
+  - seed 1: pair 32.60/19.74, agent 79.86/63.47, error 40.65/39.54
+  - seed 2: pair 32.38/19.80, agent 78.61/62.41, error 40.06/38.65
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.65/20.56, agent 79.88/67.40, error 40.08/39.09
+  - seed 1: pair 31.92/19.66, agent 79.84/62.29, error 39.37/37.59
+  - seed 2: pair 31.86/19.90, agent 78.21/61.16, error 39.97/39.66
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.10/20.97, agent 81.13/71.68, error 41.71/40.49
+  - seed 1: pair 31.82/20.73, agent 79.64/63.99, error 40.83/38.97
+  - seed 2: pair 31.19/20.26, agent 80.95/63.33, error 41.02/40.77
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.64/20.48, agent 79.85/67.40, error 40.07/39.09
+  - seed 1: pair 31.91/19.58, agent 79.81/62.15, error 39.37/37.59
+  - seed 2: pair 31.82/19.82, agent 78.19/61.28, error 39.96/39.62
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.65/20.65, agent 80.19/68.60, error 40.08/39.09
+  - seed 1: pair 31.77/19.61, agent 79.89/63.27, error 39.41/37.67
+  - seed 2: pair 31.91/20.35, agent 78.52/60.23, error 39.73/39.49
+- flat_mlp_base_min | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.35/20.74, agent 78.07/57.23, error 41.96/39.95
+  - seed 1: pair 33.86/19.30, agent 77.81/56.34, error 39.89/37.43
+  - seed 2: pair 35.63/21.43, agent 79.82/59.53, error 43.49/42.38
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.60/20.64, agent 81.08/60.41, error 43.27/40.83
+  - seed 1: pair 33.41/19.15, agent 81.48/62.68, error 40.96/36.21
+  - seed 2: pair 33.58/21.36, agent 81.97/64.15, error 41.73/41.16
+- flat_mlp_base_pm | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.35/20.74, agent 78.07/57.23, error 41.96/39.95
+  - seed 1: pair 33.83/19.19, agent 77.75/56.33, error 39.95/37.48
+  - seed 2: pair 35.59/21.31, agent 79.73/59.50, error 43.55/42.44
+- flat_mlp_base_prod | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.50/20.84, agent 78.34/56.89, error 41.79/39.96
+  - seed 1: pair 33.84/19.21, agent 78.11/56.60, error 39.81/37.38
+  - seed 2: pair 35.76/21.33, agent 80.14/59.74, error 43.36/42.25
+- flat_mlp_peer_min | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.18/22.08, agent 81.06/63.68, error 44.68/44.13
+  - seed 1: pair 37.12/22.01, agent 80.72/66.55, error 44.27/43.91
+  - seed 2: pair 36.20/22.46, agent 81.76/65.11, error 44.98/44.56
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.79/22.68, agent 82.38/67.45, error 44.43/43.34
+  - seed 1: pair 36.44/22.11, agent 82.46/65.85, error 45.32/44.76
+  - seed 2: pair 36.88/22.78, agent 80.86/63.70, error 45.19/44.64
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.16/22.10, agent 80.84/63.89, error 44.79/44.22
+  - seed 1: pair 37.11/21.92, agent 80.69/64.33, error 44.33/43.98
+  - seed 2: pair 36.15/22.30, agent 81.63/62.87, error 45.03/44.64
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.26/22.22, agent 80.78/63.36, error 44.72/44.16
+  - seed 1: pair 37.11/21.93, agent 80.77/64.47, error 44.40/44.05
+  - seed 2: pair 36.17/22.30, agent 81.62/64.83, error 45.04/44.64
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.82/22.61, agent 81.54/64.17, error 43.75/43.65
+  - seed 1: pair 36.62/21.73, agent 81.74/66.23, error 43.81/41.56
+  - seed 2: pair 36.78/22.41, agent 79.84/59.62, error 44.75/44.52
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.41/22.53, agent 81.06/61.77, error 43.55/43.98
+  - seed 1: pair 35.97/22.26, agent 81.83/66.45, error 44.68/44.05
+  - seed 2: pair 34.67/21.76, agent 81.81/62.53, error 43.75/43.43
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.80/22.55, agent 81.47/64.14, error 43.75/43.65
+  - seed 1: pair 36.59/21.48, agent 81.65/63.69, error 43.91/41.67
+  - seed 2: pair 36.67/22.41, agent 79.64/58.32, error 44.97/44.71
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.80/22.56, agent 81.47/64.13, error 43.68/43.57
+  - seed 1: pair 36.62/21.75, agent 81.81/66.14, error 43.81/41.58
+  - seed 2: pair 36.90/22.38, agent 80.09/60.63, error 45.04/44.79
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.67/19.11, agent 78.92/63.28, error 39.81/39.19
+  - seed 1: pair 26.56/18.07, agent 82.70/68.51, error 38.72/39.55
+  - seed 2: pair 31.38/18.78, agent 77.15/64.63, error 38.75/37.89
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.49/18.44, agent 81.36/67.49, error 40.54/38.36
+  - seed 1: pair 27.80/17.71, agent 82.00/66.17, error 39.13/38.31
+  - seed 2: pair 29.88/18.28, agent 80.55/67.91, error 39.29/38.20
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.67/19.04, agent 78.92/62.94, error 39.81/39.18
+  - seed 1: pair 26.56/18.07, agent 82.70/68.51, error 38.72/39.55
+  - seed 2: pair 31.38/18.78, agent 77.15/64.63, error 38.75/37.89
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.78/19.26, agent 79.28/65.43, error 39.90/39.28
+  - seed 1: pair 26.65/18.08, agent 82.91/67.61, error 38.76/39.62
+  - seed 2: pair 24.95/17.19, agent 81.91/70.47, error 37.31/38.17
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.79/16.44, agent 81.75/67.44, error 36.60/36.88
+  - seed 1: pair 26.95/19.17, agent 82.24/73.89, error 39.62/40.56
+  - seed 2: pair 26.03/17.64, agent 81.67/67.02, error 38.31/39.07
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.28/16.91, agent 80.00/63.71, error 38.40/34.90
+  - seed 1: pair 29.85/18.81, agent 81.80/68.55, error 40.10/39.01
+  - seed 2: pair 27.70/18.64, agent 80.82/61.83, error 38.76/38.52
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.79/16.44, agent 81.75/67.44, error 36.60/36.88
+  - seed 1: pair 26.94/19.10, agent 82.21/73.32, error 39.62/40.56
+  - seed 2: pair 26.03/17.57, agent 81.65/67.02, error 38.31/39.07
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.78/16.48, agent 81.64/66.63, error 36.48/36.76
+  - seed 1: pair 27.14/19.26, agent 82.74/70.43, error 39.52/40.48
+  - seed 2: pair 26.06/17.64, agent 81.71/65.61, error 38.25/39.05
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.91/19.63, agent 79.31/62.43, error 41.05/40.51
+  - seed 1: pair 31.72/19.87, agent 78.88/64.99, error 39.99/39.10
+  - seed 2: pair 30.96/18.86, agent 77.95/60.28, error 39.24/38.33
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.93/19.10, agent 81.16/68.80, error 40.19/40.27
+  - seed 1: pair 30.59/19.36, agent 81.22/67.95, error 39.35/38.05
+  - seed 2: pair 29.76/19.19, agent 81.10/66.80, error 39.90/39.60
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.01/19.70, agent 79.38/62.98, error 41.17/40.57
+  - seed 1: pair 31.72/19.87, agent 78.88/64.99, error 39.99/39.10
+  - seed 2: pair 30.96/18.86, agent 77.95/60.28, error 39.24/38.33
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.01/19.64, agent 79.69/64.62, error 41.17/40.57
+  - seed 1: pair 31.70/19.85, agent 79.11/65.24, error 39.90/39.01
+  - seed 2: pair 30.98/18.89, agent 78.17/61.17, error 39.31/38.43
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.58/18.70, agent 79.13/67.56, error 40.12/39.82
+  - seed 1: pair 32.97/19.84, agent 79.46/65.02, error 40.42/38.43
+  - seed 2: pair 32.47/18.90, agent 77.58/64.06, error 41.05/40.48
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.48/18.67, agent 80.42/69.60, error 39.66/39.54
+  - seed 1: pair 31.71/19.96, agent 81.04/68.00, error 41.56/39.92
+  - seed 2: pair 30.70/19.08, agent 80.89/68.58, error 40.61/41.26
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.58/18.70, agent 79.13/67.56, error 40.12/39.82
+  - seed 1: pair 32.97/19.84, agent 79.46/65.02, error 40.42/38.43
+  - seed 2: pair 32.47/18.93, agent 77.48/64.32, error 41.06/40.49
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.64/18.72, agent 79.44/69.58, error 40.19/39.89
+  - seed 1: pair 33.04/19.86, agent 79.85/65.57, error 40.49/38.57
+  - seed 2: pair 32.47/18.95, agent 77.79/64.69, error 41.06/40.46
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.00/18.59, agent 82.65/67.74, error 39.61/40.70
+  - seed 1: pair 25.88/16.99, agent 82.76/70.65, error 38.32/38.77
+  - seed 2: pair 30.35/18.20, agent 76.55/64.40, error 38.48/37.56
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.63/17.55, agent 82.68/69.48, error 39.45/37.61
+  - seed 1: pair 29.11/17.55, agent 81.10/64.79, error 38.81/38.42
+  - seed 2: pair 30.76/18.74, agent 79.35/69.46, error 40.93/39.67
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.00/18.59, agent 82.65/67.74, error 39.61/40.70
+  - seed 1: pair 25.88/16.99, agent 82.76/70.65, error 38.32/38.77
+  - seed 2: pair 30.34/18.19, agent 76.52/64.30, error 38.48/37.56
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.00/18.47, agent 83.15/70.55, error 39.61/40.71
+  - seed 1: pair 25.95/17.01, agent 82.96/69.79, error 38.19/38.67
+  - seed 2: pair 30.34/18.28, agent 76.84/64.12, error 38.48/37.57
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.13/17.74, agent 76.32/56.15, error 38.14/36.86
+  - seed 1: pair 31.43/17.53, agent 77.72/64.05, error 39.24/38.06
+  - seed 2: pair 25.91/16.86, agent 81.87/69.51, error 38.38/38.72
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.90/18.10, agent 81.10/62.73, error 39.51/38.34
+  - seed 1: pair 29.42/17.75, agent 80.80/68.04, error 39.52/36.64
+  - seed 2: pair 27.59/17.00, agent 80.63/65.14, error 39.10/37.72
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.11/17.67, agent 76.34/56.16, error 38.14/36.86
+  - seed 1: pair 31.42/17.46, agent 77.69/64.05, error 39.24/38.06
+  - seed 2: pair 25.90/16.86, agent 81.89/69.83, error 38.38/38.72
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.13/17.70, agent 76.81/56.46, error 38.37/37.02
+  - seed 1: pair 27.04/19.04, agent 81.43/67.93, error 39.06/39.60
+  - seed 2: pair 25.97/16.82, agent 82.02/68.27, error 38.38/38.78
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.61/20.52, agent 78.43/61.07, error 40.56/39.42
+  - seed 1: pair 32.40/20.08, agent 79.24/64.15, error 40.67/39.69
+  - seed 2: pair 31.80/19.01, agent 77.58/60.24, error 39.58/37.97
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.05/19.97, agent 80.57/66.79, error 40.18/39.42
+  - seed 1: pair 32.28/20.35, agent 80.23/64.37, error 41.34/39.99
+  - seed 2: pair 30.45/19.63, agent 79.41/63.90, error 40.09/39.70
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.58/20.51, agent 78.45/61.07, error 40.56/39.42
+  - seed 1: pair 32.40/20.08, agent 79.24/64.15, error 40.67/39.69
+  - seed 2: pair 31.79/18.93, agent 77.55/58.25, error 39.58/37.96
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.52/20.44, agent 78.53/61.53, error 40.48/39.34
+  - seed 1: pair 32.42/20.09, agent 79.38/64.66, error 40.60/39.59
+  - seed 2: pair 31.66/18.86, agent 77.48/60.25, error 39.51/37.89
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.79/18.87, agent 77.85/63.86, error 39.62/38.93
+  - seed 1: pair 32.49/19.86, agent 78.99/64.02, error 39.53/37.32
+  - seed 2: pair 32.72/19.54, agent 77.53/62.19, error 40.65/38.99
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.96/18.94, agent 80.12/69.47, error 39.65/38.97
+  - seed 1: pair 31.13/20.78, agent 79.37/67.04, error 40.97/40.22
+  - seed 2: pair 32.37/20.18, agent 79.36/64.37, error 41.72/40.69
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.79/18.87, agent 77.85/63.86, error 39.62/38.93
+  - seed 1: pair 32.48/19.86, agent 78.96/64.00, error 39.52/37.31
+  - seed 2: pair 32.71/19.47, agent 77.50/62.32, error 40.64/38.99
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.79/18.88, agent 78.01/67.00, error 39.55/38.84
+  - seed 1: pair 32.56/19.98, agent 79.17/65.14, error 39.61/37.37
+  - seed 2: pair 32.70/19.56, agent 77.60/61.72, error 40.62/39.02
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.69/18.98, agent 79.01/65.88, error 40.59/39.52
+  - seed 1: pair 26.83/17.49, agent 82.89/71.09, error 38.21/38.73
+  - seed 2: pair 31.62/18.52, agent 77.68/66.04, error 39.01/38.30
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.55/18.12, agent 81.70/71.56, error 40.35/38.96
+  - seed 1: pair 31.04/17.90, agent 80.82/67.27, error 39.93/39.27
+  - seed 2: pair 30.63/17.93, agent 82.01/69.52, error 39.90/38.80
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.68/18.98, agent 78.98/65.84, error 40.59/39.52
+  - seed 1: pair 26.83/17.49, agent 82.89/71.09, error 38.21/38.73
+  - seed 2: pair 31.62/18.52, agent 77.68/66.04, error 39.01/38.30
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.57/18.99, agent 79.08/67.28, error 40.38/39.39
+  - seed 1: pair 26.83/17.50, agent 83.18/72.15, error 38.26/38.82
+  - seed 2: pair 31.24/18.39, agent 78.03/63.64, error 38.54/37.84
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.82/20.11, agent 79.45/67.10, error 41.93/41.03
+  - seed 1: pair 31.79/18.91, agent 78.62/67.38, error 41.02/40.31
+  - seed 2: pair 32.31/18.70, agent 78.55/60.76, error 40.52/39.70
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.27/20.52, agent 81.78/69.55, error 42.67/40.98
+  - seed 1: pair 32.18/19.81, agent 81.18/72.75, error 41.03/40.00
+  - seed 2: pair 31.71/18.77, agent 81.16/66.60, error 41.61/40.58
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.85/20.14, agent 79.44/67.29, error 41.97/41.05
+  - seed 1: pair 31.78/18.91, agent 78.59/67.37, error 41.01/40.30
+  - seed 2: pair 32.31/18.70, agent 78.55/60.76, error 40.52/39.70
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.75/20.08, agent 79.69/67.30, error 41.86/40.93
+  - seed 1: pair 31.62/18.83, agent 78.95/68.99, error 40.48/39.72
+  - seed 2: pair 32.25/18.72, agent 79.02/61.32, error 40.52/39.67
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.19/18.67, agent 79.00/66.37, error 40.16/39.28
+  - seed 1: pair 32.05/19.06, agent 80.30/65.50, error 40.42/39.06
+  - seed 2: pair 32.68/18.60, agent 77.82/64.50, error 41.64/40.98
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.38/16.85, agent 81.56/68.25, error 40.13/37.05
+  - seed 1: pair 31.60/19.15, agent 81.44/68.40, error 41.74/40.40
+  - seed 2: pair 32.14/19.70, agent 81.07/65.44, error 42.63/42.29
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.19/18.67, agent 79.00/66.37, error 40.16/39.28
+  - seed 1: pair 32.10/19.08, agent 80.35/65.53, error 40.48/39.11
+  - seed 2: pair 32.71/18.62, agent 77.81/64.53, error 41.66/41.01
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.19/18.70, agent 79.23/66.73, error 40.16/39.26
+  - seed 1: pair 32.10/19.10, agent 80.50/65.83, error 40.48/39.11
+  - seed 2: pair 32.91/18.72, agent 78.21/65.27, error 41.74/41.04
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.74/17.81, agent 81.53/67.32, error 38.89/39.52
+  - seed 1: pair 25.64/17.65, agent 82.08/67.51, error 37.78/38.28
+  - seed 2: pair 31.27/18.11, agent 76.21/59.17, error 38.84/36.75
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.72/18.07, agent 81.15/66.49, error 39.27/37.75
+  - seed 1: pair 29.30/17.06, agent 80.85/66.49, error 39.48/36.56
+  - seed 2: pair 28.66/18.51, agent 80.53/64.31, error 39.06/38.04
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.76/17.82, agent 81.48/67.60, error 38.91/39.53
+  - seed 1: pair 25.62/17.59, agent 82.14/66.19, error 37.81/38.30
+  - seed 2: pair 31.27/18.11, agent 76.21/59.17, error 38.84/36.75
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.76/17.82, agent 82.28/68.58, error 38.77/39.38
+  - seed 1: pair 25.58/17.54, agent 82.27/67.77, error 37.75/38.23
+  - seed 2: pair 31.40/18.18, agent 76.75/59.15, error 38.87/36.72
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.32/19.84, agent 79.81/61.72, error 40.80/40.15
+  - seed 1: pair 31.27/18.76, agent 77.23/61.87, error 39.82/38.98
+  - seed 2: pair 31.10/19.64, agent 77.79/61.36, error 39.40/38.48
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.85/19.45, agent 80.11/61.20, error 41.06/39.31
+  - seed 1: pair 30.32/19.05, agent 80.47/64.32, error 39.99/38.65
+  - seed 2: pair 29.26/18.78, agent 80.76/62.27, error 39.03/39.10
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.35/19.86, agent 79.77/61.86, error 40.79/40.13
+  - seed 1: pair 31.33/18.78, agent 77.28/61.90, error 39.88/39.03
+  - seed 2: pair 31.09/19.64, agent 77.76/61.27, error 39.46/38.56
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.36/19.95, agent 79.60/61.69, error 40.92/40.21
+  - seed 1: pair 31.13/18.69, agent 77.15/61.74, error 39.67/38.77
+  - seed 2: pair 31.24/19.50, agent 77.82/60.14, error 39.46/38.52
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/20.03, agent 79.07/67.42, error 39.83/38.99
+  - seed 1: pair 31.54/18.81, agent 79.02/60.96, error 39.41/37.53
+  - seed 2: pair 31.39/19.05, agent 78.68/67.69, error 41.16/41.08
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.97/20.19, agent 79.68/64.29, error 39.54/39.28
+  - seed 1: pair 30.68/19.04, agent 80.19/63.79, error 41.19/40.05
+  - seed 2: pair 30.14/18.94, agent 80.40/67.54, error 41.25/40.90
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.69/19.95, agent 79.09/65.77, error 39.88/39.04
+  - seed 1: pair 31.53/18.81, agent 79.06/61.57, error 39.40/37.51
+  - seed 2: pair 31.33/19.05, agent 78.73/69.14, error 41.11/41.02
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.69/20.08, agent 79.04/63.77, error 39.89/39.07
+  - seed 1: pair 31.54/18.81, agent 79.09/61.05, error 39.48/37.65
+  - seed 2: pair 31.42/19.13, agent 78.46/65.15, error 41.17/41.08
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.09/17.49, agent 82.64/68.88, error 38.99/39.99
+  - seed 1: pair 26.44/16.85, agent 83.15/71.05, error 37.95/38.46
+  - seed 2: pair 32.80/19.41, agent 79.41/64.27, error 40.76/39.87
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.28/17.85, agent 81.88/65.77, error 39.76/38.17
+  - seed 1: pair 28.92/17.02, agent 83.25/70.61, error 39.37/37.96
+  - seed 2: pair 31.54/18.12, agent 81.75/66.59, error 40.08/37.43
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.09/17.49, agent 82.64/68.88, error 38.99/39.99
+  - seed 1: pair 26.44/16.85, agent 83.15/71.05, error 37.95/38.46
+  - seed 2: pair 32.80/19.41, agent 79.41/64.27, error 40.76/39.87
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.11/17.55, agent 83.05/68.33, error 38.98/39.96
+  - seed 1: pair 26.50/16.80, agent 83.69/70.93, error 37.87/38.40
+  - seed 2: pair 32.81/19.41, agent 79.75/65.09, error 40.68/39.81
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.01/19.31, agent 79.02/65.47, error 40.43/39.59
+  - seed 1: pair 31.84/19.22, agent 77.95/63.68, error 39.96/39.24
+  - seed 2: pair 31.75/18.46, agent 77.98/63.82, error 39.62/38.60
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.95/19.19, agent 81.61/66.95, error 41.03/39.75
+  - seed 1: pair 30.60/18.73, agent 81.26/69.14, error 40.09/38.88
+  - seed 2: pair 31.28/18.22, agent 80.76/70.46, error 40.51/39.23
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.00/19.31, agent 78.99/65.47, error 40.42/39.58
+  - seed 1: pair 31.84/19.22, agent 77.95/63.68, error 39.96/39.24
+  - seed 2: pair 31.75/18.46, agent 77.98/63.82, error 39.62/38.60
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.94/19.31, agent 79.02/65.35, error 40.43/39.59
+  - seed 1: pair 31.91/19.37, agent 78.50/64.84, error 39.96/39.17
+  - seed 2: pair 31.75/18.45, agent 78.14/63.98, error 39.47/38.46
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.14/19.78, agent 79.86/68.07, error 39.92/39.46
+  - seed 1: pair 33.13/19.37, agent 80.29/68.10, error 39.92/38.13
+  - seed 2: pair 32.75/19.65, agent 77.72/66.52, error 41.28/40.91
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.67/19.81, agent 80.09/67.78, error 39.81/40.27
+  - seed 1: pair 32.18/20.39, agent 82.16/72.26, error 40.90/39.96
+  - seed 2: pair 30.99/19.48, agent 81.35/68.16, error 40.81/41.39
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.14/19.78, agent 79.86/68.07, error 39.92/39.46
+  - seed 1: pair 33.13/19.45, agent 80.29/67.68, error 39.92/38.13
+  - seed 2: pair 32.69/19.64, agent 77.54/65.85, error 41.27/40.91
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.02/19.71, agent 79.94/68.15, error 39.85/39.34
+  - seed 1: pair 33.13/19.38, agent 80.68/68.58, error 39.99/38.17
+  - seed 2: pair 32.70/19.62, agent 77.89/65.99, error 41.14/40.73
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.32/18.88, agent 78.13/61.00, error 39.88/38.82
+  - seed 1: pair 25.94/16.64, agent 82.76/72.46, error 38.18/38.63
+  - seed 2: pair 31.60/19.30, agent 77.96/63.78, error 39.97/39.20
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.51/19.09, agent 81.80/70.19, error 39.50/39.33
+  - seed 1: pair 27.87/17.31, agent 83.20/73.51, error 38.19/37.27
+  - seed 2: pair 31.32/18.99, agent 81.36/69.81, error 41.02/39.69
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.32/18.88, agent 78.13/61.00, error 39.88/38.82
+  - seed 1: pair 25.94/16.64, agent 82.76/72.46, error 38.18/38.63
+  - seed 2: pair 31.60/19.30, agent 77.96/63.78, error 39.97/39.20
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.52/19.16, agent 78.84/64.87, error 40.03/38.91
+  - seed 1: pair 25.96/16.63, agent 83.22/73.36, error 38.08/38.55
+  - seed 2: pair 31.68/19.32, agent 78.23/64.43, error 40.06/39.32
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.62/19.99, agent 79.64/66.98, error 40.71/39.32
+  - seed 1: pair 27.53/18.89, agent 82.87/71.74, error 40.06/40.93
+  - seed 2: pair 31.85/19.98, agent 80.41/67.38, error 41.84/40.96
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.68/20.59, agent 80.80/69.65, error 42.21/40.79
+  - seed 1: pair 32.38/19.57, agent 81.30/67.38, error 41.83/39.93
+  - seed 2: pair 31.21/20.17, agent 80.94/71.01, error 41.30/40.10
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.61/19.96, agent 79.60/67.07, error 40.69/39.32
+  - seed 1: pair 27.53/18.89, agent 82.87/71.74, error 40.06/40.93
+  - seed 2: pair 31.85/19.98, agent 80.41/67.38, error 41.84/40.96
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.61/20.00, agent 79.45/66.27, error 40.69/39.32
+  - seed 1: pair 27.53/18.88, agent 82.87/71.75, error 40.06/40.94
+  - seed 2: pair 32.01/20.30, agent 80.27/68.66, error 42.01/41.04
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.64/20.00, agent 79.69/69.56, error 39.74/39.13
+  - seed 1: pair 33.51/20.49, agent 79.88/66.22, error 41.33/39.85
+  - seed 2: pair 32.62/20.19, agent 77.64/66.07, error 40.72/39.55
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.12/19.67, agent 81.83/71.47, error 40.77/38.60
+  - seed 1: pair 31.90/19.56, agent 80.50/66.21, error 40.43/39.40
+  - seed 2: pair 31.22/20.60, agent 81.00/69.13, error 41.29/41.51
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.64/20.00, agent 79.69/69.56, error 39.74/39.13
+  - seed 1: pair 33.50/20.49, agent 79.85/66.22, error 41.32/39.84
+  - seed 2: pair 32.52/20.16, agent 77.58/66.08, error 40.63/39.48
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.70/20.16, agent 79.84/70.80, error 39.74/39.14
+  - seed 1: pair 33.56/20.50, agent 80.00/67.56, error 41.39/39.92
+  - seed 2: pair 32.48/20.01, agent 77.64/65.86, error 40.49/39.34
+- flat_mlp_base_min | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.01/17.26, agent 82.25/66.24, error 39.37/39.95
+  - seed 1: pair 27.07/17.74, agent 82.97/68.68, error 38.60/39.12
+  - seed 2: pair 30.59/19.04, agent 78.30/62.63, error 38.43/38.23
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.31/16.15, agent 81.77/65.09, error 39.61/35.67
+  - seed 1: pair 28.99/19.01, agent 81.88/66.17, error 39.88/40.69
+  - seed 2: pair 30.58/19.23, agent 80.17/66.41, error 39.96/39.38
+- flat_mlp_base_pm | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.01/17.26, agent 82.25/66.24, error 39.37/39.95
+  - seed 1: pair 27.07/17.74, agent 82.97/68.68, error 38.60/39.12
+  - seed 2: pair 30.64/19.08, agent 78.34/62.88, error 38.49/38.27
+- flat_mlp_base_prod | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.06/17.24, agent 82.74/66.81, error 39.38/39.98
+  - seed 1: pair 27.10/17.73, agent 83.09/68.64, error 38.61/39.14
+  - seed 2: pair 30.62/19.12, agent 78.40/62.33, error 38.19/38.02
+- flat_mlp_peer_min | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.35/19.42, agent 79.55/65.79, error 41.36/40.39
+  - seed 1: pair 31.97/18.86, agent 79.81/64.19, error 40.24/39.49
+  - seed 2: pair 31.67/18.60, agent 78.61/62.49, error 39.24/37.97
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.25/19.51, agent 81.12/66.26, error 41.76/41.03
+  - seed 1: pair 30.61/19.77, agent 82.40/68.35, error 41.18/41.96
+  - seed 2: pair 30.78/18.02, agent 81.90/65.03, error 40.16/38.18
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.40/19.45, agent 79.64/66.10, error 41.41/40.40
+  - seed 1: pair 31.96/18.86, agent 79.78/64.18, error 40.23/39.48
+  - seed 2: pair 31.66/18.60, agent 78.57/62.41, error 39.30/38.05
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.46/19.41, agent 79.64/62.60, error 41.62/40.53
+  - seed 1: pair 31.96/19.01, agent 80.02/63.70, error 40.16/39.39
+  - seed 2: pair 31.59/18.64, agent 78.79/63.07, error 39.27/38.01
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.64/18.86, agent 80.56/66.86, error 39.17/38.72
+  - seed 1: pair 32.75/19.57, agent 80.79/65.79, error 40.79/39.43
+  - seed 2: pair 32.59/18.95, agent 78.50/64.34, error 40.49/39.24
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.95/18.41, agent 81.51/67.79, error 39.58/38.94
+  - seed 1: pair 33.06/19.93, agent 79.91/65.58, error 41.98/40.19
+  - seed 2: pair 31.21/19.28, agent 81.05/67.50, error 40.54/40.41
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.64/18.86, agent 80.56/66.86, error 39.17/38.72
+  - seed 1: pair 32.74/19.50, agent 80.76/65.79, error 40.78/39.42
+  - seed 2: pair 32.55/18.87, agent 78.41/64.28, error 40.48/39.24
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.58/18.77, agent 80.79/67.36, error 39.17/38.72
+  - seed 1: pair 32.67/19.45, agent 80.61/65.73, error 40.78/39.43
+  - seed 2: pair 32.55/18.84, agent 78.73/64.50, error 40.55/39.33
+- flat_mlp_base_min | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.19/18.67, agent 77.90/61.32, error 38.69/36.61
+  - seed 1: pair 31.86/17.42, agent 77.03/61.59, error 37.67/35.01
+  - seed 2: pair 32.82/20.45, agent 80.71/65.65, error 40.57/39.85
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.82/18.82, agent 81.93/64.99, error 40.73/38.49
+  - seed 1: pair 31.54/18.85, agent 82.22/67.64, error 39.94/38.74
+  - seed 2: pair 31.36/18.71, agent 82.96/71.66, error 41.00/37.59
+- flat_mlp_base_pm | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.23/18.62, agent 77.89/59.42, error 38.80/36.70
+  - seed 1: pair 31.86/17.40, agent 76.95/61.23, error 37.67/35.03
+  - seed 2: pair 32.86/20.39, agent 80.72/65.68, error 40.61/39.88
+- flat_mlp_base_prod | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.09/18.59, agent 77.65/58.16, error 38.71/36.75
+  - seed 1: pair 32.00/17.63, agent 77.94/64.19, error 37.67/35.03
+  - seed 2: pair 32.93/20.40, agent 80.64/65.57, error 40.69/39.96
+- flat_mlp_peer_min | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.67/19.81, agent 80.64/66.37, error 41.84/41.20
+  - seed 1: pair 32.62/20.05, agent 80.03/67.37, error 40.49/39.81
+  - seed 2: pair 32.35/20.83, agent 80.02/62.71, error 41.75/40.82
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.89/19.64, agent 82.63/69.04, error 41.52/41.55
+  - seed 1: pair 31.75/20.13, agent 82.11/71.83, error 42.18/41.16
+  - seed 2: pair 32.39/20.75, agent 81.04/60.58, error 42.20/40.98
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.70/19.70, agent 80.51/63.30, error 41.86/41.23
+  - seed 1: pair 32.60/19.64, agent 79.97/64.00, error 40.40/39.72
+  - seed 2: pair 32.28/20.73, agent 79.88/62.27, error 41.68/40.74
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.73/19.75, agent 80.92/65.92, error 41.75/41.15
+  - seed 1: pair 32.68/20.10, agent 80.00/67.22, error 40.54/39.91
+  - seed 2: pair 32.23/20.69, agent 79.94/60.11, error 41.70/40.77
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.87/21.08, agent 80.39/70.89, error 40.86/40.64
+  - seed 1: pair 32.97/20.82, agent 80.39/61.04, error 40.85/39.81
+  - seed 2: pair 32.32/19.43, agent 77.33/58.74, error 39.61/38.70
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.50/21.04, agent 82.01/67.58, error 41.60/40.63
+  - seed 1: pair 32.18/21.67, agent 81.94/64.61, error 41.43/41.56
+  - seed 2: pair 31.50/19.32, agent 79.27/61.59, error 40.47/39.83
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.85/21.05, agent 80.40/68.31, error 40.84/40.64
+  - seed 1: pair 32.95/20.74, agent 80.33/59.04, error 40.91/39.88
+  - seed 2: pair 32.30/19.47, agent 77.35/58.36, error 39.58/38.69
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.80/20.73, agent 80.43/67.70, error 40.79/40.55
+  - seed 1: pair 32.96/20.84, agent 80.28/60.85, error 40.85/39.80
+  - seed 2: pair 32.32/19.44, agent 77.49/59.22, error 39.61/38.77
+- flat_mlp_base_min | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.86/20.59, agent 82.00/62.64, error 43.77/43.01
+  - seed 1: pair 36.04/21.13, agent 79.89/66.39, error 41.83/40.49
+  - seed 2: pair 35.26/20.05, agent 80.42/64.96, error 41.52/39.45
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.41/19.77, agent 83.28/67.00, error 43.37/42.05
+  - seed 1: pair 35.17/22.24, agent 83.73/71.20, error 43.32/43.33
+  - seed 2: pair 32.26/20.71, agent 83.56/68.38, error 42.64/42.06
+- flat_mlp_base_pm | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.91/20.53, agent 82.01/62.66, error 43.89/43.14
+  - seed 1: pair 36.02/21.05, agent 79.74/64.15, error 41.87/40.54
+  - seed 2: pair 35.23/19.97, agent 80.36/62.79, error 41.58/39.52
+- flat_mlp_base_prod | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.91/20.55, agent 82.21/63.59, error 43.80/43.06
+  - seed 1: pair 36.07/21.18, agent 79.71/65.82, error 41.91/40.58
+  - seed 2: pair 35.19/20.04, agent 80.26/64.75, error 41.52/39.43
+- flat_mlp_peer_min | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.38/23.11, agent 81.79/66.19, error 45.37/44.76
+  - seed 1: pair 36.90/22.65, agent 82.10/69.57, error 44.79/44.57
+  - seed 2: pair 37.41/23.29, agent 82.85/70.20, error 44.91/44.37
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.42/23.19, agent 82.03/64.77, error 45.29/44.70
+  - seed 1: pair 37.20/22.73, agent 83.52/70.38, error 45.02/44.16
+  - seed 2: pair 36.96/23.01, agent 83.79/69.33, error 45.45/44.18
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.35/22.94, agent 81.85/64.42, error 45.49/44.90
+  - seed 1: pair 36.86/22.31, agent 81.93/65.21, error 45.02/44.79
+  - seed 2: pair 37.40/23.11, agent 82.81/67.90, error 45.01/44.47
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.33/23.05, agent 82.14/64.85, error 45.32/44.72
+  - seed 1: pair 36.95/22.60, agent 82.23/69.35, error 44.68/44.40
+  - seed 2: pair 37.52/23.28, agent 82.68/67.78, error 44.95/44.41
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.23/22.57, agent 82.07/66.16, error 42.52/42.61
+  - seed 1: pair 35.54/22.20, agent 81.86/68.99, error 42.49/41.73
+  - seed 2: pair 37.37/22.65, agent 79.98/66.56, error 44.58/44.18
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.96/22.19, agent 83.26/67.81, error 42.94/42.39
+  - seed 1: pair 36.17/23.08, agent 81.99/67.44, error 44.51/43.48
+  - seed 2: pair 35.76/22.93, agent 83.15/67.73, error 44.81/43.90
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.22/22.48, agent 82.04/66.16, error 42.58/42.68
+  - seed 1: pair 35.55/22.06, agent 81.81/64.62, error 42.59/41.81
+  - seed 2: pair 37.33/22.59, agent 79.65/65.32, error 44.57/44.16
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.22/22.55, agent 82.12/65.96, error 42.58/42.70
+  - seed 1: pair 35.57/22.16, agent 81.84/66.85, error 42.61/41.81
+  - seed 2: pair 37.48/22.91, agent 80.19/66.51, error 44.76/44.38
+- flat_mlp_base_min | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.41/21.89, agent 81.38/65.34, error 44.26/43.09
+  - seed 1: pair 36.16/21.04, agent 79.42/65.03, error 42.15/40.81
+  - seed 2: pair 35.90/22.16, agent 83.30/70.59, error 44.64/44.54
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.72/21.65, agent 83.79/67.83, error 43.93/42.28
+  - seed 1: pair 35.07/21.84, agent 82.97/70.14, error 43.25/43.44
+  - seed 2: pair 35.91/22.06, agent 83.69/73.97, error 44.80/44.74
+- flat_mlp_base_pm | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.40/21.80, agent 81.35/63.16, error 44.32/43.17
+  - seed 1: pair 36.16/21.04, agent 79.42/65.03, error 42.15/40.81
+  - seed 2: pair 35.86/22.13, agent 83.21/70.42, error 44.59/44.50
+- flat_mlp_base_prod | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.44/21.89, agent 81.45/65.33, error 44.35/43.20
+  - seed 1: pair 36.25/21.10, agent 79.48/65.11, error 42.16/40.82
+  - seed 2: pair 35.86/22.05, agent 83.13/73.79, error 44.59/44.51
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.19/22.33, agent 82.59/69.94, error 42.79/42.94
+  - seed 1: pair 34.63/22.40, agent 82.59/69.57, error 43.44/42.73
+  - seed 2: pair 37.21/23.26, agent 82.24/73.36, error 45.26/44.50
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.39/22.97, agent 84.53/72.97, error 42.91/43.24
+  - seed 1: pair 35.75/22.18, agent 80.44/64.93, error 43.98/43.89
+  - seed 2: pair 36.35/23.58, agent 82.81/74.70, error 44.90/45.69
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.17/22.33, agent 82.63/70.46, error 42.77/42.92
+  - seed 1: pair 34.61/22.30, agent 82.60/67.26, error 43.54/42.86
+  - seed 2: pair 37.13/23.17, agent 82.20/71.36, error 45.30/44.55
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.20/22.66, agent 82.69/71.91, error 42.71/42.86
+  - seed 1: pair 34.72/22.10, agent 82.31/67.90, error 43.39/42.62
+  - seed 2: pair 37.16/23.30, agent 82.03/73.86, error 45.40/44.67
+- flat_mlp_base_min | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.36/20.81, agent 78.61/61.65, error 42.92/41.76
+  - seed 1: pair 36.00/21.48, agent 79.10/63.30, error 42.18/40.75
+  - seed 2: pair 35.28/20.74, agent 79.55/65.87, error 42.47/41.06
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.21/20.93, agent 81.70/66.23, error 43.17/40.97
+  - seed 1: pair 34.41/20.79, agent 82.79/68.27, error 42.35/40.01
+  - seed 2: pair 34.37/20.94, agent 82.93/66.24, error 43.19/41.52
+- flat_mlp_base_pm | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.34/20.73, agent 78.55/59.52, error 42.97/41.83
+  - seed 1: pair 35.98/21.39, agent 79.04/61.26, error 42.23/40.81
+  - seed 2: pair 35.25/20.62, agent 79.49/61.72, error 42.51/41.12
+- flat_mlp_base_prod | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.29/20.81, agent 78.70/61.03, error 42.69/41.56
+  - seed 1: pair 35.84/21.38, agent 79.23/63.00, error 41.77/40.41
+  - seed 2: pair 35.46/20.74, agent 79.89/64.15, error 42.44/41.01
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.86/22.46, agent 82.25/68.32, error 43.56/43.48
+  - seed 1: pair 34.85/21.56, agent 81.70/68.40, error 43.41/42.23
+  - seed 2: pair 36.81/22.68, agent 80.44/64.96, error 44.32/44.27
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.23/22.82, agent 83.64/68.89, error 43.77/42.74
+  - seed 1: pair 35.08/22.42, agent 82.19/69.78, error 44.77/43.43
+  - seed 2: pair 35.87/22.15, agent 81.03/67.33, error 43.56/42.37
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.83/22.33, agent 82.16/67.97, error 43.59/43.52
+  - seed 1: pair 34.82/21.45, agent 81.60/65.47, error 43.45/42.28
+  - seed 2: pair 36.86/22.58, agent 80.38/62.58, error 44.44/44.42
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.88/22.63, agent 82.40/68.91, error 43.59/43.53
+  - seed 1: pair 34.83/21.48, agent 81.64/67.45, error 43.46/42.28
+  - seed 2: pair 36.94/22.72, agent 80.72/65.13, error 44.45/44.48
+- flat_mlp_base_min | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.84/20.98, agent 79.44/69.75, error 41.17/40.99
+  - seed 1: pair 33.87/21.00, agent 79.84/69.35, error 41.95/41.73
+  - seed 2: pair 33.59/21.02, agent 80.13/68.08, error 40.75/40.09
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.61/20.76, agent 83.33/74.21, error 42.41/41.98
+  - seed 1: pair 32.87/21.07, agent 81.77/69.28, error 43.09/42.42
+  - seed 2: pair 32.29/21.38, agent 83.95/72.94, error 42.02/42.51
+- flat_mlp_base_pm | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.84/20.98, agent 79.44/69.75, error 41.17/40.99
+  - seed 1: pair 33.87/21.00, agent 79.84/69.35, error 41.95/41.73
+  - seed 2: pair 33.59/21.02, agent 80.13/68.08, error 40.75/40.09
+- flat_mlp_base_prod | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.84/20.99, agent 79.76/70.35, error 41.17/40.98
+  - seed 1: pair 33.94/21.15, agent 79.60/65.77, error 42.09/41.86
+  - seed 2: pair 33.52/21.02, agent 79.97/67.49, error 40.83/40.19
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.00/19.94, agent 79.20/69.99, error 41.71/41.04
+  - seed 1: pair 34.52/21.14, agent 79.78/71.09, error 41.63/41.34
+  - seed 2: pair 33.52/20.17, agent 79.93/68.03, error 40.95/39.48
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.35/19.66, agent 82.89/71.18, error 41.78/41.51
+  - seed 1: pair 32.30/20.96, agent 83.54/75.23, error 41.64/40.12
+  - seed 2: pair 32.14/19.95, agent 80.98/67.03, error 39.42/37.86
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.99/19.86, agent 79.17/67.65, error 41.77/41.11
+  - seed 1: pair 34.52/21.14, agent 79.78/71.09, error 41.63/41.34
+  - seed 2: pair 33.52/20.17, agent 79.93/68.03, error 40.95/39.48
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.99/19.85, agent 79.33/67.84, error 41.84/41.20
+  - seed 1: pair 34.72/21.27, agent 80.18/71.83, error 41.77/41.52
+  - seed 2: pair 33.50/20.47, agent 80.28/66.38, error 40.67/39.19
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.49/22.78, agent 83.87/72.74, error 42.11/42.39
+  - seed 1: pair 36.11/24.43, agent 83.89/71.87, error 44.91/44.76
+  - seed 2: pair 34.50/23.16, agent 83.05/72.86, error 42.60/42.64
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.02/23.18, agent 83.84/70.62, error 43.22/42.58
+  - seed 1: pair 36.76/23.33, agent 82.80/71.81, error 44.67/43.22
+  - seed 2: pair 34.50/21.86, agent 83.05/70.42, error 42.32/41.18
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.47/22.69, agent 83.80/70.31, error 42.15/42.45
+  - seed 1: pair 36.10/24.33, agent 83.86/69.47, error 44.96/44.83
+  - seed 2: pair 34.49/23.07, agent 83.02/70.43, error 42.65/42.70
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.48/22.69, agent 83.68/70.04, error 42.10/42.37
+  - seed 1: pair 36.21/24.57, agent 83.98/72.02, error 44.99/44.82
+  - seed 2: pair 34.64/23.09, agent 83.19/70.32, error 42.70/42.78
+- flat_mlp_base_min | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.83/20.88, agent 80.66/61.56, error 43.08/41.80
+  - seed 1: pair 33.73/19.06, agent 76.91/57.93, error 38.73/36.03
+  - seed 2: pair 34.48/21.36, agent 77.98/65.67, error 40.21/39.78
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.03/21.28, agent 82.51/66.89, error 42.82/42.03
+  - seed 1: pair 32.53/20.93, agent 81.20/63.15, error 40.90/40.56
+  - seed 2: pair 32.32/19.94, agent 82.80/70.08, error 41.99/40.28
+- flat_mlp_base_pm | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.82/20.88, agent 80.63/61.51, error 43.08/41.80
+  - seed 1: pair 33.79/19.09, agent 76.96/57.96, error 38.80/36.08
+  - seed 2: pair 34.48/21.36, agent 77.98/65.67, error 40.21/39.78
+- flat_mlp_base_prod | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.89/20.89, agent 80.79/61.72, error 43.08/41.71
+  - seed 1: pair 33.87/19.20, agent 77.13/59.28, error 38.96/36.25
+  - seed 2: pair 34.47/21.37, agent 78.30/64.96, error 40.26/39.91
+- flat_mlp_peer_min | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.47/21.79, agent 80.39/65.12, error 43.97/43.57
+  - seed 1: pair 37.25/23.51, agent 82.24/72.47, error 44.92/44.13
+  - seed 2: pair 36.04/21.70, agent 80.61/62.38, error 44.24/43.45
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.63/21.82, agent 81.85/68.68, error 44.37/42.75
+  - seed 1: pair 37.03/24.24, agent 82.05/70.57, error 44.98/45.55
+  - seed 2: pair 34.17/21.91, agent 81.88/65.98, error 42.65/42.82
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.50/21.70, agent 80.37/62.96, error 44.08/43.70
+  - seed 1: pair 37.30/23.55, agent 82.12/72.33, error 45.09/44.26
+  - seed 2: pair 36.02/21.70, agent 80.54/62.32, error 44.22/43.44
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.50/21.59, agent 80.45/66.19, error 44.08/43.70
+  - seed 1: pair 37.26/23.43, agent 82.03/70.59, error 45.03/44.22
+  - seed 2: pair 36.04/21.70, agent 80.29/61.65, error 44.24/43.46
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.44/21.01, agent 80.21/64.49, error 41.78/40.55
+  - seed 1: pair 34.25/20.70, agent 79.09/59.86, error 41.74/39.41
+  - seed 2: pair 35.06/23.54, agent 80.55/68.95, error 43.10/43.17
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.77/20.79, agent 81.59/66.16, error 41.27/41.12
+  - seed 1: pair 33.52/21.37, agent 80.15/65.19, error 42.78/41.42
+  - seed 2: pair 33.55/22.80, agent 82.06/70.73, error 42.89/42.33
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.47/20.86, agent 80.19/62.36, error 41.96/40.72
+  - seed 1: pair 34.30/20.63, agent 79.11/57.89, error 41.85/39.51
+  - seed 2: pair 35.00/23.33, agent 80.40/68.85, error 43.09/43.15
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.49/21.05, agent 80.50/65.22, error 41.91/40.66
+  - seed 1: pair 34.37/20.74, agent 79.30/59.99, error 41.86/39.49
+  - seed 2: pair 35.01/23.38, agent 80.43/68.42, error 43.09/43.19
+- flat_mlp_base_min | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.81/19.44, agent 82.81/70.61, error 40.28/41.42
+  - seed 1: pair 33.74/19.30, agent 76.99/62.53, error 39.64/37.70
+  - seed 2: pair 34.59/21.17, agent 78.89/63.88, error 41.82/40.84
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.15/19.43, agent 81.45/67.49, error 41.41/39.28
+  - seed 1: pair 31.78/19.65, agent 82.31/69.33, error 40.93/39.48
+  - seed 2: pair 32.77/20.65, agent 81.99/68.12, error 41.75/40.78
+- flat_mlp_base_pm | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.81/19.37, agent 82.78/68.25, error 40.32/41.49
+  - seed 1: pair 33.73/19.30, agent 76.96/62.49, error 39.64/37.70
+  - seed 2: pair 34.59/21.17, agent 78.89/63.88, error 41.82/40.84
+- flat_mlp_base_prod | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.80/19.40, agent 82.97/70.54, error 40.13/41.27
+  - seed 1: pair 33.74/19.30, agent 77.49/63.27, error 39.40/37.42
+  - seed 2: pair 34.66/21.33, agent 79.37/64.67, error 41.82/40.85
+- flat_mlp_peer_min | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.39/21.25, agent 80.30/64.65, error 42.74/42.11
+  - seed 1: pair 34.01/20.95, agent 79.19/63.92, error 40.36/40.06
+  - seed 2: pair 35.09/21.41, agent 81.43/70.14, error 42.81/41.94
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.21/21.15, agent 80.82/65.27, error 41.62/40.94
+  - seed 1: pair 34.02/21.47, agent 82.68/69.63, error 42.56/42.21
+  - seed 2: pair 34.87/22.11, agent 81.43/71.46, error 42.94/43.39
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.38/21.17, agent 80.27/62.50, error 42.80/42.19
+  - seed 1: pair 34.06/20.89, agent 79.21/61.82, error 40.48/40.18
+  - seed 2: pair 35.09/21.41, agent 81.43/70.14, error 42.81/41.94
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.18/21.25, agent 80.41/64.89, error 42.50/41.85
+  - seed 1: pair 34.07/20.96, agent 79.40/65.52, error 40.57/40.27
+  - seed 2: pair 35.09/21.69, agent 81.58/70.64, error 42.74/41.88
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.67/20.25, agent 81.17/67.35, error 40.92/40.45
+  - seed 1: pair 33.74/20.42, agent 79.91/66.25, error 40.34/39.08
+  - seed 2: pair 34.63/21.55, agent 79.15/65.97, error 41.21/40.94
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.97/20.33, agent 82.29/69.67, error 40.90/40.57
+  - seed 1: pair 34.26/20.92, agent 81.08/70.21, error 42.35/41.17
+  - seed 2: pair 34.05/21.42, agent 80.97/69.11, error 42.15/41.14
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.67/20.25, agent 81.17/67.35, error 40.92/40.45
+  - seed 1: pair 33.79/20.36, agent 79.92/64.07, error 40.45/39.19
+  - seed 2: pair 34.63/21.55, agent 79.15/65.97, error 41.21/40.94
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.67/20.36, agent 81.17/68.85, error 40.92/40.47
+  - seed 1: pair 33.80/20.36, agent 80.03/67.30, error 40.39/39.18
+  - seed 2: pair 34.50/21.51, agent 79.07/66.53, error 41.28/41.06
+- flat_mlp_base_min | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.25/20.61, agent 80.24/59.95, error 42.58/41.63
+  - seed 1: pair 34.21/19.73, agent 79.00/60.10, error 40.68/39.20
+  - seed 2: pair 35.08/20.78, agent 79.58/60.38, error 42.34/41.89
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.63/19.66, agent 82.78/62.76, error 42.66/41.41
+  - seed 1: pair 32.92/20.77, agent 82.61/66.45, error 42.04/41.39
+  - seed 2: pair 32.77/21.30, agent 83.08/66.74, error 43.20/43.00
+- flat_mlp_base_pm | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.30/20.66, agent 80.29/60.25, error 42.64/41.66
+  - seed 1: pair 34.20/19.65, agent 78.97/58.10, error 40.74/39.25
+  - seed 2: pair 35.08/20.78, agent 79.58/60.38, error 42.34/41.89
+- flat_mlp_base_prod | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.36/20.62, agent 80.72/59.42, error 42.55/41.67
+  - seed 1: pair 34.33/19.76, agent 79.05/63.11, error 40.71/39.30
+  - seed 2: pair 35.14/20.87, agent 79.94/63.76, error 42.31/41.79
+- flat_mlp_peer_min | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.37/22.53, agent 80.57/66.59, error 43.62/44.08
+  - seed 1: pair 34.91/21.41, agent 79.87/61.18, error 43.10/42.78
+  - seed 2: pair 33.86/20.84, agent 79.74/62.19, error 41.63/41.01
+- flat_mlp_peer_perclass | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.16/21.11, agent 81.06/61.47, error 41.94/40.93
+  - seed 1: pair 34.32/20.43, agent 81.67/64.64, error 43.36/42.62
+  - seed 2: pair 33.18/19.69, agent 82.51/64.76, error 42.45/41.27
+- flat_mlp_peer_pm | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.35/22.54, agent 80.43/66.29, error 43.66/44.14
+  - seed 1: pair 34.90/21.32, agent 79.84/59.14, error 43.16/42.84
+  - seed 2: pair 33.83/20.84, agent 79.64/62.02, error 41.68/41.08
+- flat_mlp_peer_prod | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.42/22.68, agent 80.31/61.75, error 43.71/44.03
+  - seed 1: pair 35.04/21.38, agent 80.43/65.21, error 43.02/42.75
+  - seed 2: pair 33.75/20.39, agent 79.75/60.25, error 41.39/40.78
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.01/21.41, agent 80.53/66.99, error 42.67/42.33
+  - seed 1: pair 33.51/20.10, agent 80.12/61.59, error 42.20/40.85
+  - seed 2: pair 34.23/21.31, agent 79.86/60.13, error 43.16/43.22
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.38/20.89, agent 81.16/61.91, error 41.78/40.48
+  - seed 1: pair 34.09/20.22, agent 79.66/59.55, error 42.75/41.06
+  - seed 2: pair 33.64/20.33, agent 81.29/68.05, error 42.79/41.61
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.00/21.39, agent 80.50/66.98, error 42.67/42.33
+  - seed 1: pair 33.50/20.01, agent 80.09/59.68, error 42.18/40.83
+  - seed 2: pair 34.20/21.31, agent 79.69/60.04, error 43.16/43.22
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.93/21.30, agent 80.24/62.80, error 42.64/42.36
+  - seed 1: pair 33.51/20.09, agent 80.27/61.75, error 42.13/40.77
+  - seed 2: pair 34.17/21.20, agent 80.12/62.81, error 43.02/43.15
+- flat_mlp_base_min | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.62/19.57, agent 82.73/66.33, error 40.01/41.22
+  - seed 1: pair 33.79/18.71, agent 76.98/58.57, error 39.10/36.81
+  - seed 2: pair 34.61/20.22, agent 77.69/56.62, error 41.94/40.60
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.94/19.12, agent 81.57/67.59, error 41.49/38.92
+  - seed 1: pair 31.70/19.35, agent 82.10/67.55, error 40.07/38.56
+  - seed 2: pair 33.60/19.43, agent 81.14/66.13, error 41.89/39.53
+- flat_mlp_base_pm | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.62/19.57, agent 82.73/66.33, error 40.01/41.22
+  - seed 1: pair 33.77/18.71, agent 76.95/58.54, error 39.10/36.81
+  - seed 2: pair 34.60/20.22, agent 77.66/56.61, error 41.94/40.60
+- flat_mlp_base_prod | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.86/19.01, agent 77.00/60.78, error 40.06/38.18
+  - seed 1: pair 34.02/18.88, agent 77.46/62.53, error 39.32/37.08
+  - seed 2: pair 34.60/20.07, agent 78.17/60.31, error 41.70/40.34
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.67/20.05, agent 78.91/62.55, error 39.72/38.68
+  - seed 1: pair 32.95/18.68, agent 77.04/58.57, error 40.63/38.31
+  - seed 2: pair 33.93/21.26, agent 80.85/67.37, error 41.20/41.22
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.13/20.63, agent 81.29/66.12, error 40.89/40.02
+  - seed 1: pair 31.24/19.24, agent 81.60/66.65, error 40.45/38.32
+  - seed 2: pair 33.88/21.35, agent 82.38/70.06, error 42.23/41.10
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.71/20.07, agent 78.92/62.54, error 39.78/38.74
+  - seed 1: pair 32.94/18.68, agent 77.00/58.55, error 40.63/38.31
+  - seed 2: pair 33.91/21.25, agent 80.79/67.31, error 41.20/41.22
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.72/20.07, agent 79.06/63.30, error 39.62/38.59
+  - seed 1: pair 33.01/18.68, agent 77.33/62.58, error 40.63/38.33
+  - seed 2: pair 33.90/21.50, agent 81.09/68.85, error 41.11/41.17
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.69/20.97, agent 79.48/64.25, error 41.30/40.96
+  - seed 1: pair 36.08/21.22, agent 79.91/66.19, error 42.49/40.74
+  - seed 2: pair 34.37/20.62, agent 77.92/61.19, error 41.13/40.68
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.33/20.82, agent 81.64/67.28, error 42.48/41.40
+  - seed 1: pair 35.12/21.41, agent 81.08/68.54, error 43.27/42.31
+  - seed 2: pair 34.03/20.75, agent 80.22/64.70, error 41.99/41.36
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.69/20.97, agent 79.48/64.25, error 41.30/40.96
+  - seed 1: pair 36.18/21.33, agent 80.08/66.39, error 42.60/40.84
+  - seed 2: pair 34.35/20.59, agent 77.86/61.18, error 41.12/40.67
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.69/20.88, agent 79.80/65.05, error 41.30/40.93
+  - seed 1: pair 36.08/21.23, agent 79.98/66.11, error 42.42/40.67
+  - seed 2: pair 34.36/20.64, agent 78.45/62.19, error 41.04/40.55
+- flat_mlp_base_min | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.10/18.36, agent 79.58/66.43, error 39.56/38.59
+  - seed 1: pair 31.39/17.59, agent 77.30/64.99, error 39.31/38.29
+  - seed 2: pair 30.82/18.09, agent 77.80/63.56, error 38.85/38.31
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.97/19.05, agent 81.25/67.38, error 40.50/39.87
+  - seed 1: pair 28.26/17.72, agent 81.26/68.71, error 38.68/37.73
+  - seed 2: pair 30.11/18.81, agent 81.66/67.92, error 39.77/39.24
+- flat_mlp_base_pm | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.09/18.35, agent 79.55/66.35, error 39.56/38.59
+  - seed 1: pair 31.39/17.59, agent 77.30/64.99, error 39.31/38.29
+  - seed 2: pair 30.82/18.09, agent 77.80/63.56, error 38.85/38.31
+- flat_mlp_base_prod | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.16/18.66, agent 79.30/65.80, error 39.71/38.71
+  - seed 1: pair 31.39/17.51, agent 77.63/65.26, error 39.39/38.31
+  - seed 2: pair 30.91/18.38, agent 78.26/64.11, error 38.93/38.46
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.03/17.99, agent 77.72/62.80, error 38.64/38.06
+  - seed 1: pair 26.95/18.45, agent 81.94/68.37, error 38.81/39.39
+  - seed 2: pair 30.49/18.22, agent 77.32/60.87, error 38.43/37.74
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.11/17.91, agent 80.54/67.29, error 39.96/39.43
+  - seed 1: pair 28.98/18.52, agent 81.96/67.79, error 38.73/38.01
+  - seed 2: pair 30.14/17.83, agent 80.79/66.01, error 39.44/37.80
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.03/17.99, agent 77.72/62.80, error 38.64/38.06
+  - seed 1: pair 26.95/18.45, agent 81.94/68.37, error 38.81/39.39
+  - seed 2: pair 30.49/18.22, agent 77.32/60.87, error 38.43/37.74
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.03/17.93, agent 77.56/63.00, error 38.64/38.03
+  - seed 1: pair 27.04/18.53, agent 82.40/69.53, error 38.77/39.39
+  - seed 2: pair 30.62/18.48, agent 77.48/61.59, error 38.50/37.79
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.42/19.87, agent 79.88/66.22, error 41.75/41.87
+  - seed 1: pair 32.03/18.21, agent 76.66/57.32, error 39.93/38.48
+  - seed 2: pair 31.99/19.65, agent 78.60/65.23, error 40.53/40.33
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.77/18.79, agent 80.72/67.16, error 41.10/41.16
+  - seed 1: pair 30.89/19.06, agent 79.76/65.00, error 40.86/40.32
+  - seed 2: pair 30.69/19.63, agent 81.08/67.76, error 40.30/41.01
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.42/19.87, agent 79.88/66.22, error 41.75/41.87
+  - seed 1: pair 32.02/18.21, agent 76.63/57.32, error 39.91/38.47
+  - seed 2: pair 31.95/19.65, agent 78.56/65.75, error 40.58/40.36
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.31/19.82, agent 79.89/65.80, error 41.68/41.82
+  - seed 1: pair 31.95/18.20, agent 76.71/59.66, error 39.69/38.30
+  - seed 2: pair 31.95/19.67, agent 78.48/65.61, error 40.58/40.37
+- flat_mlp_base_min | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.76/18.00, agent 78.09/60.61, error 38.77/37.61
+  - seed 1: pair 31.71/18.16, agent 76.92/62.98, error 38.87/37.71
+  - seed 2: pair 30.94/16.90, agent 76.31/63.60, error 38.41/36.61
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.29/17.74, agent 81.39/65.95, error 39.42/38.03
+  - seed 1: pair 28.43/17.93, agent 80.96/68.77, error 38.56/38.37
+  - seed 2: pair 29.26/17.68, agent 81.15/70.77, error 39.58/39.00
+- flat_mlp_base_pm | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.76/18.00, agent 78.09/60.61, error 38.77/37.61
+  - seed 1: pair 31.70/18.15, agent 76.88/62.96, error 38.87/37.71
+  - seed 2: pair 30.94/16.90, agent 76.31/63.60, error 38.41/36.61
+- flat_mlp_base_prod | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.76/17.98, agent 78.25/61.11, error 38.92/37.73
+  - seed 1: pair 31.89/18.23, agent 77.01/63.17, error 39.04/37.84
+  - seed 2: pair 31.05/17.01, agent 76.57/65.02, error 38.53/36.71
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.47/17.99, agent 76.64/60.65, error 37.29/36.88
+  - seed 1: pair 30.92/17.73, agent 76.61/61.46, error 38.62/37.74
+  - seed 2: pair 30.20/17.29, agent 76.53/61.25, error 37.98/37.14
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.30/18.62, agent 80.07/65.04, error 39.90/39.12
+  - seed 1: pair 29.40/18.38, agent 81.51/66.80, error 39.00/38.51
+  - seed 2: pair 29.79/17.27, agent 80.10/66.87, error 39.70/38.10
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.47/17.99, agent 76.64/60.65, error 37.29/36.88
+  - seed 1: pair 30.91/17.73, agent 76.58/61.43, error 38.62/37.74
+  - seed 2: pair 30.20/17.29, agent 76.53/61.25, error 37.98/37.14
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.59/17.99, agent 76.71/61.08, error 37.33/36.97
+  - seed 1: pair 31.03/17.73, agent 76.87/62.05, error 38.73/37.81
+  - seed 2: pair 30.20/17.30, agent 76.69/61.86, error 37.98/37.10
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.61/19.98, agent 79.44/70.28, error 40.93/40.56
+  - seed 1: pair 32.79/18.74, agent 77.35/63.27, error 40.52/38.97
+  - seed 2: pair 31.30/19.52, agent 80.51/67.61, error 40.91/41.22
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.53/20.03, agent 81.53/70.86, error 41.58/40.94
+  - seed 1: pair 31.21/19.08, agent 80.81/67.28, error 41.21/39.81
+  - seed 2: pair 30.66/18.76, agent 81.22/65.42, error 40.69/40.63
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.58/19.97, agent 79.35/70.16, error 40.92/40.55
+  - seed 1: pair 32.78/18.74, agent 77.32/63.27, error 40.50/38.96
+  - seed 2: pair 31.27/19.45, agent 80.42/65.35, error 40.88/41.20
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.86/19.96, agent 79.74/68.45, error 41.04/40.70
+  - seed 1: pair 32.78/18.74, agent 77.48/63.50, error 40.43/38.90
+  - seed 2: pair 31.36/19.45, agent 80.51/67.09, error 40.84/41.09
+- flat_mlp_base_min | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.64/21.49, agent 81.22/66.75, error 43.76/42.16
+  - seed 1: pair 35.55/20.50, agent 78.38/63.84, error 41.67/39.20
+  - seed 2: pair 36.90/21.27, agent 78.75/62.39, error 43.10/40.82
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.46/21.00, agent 84.29/68.66, error 42.63/42.01
+  - seed 1: pair 35.16/20.52, agent 82.13/68.91, error 43.14/40.78
+  - seed 2: pair 34.52/21.65, agent 82.64/70.06, error 43.59/41.40
+- flat_mlp_base_pm | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.63/21.40, agent 81.19/66.59, error 43.76/42.16
+  - seed 1: pair 35.54/20.41, agent 78.35/63.67, error 41.67/39.20
+  - seed 2: pair 36.89/21.17, agent 78.63/62.16, error 43.10/40.79
+- flat_mlp_base_prod | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.87/21.72, agent 81.32/65.37, error 43.82/42.41
+  - seed 1: pair 35.55/20.48, agent 78.21/63.84, error 41.59/39.10
+  - seed 2: pair 36.83/21.04, agent 78.66/65.17, error 43.10/40.74
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.50/20.31, agent 77.36/63.06, error 40.56/37.76
+  - seed 1: pair 34.92/20.12, agent 79.20/62.77, error 42.73/39.89
+  - seed 2: pair 34.83/19.95, agent 78.44/64.48, error 40.87/39.24
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.09/20.27, agent 81.99/67.54, error 41.14/38.40
+  - seed 1: pair 32.93/19.73, agent 82.53/66.78, error 41.14/40.09
+  - seed 2: pair 33.36/19.95, agent 81.78/71.06, error 42.59/40.21
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.50/20.31, agent 77.36/63.06, error 40.56/37.76
+  - seed 1: pair 34.92/20.12, agent 79.20/62.77, error 42.73/39.89
+  - seed 2: pair 34.89/19.96, agent 78.57/64.53, error 40.87/39.24
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.43/20.18, agent 77.10/61.98, error 40.48/37.67
+  - seed 1: pair 35.06/20.04, agent 79.53/63.21, error 42.80/39.96
+  - seed 2: pair 34.89/19.95, agent 78.66/66.88, error 40.72/39.10
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.53/22.08, agent 80.90/67.01, error 43.79/42.76
+  - seed 1: pair 35.74/22.14, agent 81.69/67.60, error 43.83/43.38
+  - seed 2: pair 36.16/22.19, agent 79.95/67.99, error 42.71/42.16
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.58/22.31, agent 82.47/68.15, error 44.19/43.41
+  - seed 1: pair 35.12/22.47, agent 83.16/69.10, error 43.28/42.83
+  - seed 2: pair 36.34/22.65, agent 81.41/69.22, error 44.36/43.81
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.51/22.06, agent 80.95/67.22, error 43.77/42.74
+  - seed 1: pair 35.74/22.14, agent 81.69/67.60, error 43.83/43.38
+  - seed 2: pair 36.14/22.17, agent 79.89/67.81, error 42.69/42.15
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.51/22.15, agent 81.43/67.60, error 43.70/42.63
+  - seed 1: pair 35.76/22.33, agent 81.83/67.59, error 43.79/43.31
+  - seed 2: pair 36.14/22.17, agent 80.29/68.25, error 42.40/41.85
+- flat_mlp_base_min | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.83/19.58, agent 78.51/61.81, error 40.21/39.77
+  - seed 1: pair 26.58/16.84, agent 82.66/68.09, error 38.59/39.29
+  - seed 2: pair 31.32/19.24, agent 77.57/61.29, error 38.73/37.98
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.46/19.45, agent 82.88/67.46, error 39.68/39.53
+  - seed 1: pair 28.49/16.60, agent 82.04/65.61, error 38.34/36.13
+  - seed 2: pair 30.49/19.78, agent 81.10/67.12, error 40.09/39.64
+- flat_mlp_base_pm | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.83/19.58, agent 78.51/61.33, error 40.21/39.81
+  - seed 1: pair 26.57/16.84, agent 82.67/68.38, error 38.59/39.29
+  - seed 2: pair 31.32/19.24, agent 77.57/61.29, error 38.73/37.98
+- flat_mlp_base_prod | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.74/19.54, agent 78.95/62.76, error 40.09/39.70
+  - seed 1: pair 26.63/16.78, agent 83.11/68.20, error 38.42/39.16
+  - seed 2: pair 31.18/19.27, agent 77.72/62.57, error 38.73/37.97
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.69/16.45, agent 81.85/67.33, error 36.70/37.05
+  - seed 1: pair 27.04/18.90, agent 82.17/68.02, error 39.89/40.51
+  - seed 2: pair 25.81/16.65, agent 81.80/69.62, error 38.27/38.91
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.74/16.29, agent 80.68/64.83, error 38.02/34.75
+  - seed 1: pair 29.73/18.84, agent 81.46/65.57, error 40.19/38.50
+  - seed 2: pair 27.73/17.07, agent 80.87/64.40, error 38.33/36.12
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.69/16.45, agent 81.85/67.33, error 36.70/37.05
+  - seed 1: pair 27.08/18.92, agent 82.21/68.24, error 39.89/40.51
+  - seed 2: pair 25.81/16.65, agent 81.80/69.62, error 38.27/38.91
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.69/16.49, agent 81.85/68.10, error 36.70/37.06
+  - seed 1: pair 27.11/18.99, agent 82.60/67.69, error 39.79/40.40
+  - seed 2: pair 25.90/16.67, agent 82.23/68.45, error 38.20/38.91
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/19.11, agent 79.23/69.21, error 39.64/39.12
+  - seed 1: pair 32.69/19.69, agent 80.37/65.00, error 40.10/37.89
+  - seed 2: pair 31.71/18.43, agent 77.73/63.40, error 40.19/39.11
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.95/18.77, agent 81.25/70.02, error 38.83/37.80
+  - seed 1: pair 32.08/19.67, agent 80.40/65.24, error 41.28/39.43
+  - seed 2: pair 30.19/18.77, agent 80.18/65.58, error 39.97/39.82
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/19.11, agent 79.23/69.21, error 39.64/39.12
+  - seed 1: pair 32.66/19.69, agent 80.31/64.42, error 40.07/37.86
+  - seed 2: pair 31.69/18.43, agent 77.67/63.40, error 40.24/39.14
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/19.05, agent 79.62/70.32, error 39.64/39.07
+  - seed 1: pair 32.72/19.70, agent 80.61/65.68, error 40.06/37.83
+  - seed 2: pair 31.64/18.41, agent 77.76/63.02, error 40.16/39.15
+- flat_mlp_base_min | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.04/18.70, agent 82.03/64.59, error 38.84/39.56
+  - seed 1: pair 26.14/16.94, agent 82.42/69.88, error 37.98/38.27
+  - seed 2: pair 26.06/17.98, agent 81.79/72.06, error 38.27/39.04
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.69/17.70, agent 82.14/69.37, error 39.27/37.55
+  - seed 1: pair 29.49/17.91, agent 80.42/63.43, error 38.77/38.31
+  - seed 2: pair 30.52/18.43, agent 80.90/68.69, error 40.16/39.38
+- flat_mlp_base_pm | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.04/18.70, agent 82.03/64.59, error 38.84/39.56
+  - seed 1: pair 26.14/16.94, agent 82.42/69.88, error 37.98/38.27
+  - seed 2: pair 26.06/17.98, agent 81.76/72.01, error 38.27/39.04
+- flat_mlp_base_prod | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.03/18.52, agent 82.45/70.50, error 38.79/39.50
+  - seed 1: pair 26.32/17.04, agent 82.34/67.80, error 38.12/38.41
+  - seed 2: pair 26.20/18.16, agent 82.29/70.08, error 38.19/38.99
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.39/16.29, agent 81.65/68.50, error 36.32/36.82
+  - seed 1: pair 31.29/18.29, agent 77.89/62.57, error 39.18/37.91
+  - seed 2: pair 26.07/17.19, agent 81.60/68.79, error 38.80/39.18
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.56/16.72, agent 80.27/64.59, error 38.44/36.05
+  - seed 1: pair 29.07/18.57, agent 81.79/69.61, error 38.84/37.63
+  - seed 2: pair 28.31/15.91, agent 80.74/63.45, error 38.77/35.52
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.39/16.29, agent 81.65/68.50, error 36.32/36.82
+  - seed 1: pair 31.28/18.29, agent 77.94/62.97, error 39.24/37.94
+  - seed 2: pair 26.06/17.19, agent 81.65/69.16, error 38.80/39.18
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.45/16.40, agent 81.96/66.28, error 36.25/36.84
+  - seed 1: pair 31.39/18.26, agent 78.52/64.63, error 39.12/37.86
+  - seed 2: pair 26.11/17.19, agent 81.47/68.54, error 38.85/39.22
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.33/19.31, agent 79.18/63.82, error 39.13/38.35
+  - seed 1: pair 32.31/20.07, agent 80.08/60.54, error 40.03/37.95
+  - seed 2: pair 33.06/19.64, agent 76.79/61.80, error 40.13/38.80
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.59/18.24, agent 80.70/64.71, error 37.87/37.50
+  - seed 1: pair 30.71/20.67, agent 80.33/63.77, error 40.93/40.04
+  - seed 2: pair 31.36/18.95, agent 79.57/65.86, error 41.05/39.59
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.33/19.31, agent 79.18/63.82, error 39.13/38.35
+  - seed 1: pair 32.30/19.99, agent 80.05/60.54, error 40.01/37.94
+  - seed 2: pair 33.03/19.64, agent 76.73/61.74, error 40.19/38.88
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.27/19.35, agent 78.98/62.97, error 39.07/38.34
+  - seed 1: pair 32.31/20.07, agent 80.15/60.87, error 39.89/37.83
+  - seed 2: pair 33.03/19.72, agent 77.23/62.86, error 40.09/38.81
+- flat_mlp_base_min | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.63/13.22, agent 79.64/65.10, error 33.92/33.68
+  - seed 1: pair 21.07/12.95, agent 79.59/68.39, error 34.51/34.37
+  - seed 2: pair 21.56/14.30, agent 79.63/68.48, error 35.22/34.93
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 21.15/13.93, agent 78.41/65.89, error 34.06/34.11
+  - seed 1: pair 21.73/13.30, agent 78.95/64.92, error 33.76/32.92
+  - seed 2: pair 22.06/14.52, agent 79.32/69.78, error 35.17/34.37
+- flat_mlp_base_pm | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.63/13.22, agent 79.64/65.10, error 33.92/33.68
+  - seed 1: pair 21.07/12.95, agent 79.59/68.39, error 34.51/34.37
+  - seed 2: pair 21.56/14.30, agent 79.63/68.48, error 35.22/34.93
+- flat_mlp_base_prod | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.66/13.19, agent 79.64/66.98, error 33.96/33.71
+  - seed 1: pair 21.04/12.93, agent 79.88/67.04, error 34.42/34.29
+  - seed 2: pair 21.56/14.30, agent 79.83/69.41, error 35.22/34.93
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.24/12.32, agent 79.46/66.63, error 34.02/34.10
+  - seed 1: pair 19.61/12.21, agent 79.53/68.44, error 32.65/32.59
+  - seed 2: pair 18.89/13.09, agent 79.95/71.19, error 32.59/32.82
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.55/12.43, agent 78.43/64.51, error 34.04/33.40
+  - seed 1: pair 20.61/11.54, agent 78.07/67.08, error 33.19/30.13
+  - seed 2: pair 21.18/13.24, agent 79.10/69.95, error 33.31/31.83
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.24/12.32, agent 79.46/66.63, error 34.02/34.10
+  - seed 1: pair 19.61/12.21, agent 79.53/68.44, error 32.65/32.59
+  - seed 2: pair 18.89/13.09, agent 79.99/71.21, error 32.59/32.81
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 19.24/12.32, agent 79.46/66.63, error 33.97/34.06
+  - seed 1: pair 19.64/12.23, agent 79.60/68.71, error 32.65/32.58
+  - seed 2: pair 18.86/13.07, agent 80.17/71.28, error 32.56/32.80
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.55/14.91, agent 80.30/69.26, error 35.97/36.30
+  - seed 1: pair 21.95/14.10, agent 80.83/71.77, error 34.77/34.37
+  - seed 2: pair 21.96/14.50, agent 80.53/71.12, error 35.36/35.49
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.80/14.72, agent 77.53/64.40, error 36.95/35.27
+  - seed 1: pair 23.76/12.61, agent 79.33/67.02, error 34.96/31.87
+  - seed 2: pair 24.41/14.26, agent 78.63/67.57, error 36.39/33.33
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.55/14.91, agent 80.28/69.14, error 35.97/36.30
+  - seed 1: pair 21.95/14.10, agent 80.83/71.77, error 34.77/34.37
+  - seed 2: pair 21.96/14.50, agent 80.53/71.12, error 35.36/35.49
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.47/14.93, agent 80.22/68.59, error 35.94/36.30
+  - seed 1: pair 22.11/14.25, agent 81.00/70.80, error 34.83/34.42
+  - seed 2: pair 22.27/14.50, agent 80.67/68.44, error 35.44/35.53
+- flat_mlp_base_min | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.52/17.29, agent 81.65/71.52, error 37.04/37.62
+  - seed 1: pair 27.10/15.95, agent 76.37/63.00, error 34.51/33.63
+  - seed 2: pair 29.14/17.66, agent 77.39/61.89, error 36.88/35.51
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.67/16.50, agent 79.78/67.74, error 36.81/35.90
+  - seed 1: pair 26.12/16.96, agent 81.14/69.81, error 36.68/36.30
+  - seed 2: pair 27.77/16.95, agent 80.43/69.92, error 37.77/35.34
+- flat_mlp_base_pm | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.52/17.23, agent 81.65/71.48, error 37.04/37.62
+  - seed 1: pair 27.09/15.94, agent 76.34/62.89, error 34.51/33.63
+  - seed 2: pair 29.14/17.66, agent 77.39/61.89, error 36.88/35.51
+- flat_mlp_base_prod | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.51/17.27, agent 81.85/72.04, error 37.02/37.58
+  - seed 1: pair 27.12/15.82, agent 76.87/63.01, error 34.26/33.32
+  - seed 2: pair 28.91/17.51, agent 78.00/66.09, error 36.58/35.27
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.92/15.48, agent 76.81/62.70, error 35.04/34.07
+  - seed 1: pair 24.65/17.70, agent 80.49/67.30, error 36.93/36.83
+  - seed 2: pair 26.37/15.94, agent 76.73/64.65, error 34.91/33.73
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.89/15.20, agent 80.57/68.59, error 35.11/31.87
+  - seed 1: pair 25.72/17.64, agent 79.28/65.16, error 37.65/36.27
+  - seed 2: pair 25.96/16.45, agent 81.53/72.55, error 37.10/34.90
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.92/15.47, agent 76.78/62.62, error 35.04/34.07
+  - seed 1: pair 24.65/17.70, agent 80.49/67.30, error 36.93/36.83
+  - seed 2: pair 26.37/15.94, agent 76.73/64.65, error 34.91/33.73
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.08/15.53, agent 76.97/63.51, error 35.07/34.14
+  - seed 1: pair 24.68/17.74, agent 80.78/66.84, error 36.88/36.80
+  - seed 2: pair 26.42/16.13, agent 76.47/64.85, error 34.97/33.81
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.95/17.59, agent 76.26/65.83, error 36.64/35.87
+  - seed 1: pair 29.52/18.06, agent 77.35/61.84, error 37.49/35.60
+  - seed 2: pair 27.12/16.64, agent 78.82/66.54, error 37.22/36.75
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.34/17.74, agent 81.17/71.06, error 38.92/36.93
+  - seed 1: pair 28.10/19.08, agent 80.53/66.60, error 38.86/39.16
+  - seed 2: pair 27.97/17.76, agent 79.65/69.26, error 38.50/37.92
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.95/17.59, agent 76.10/63.45, error 36.64/35.87
+  - seed 1: pair 29.52/18.06, agent 77.35/61.84, error 37.49/35.60
+  - seed 2: pair 27.15/16.61, agent 78.73/65.59, error 37.22/36.74
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.98/17.63, agent 76.67/67.00, error 36.74/35.98
+  - seed 1: pair 29.45/17.90, agent 77.27/61.58, error 37.49/35.55
+  - seed 2: pair 27.22/16.67, agent 79.35/66.66, error 36.78/36.39
+- flat_mlp_base_min | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.31/14.89, agent 80.20/71.55, error 35.28/34.70
+  - seed 1: pair 21.16/14.39, agent 81.53/73.06, error 34.56/34.45
+  - seed 2: pair 21.35/14.01, agent 80.69/73.88, error 35.12/35.54
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.82/14.89, agent 79.70/69.48, error 36.04/34.72
+  - seed 1: pair 22.87/14.28, agent 80.40/73.45, error 35.17/34.38
+  - seed 2: pair 22.24/14.29, agent 79.69/70.45, error 35.10/35.57
+- flat_mlp_base_pm | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.30/14.89, agent 80.17/71.54, error 35.28/34.70
+  - seed 1: pair 21.16/14.39, agent 81.53/73.06, error 34.56/34.45
+  - seed 2: pair 21.35/14.01, agent 80.69/73.88, error 35.12/35.54
+- flat_mlp_base_prod | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.36/14.91, agent 80.35/71.22, error 35.17/34.63
+  - seed 1: pair 21.16/14.34, agent 81.92/74.64, error 34.48/34.38
+  - seed 2: pair 21.43/14.05, agent 80.87/71.52, error 35.00/35.45
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.83/14.15, agent 80.52/73.75, error 35.31/35.06
+  - seed 1: pair 20.11/13.82, agent 79.81/72.26, error 34.37/34.36
+  - seed 2: pair 21.39/14.73, agent 80.42/71.54, error 35.62/35.61
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 21.16/14.44, agent 79.45/71.16, error 35.23/35.04
+  - seed 1: pair 19.75/12.71, agent 79.53/71.12, error 32.96/30.46
+  - seed 2: pair 22.18/14.54, agent 80.28/71.72, error 36.20/35.85
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.83/14.20, agent 80.52/72.08, error 35.31/35.06
+  - seed 1: pair 20.11/13.82, agent 79.78/72.24, error 34.37/34.35
+  - seed 2: pair 21.42/14.74, agent 80.46/71.56, error 35.62/35.61
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 20.81/14.12, agent 80.57/73.72, error 35.28/35.01
+  - seed 1: pair 20.07/13.76, agent 80.20/72.07, error 34.16/34.18
+  - seed 2: pair 21.47/14.72, agent 81.00/72.03, error 35.61/35.58
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.26/15.94, agent 81.33/70.91, error 36.37/36.53
+  - seed 1: pair 21.37/13.54, agent 81.42/73.16, error 34.63/34.39
+  - seed 2: pair 22.39/14.59, agent 80.50/70.73, error 36.34/36.16
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.92/15.36, agent 79.80/66.11, error 36.56/35.60
+  - seed 1: pair 22.89/13.74, agent 79.18/67.71, error 34.76/33.88
+  - seed 2: pair 23.90/14.91, agent 78.87/66.84, error 34.90/33.82
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.25/15.93, agent 81.28/70.89, error 36.35/36.52
+  - seed 1: pair 21.37/13.54, agent 81.42/73.16, error 34.63/34.39
+  - seed 2: pair 22.39/14.59, agent 80.50/70.73, error 36.34/36.16
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.29/15.71, agent 81.43/67.21, error 36.21/36.32
+  - seed 1: pair 21.36/13.51, agent 81.51/73.09, error 34.61/34.36
+  - seed 2: pair 22.42/14.30, agent 80.18/67.72, error 36.27/36.14
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.12/18.02, agent 77.42/62.09, error 37.65/36.15
+  - seed 1: pair 30.75/19.09, agent 79.64/67.52, error 39.10/38.94
+  - seed 2: pair 31.17/19.23, agent 79.51/65.32, error 39.38/39.31
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.70/18.08, agent 80.82/64.12, error 38.33/36.13
+  - seed 1: pair 29.27/18.79, agent 81.38/68.86, error 38.98/37.49
+  - seed 2: pair 31.45/19.88, agent 81.23/68.26, error 40.80/40.05
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.12/18.02, agent 77.42/62.09, error 37.65/36.15
+  - seed 1: pair 30.75/19.09, agent 79.64/67.52, error 39.10/38.94
+  - seed 2: pair 31.17/19.23, agent 79.51/65.32, error 39.38/39.31
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.19/18.14, agent 77.33/61.99, error 37.80/36.25
+  - seed 1: pair 30.58/18.99, agent 79.63/66.78, error 38.87/38.70
+  - seed 2: pair 31.30/19.50, agent 80.28/66.60, error 39.25/39.20
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.21/17.45, agent 77.59/62.42, error 37.14/36.15
+  - seed 1: pair 29.88/17.59, agent 77.58/64.46, error 38.44/36.66
+  - seed 2: pair 29.81/18.86, agent 78.59/65.69, error 38.11/38.41
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.40/18.72, agent 81.62/66.77, error 39.05/37.19
+  - seed 1: pair 29.93/18.27, agent 81.68/67.45, error 39.54/37.94
+  - seed 2: pair 29.64/18.86, agent 80.23/69.72, error 39.39/38.15
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.21/17.45, agent 77.59/62.42, error 37.14/36.15
+  - seed 1: pair 29.88/17.59, agent 77.58/64.46, error 38.44/36.66
+  - seed 2: pair 29.81/18.86, agent 78.59/65.69, error 38.11/38.41
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.31/17.47, agent 77.89/62.79, error 37.04/36.03
+  - seed 1: pair 29.92/17.59, agent 78.03/64.88, error 38.45/36.70
+  - seed 2: pair 29.81/18.81, agent 78.83/65.28, error 38.04/38.28
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.71/21.61, agent 83.07/70.03, error 41.81/40.72
+  - seed 1: pair 31.36/21.86, agent 80.82/63.57, error 41.08/41.10
+  - seed 2: pair 32.69/21.32, agent 80.96/63.04, error 42.20/41.72
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.82/21.41, agent 81.53/66.81, error 41.51/40.32
+  - seed 1: pair 31.22/22.06, agent 80.66/63.66, error 40.66/40.96
+  - seed 2: pair 32.47/19.84, agent 80.94/61.27, error 40.97/38.43
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.68/21.60, agent 82.94/69.94, error 41.79/40.69
+  - seed 1: pair 31.33/21.85, agent 80.80/64.30, error 41.11/41.12
+  - seed 2: pair 32.69/21.32, agent 80.96/63.04, error 42.20/41.72
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.71/21.50, agent 83.14/69.31, error 41.86/40.75
+  - seed 1: pair 31.40/21.86, agent 80.72/64.28, error 41.17/41.17
+  - seed 2: pair 32.90/21.51, agent 81.04/61.85, error 42.46/42.02
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.78/17.42, agent 77.17/61.88, error 35.17/34.01
+  - seed 1: pair 31.35/19.45, agent 79.29/64.52, error 39.11/39.02
+  - seed 2: pair 29.29/16.69, agent 76.37/62.20, error 37.29/36.37
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.17/18.88, agent 81.76/63.50, error 39.01/37.84
+  - seed 1: pair 31.23/18.98, agent 80.64/66.82, error 39.92/39.65
+  - seed 2: pair 27.05/17.63, agent 81.62/64.75, error 37.57/37.29
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.77/17.42, agent 77.14/61.83, error 35.17/34.01
+  - seed 1: pair 31.35/19.45, agent 79.29/64.52, error 39.11/39.02
+  - seed 2: pair 29.28/16.62, agent 76.34/60.20, error 37.35/36.44
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.84/17.50, agent 77.14/60.86, error 35.17/34.02
+  - seed 1: pair 31.36/19.46, agent 79.49/64.63, error 39.12/39.04
+  - seed 2: pair 29.14/16.40, agent 76.25/59.82, error 37.13/36.20
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.17/17.71, agent 75.64/65.77, error 37.12/36.40
+  - seed 1: pair 29.80/18.45, agent 76.37/59.19, error 38.25/38.43
+  - seed 2: pair 24.83/17.13, agent 82.07/70.75, error 37.35/37.88
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.09/18.27, agent 81.01/69.37, error 37.85/37.35
+  - seed 1: pair 28.43/18.04, agent 80.26/64.65, error 39.43/38.14
+  - seed 2: pair 26.91/16.72, agent 81.21/66.68, error 37.43/36.56
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.17/17.71, agent 75.64/65.77, error 37.12/36.40
+  - seed 1: pair 29.80/18.45, agent 76.37/59.19, error 38.25/38.43
+  - seed 2: pair 24.82/17.06, agent 82.04/68.39, error 37.35/37.88
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.28/17.75, agent 75.90/66.06, error 37.00/36.24
+  - seed 1: pair 29.89/18.52, agent 76.46/60.34, error 38.16/38.34
+  - seed 2: pair 24.87/17.18, agent 82.47/71.48, error 37.35/37.89
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.79/21.61, agent 81.58/65.17, error 38.99/38.81
+  - seed 1: pair 32.06/20.89, agent 81.52/67.44, error 40.76/40.56
+  - seed 2: pair 32.19/21.18, agent 81.66/63.91, error 41.15/40.50
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.99/20.82, agent 82.13/66.88, error 40.19/39.68
+  - seed 1: pair 32.16/20.90, agent 81.02/64.01, error 40.89/40.68
+  - seed 2: pair 31.79/22.21, agent 82.88/65.83, error 41.98/41.81
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.78/21.52, agent 81.55/62.99, error 39.04/38.87
+  - seed 1: pair 32.04/20.81, agent 81.46/64.19, error 40.79/40.62
+  - seed 2: pair 32.19/21.18, agent 81.66/63.91, error 41.15/40.50
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.79/21.61, agent 81.51/65.06, error 38.99/38.80
+  - seed 1: pair 32.06/20.91, agent 81.37/64.17, error 40.76/40.59
+  - seed 2: pair 32.19/21.17, agent 81.74/63.98, error 41.09/40.42
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.47/18.86, agent 76.77/63.59, error 38.99/38.09
+  - seed 1: pair 31.28/18.74, agent 76.48/63.72, error 38.81/38.22
+  - seed 2: pair 31.61/18.76, agent 76.99/63.04, error 40.51/40.01
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.27/19.16, agent 81.06/69.36, error 40.45/39.04
+  - seed 1: pair 31.22/18.80, agent 79.59/63.01, error 39.48/37.91
+  - seed 2: pair 30.45/18.57, agent 80.85/68.19, error 40.74/39.65
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.47/18.86, agent 76.77/63.59, error 38.99/38.09
+  - seed 1: pair 31.28/18.74, agent 76.48/63.72, error 38.81/38.22
+  - seed 2: pair 31.61/18.76, agent 76.99/63.04, error 40.51/40.01
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.28/19.56, agent 82.73/72.30, error 37.94/38.09
+  - seed 1: pair 31.61/18.63, agent 77.04/61.57, error 38.93/38.26
+  - seed 2: pair 31.81/18.84, agent 77.07/63.00, error 40.65/40.13
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.93/21.09, agent 76.81/64.65, error 39.59/39.46
+  - seed 1: pair 31.52/19.35, agent 75.67/60.31, error 39.22/38.41
+  - seed 2: pair 31.96/19.18, agent 76.07/63.13, error 39.06/38.52
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.08/20.86, agent 80.65/70.68, error 40.26/39.10
+  - seed 1: pair 30.34/19.40, agent 79.00/68.25, error 39.44/39.13
+  - seed 2: pair 29.94/18.88, agent 81.03/68.86, error 39.53/38.92
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.93/21.09, agent 76.81/64.65, error 39.59/39.46
+  - seed 1: pair 31.52/19.35, agent 75.67/60.31, error 39.22/38.41
+  - seed 2: pair 31.96/19.18, agent 76.07/63.13, error 39.06/38.52
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.86/21.04, agent 77.14/65.10, error 39.51/39.32
+  - seed 1: pair 31.55/19.26, agent 75.93/61.68, error 39.27/38.39
+  - seed 2: pair 32.09/19.23, agent 77.14/65.09, error 39.06/38.50
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.31/21.49, agent 79.09/64.16, error 41.14/40.18
+  - seed 1: pair 33.37/21.52, agent 79.57/67.64, error 41.25/40.73
+  - seed 2: pair 32.32/21.79, agent 78.01/60.26, error 39.19/38.67
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.27/21.16, agent 80.40/66.31, error 40.52/39.98
+  - seed 1: pair 33.57/21.98, agent 78.80/67.80, error 41.12/41.21
+  - seed 2: pair 31.36/21.71, agent 80.26/65.72, error 39.73/39.14
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.34/21.54, agent 79.07/64.42, error 41.18/40.20
+  - seed 1: pair 33.37/21.43, agent 79.49/65.22, error 41.25/40.73
+  - seed 2: pair 32.31/21.79, agent 77.98/60.18, error 39.18/38.66
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.31/21.54, agent 79.17/64.26, error 41.14/40.19
+  - seed 1: pair 33.44/21.60, agent 79.72/67.54, error 41.32/40.79
+  - seed 2: pair 32.50/21.90, agent 78.56/61.77, error 39.26/38.70
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.91/17.41, agent 76.11/58.94, error 38.23/36.70
+  - seed 1: pair 31.09/18.75, agent 79.08/65.23, error 38.87/38.26
+  - seed 2: pair 31.79/19.00, agent 77.62/61.89, error 39.49/39.36
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.89/17.43, agent 80.72/62.03, error 38.85/36.73
+  - seed 1: pair 30.15/19.46, agent 81.09/71.17, error 40.15/39.39
+  - seed 2: pair 30.54/19.46, agent 80.03/64.80, error 40.84/40.14
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.91/17.41, agent 76.11/58.94, error 38.23/36.70
+  - seed 1: pair 31.08/18.74, agent 79.12/65.25, error 38.87/38.26
+  - seed 2: pair 31.79/19.00, agent 77.62/61.89, error 39.49/39.36
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.83/17.40, agent 76.28/59.40, error 38.07/36.48
+  - seed 1: pair 31.15/18.74, agent 79.37/67.02, error 38.73/38.07
+  - seed 2: pair 31.76/18.93, agent 77.55/61.88, error 39.46/39.29
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.02/18.10, agent 76.21/63.03, error 37.00/35.88
+  - seed 1: pair 30.58/19.13, agent 76.30/58.88, error 38.69/37.04
+  - seed 2: pair 29.84/17.79, agent 74.77/59.14, error 37.55/35.00
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.55/17.96, agent 79.95/71.71, error 38.63/35.76
+  - seed 1: pair 29.27/19.62, agent 79.82/64.28, error 40.09/38.67
+  - seed 2: pair 27.48/18.86, agent 80.85/68.10, error 38.26/36.98
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.02/18.10, agent 76.21/63.03, error 37.00/35.88
+  - seed 1: pair 30.58/19.13, agent 76.30/58.88, error 38.69/37.04
+  - seed 2: pair 29.84/17.79, agent 74.77/59.14, error 37.55/35.00
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.09/18.09, agent 76.62/67.26, error 37.00/35.87
+  - seed 1: pair 30.65/19.14, agent 76.55/57.26, error 38.76/37.11
+  - seed 2: pair 29.62/17.45, agent 75.02/59.01, error 37.24/34.56
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.06/19.54, agent 80.53/64.65, error 38.76/37.95
+  - seed 1: pair 32.92/21.57, agent 82.37/66.42, error 42.38/41.94
+  - seed 2: pair 32.13/20.93, agent 79.08/59.08, error 40.16/39.02
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.19/19.89, agent 80.30/64.88, error 38.89/38.09
+  - seed 1: pair 32.93/21.66, agent 82.32/65.98, error 42.32/41.90
+  - seed 2: pair 32.16/21.06, agent 81.60/62.19, error 41.24/38.89
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.06/19.54, agent 80.53/64.65, error 38.76/37.95
+  - seed 1: pair 32.92/21.57, agent 82.37/66.42, error 42.38/41.94
+  - seed 2: pair 32.18/20.98, agent 79.09/59.38, error 40.22/39.06
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.06/19.61, agent 80.61/64.33, error 38.82/37.97
+  - seed 1: pair 32.93/21.66, agent 82.32/65.98, error 42.32/41.90
+  - seed 2: pair 32.16/20.80, agent 79.36/59.31, error 40.00/38.80
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.69/18.81, agent 77.33/63.31, error 39.61/38.50
+  - seed 1: pair 31.02/18.83, agent 76.97/63.20, error 38.77/37.96
+  - seed 2: pair 30.95/18.64, agent 78.05/64.39, error 39.56/39.17
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.02/20.04, agent 80.73/66.34, error 40.87/40.74
+  - seed 1: pair 30.61/19.77, agent 79.98/65.06, error 40.73/39.64
+  - seed 2: pair 29.67/19.38, agent 81.42/68.04, error 39.16/38.65
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.69/18.81, agent 77.33/63.31, error 39.61/38.50
+  - seed 1: pair 31.02/18.83, agent 76.97/63.20, error 38.77/37.96
+  - seed 2: pair 30.95/18.64, agent 78.05/64.39, error 39.56/39.17
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.65/18.80, agent 77.42/63.51, error 39.50/38.34
+  - seed 1: pair 31.06/18.95, agent 77.20/62.82, error 38.79/38.01
+  - seed 2: pair 31.04/18.71, agent 77.96/63.94, error 39.73/39.29
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.36/18.52, agent 77.02/63.03, error 37.70/36.85
+  - seed 1: pair 29.76/17.07, agent 75.97/61.20, error 38.64/36.86
+  - seed 2: pair 29.61/17.81, agent 76.39/65.03, error 37.53/36.40
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.53/17.51, agent 79.68/67.13, error 38.60/36.87
+  - seed 1: pair 30.14/18.23, agent 79.81/63.91, error 40.51/38.56
+  - seed 2: pair 29.00/18.22, agent 79.91/67.37, error 39.44/37.71
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.35/18.52, agent 76.99/62.85, error 37.69/36.84
+  - seed 1: pair 29.76/17.07, agent 75.97/61.20, error 38.64/36.86
+  - seed 2: pair 29.61/17.81, agent 76.39/65.03, error 37.53/36.40
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.32/18.37, agent 77.30/63.41, error 37.75/36.89
+  - seed 1: pair 29.70/16.99, agent 76.41/61.18, error 38.48/36.69
+  - seed 2: pair 29.68/17.82, agent 76.06/64.60, error 37.61/36.34
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.58/20.82, agent 80.42/64.84, error 40.72/40.03
+  - seed 1: pair 33.90/22.26, agent 80.70/66.29, error 42.65/42.41
+  - seed 2: pair 32.69/21.44, agent 81.43/67.19, error 41.06/41.21
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.36/19.79, agent 81.07/65.23, error 40.69/38.55
+  - seed 1: pair 33.72/22.62, agent 80.93/68.31, error 42.60/42.38
+  - seed 2: pair 33.02/21.48, agent 81.28/68.45, error 42.51/41.59
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.62/20.84, agent 80.44/64.91, error 40.78/40.08
+  - seed 1: pair 33.90/22.26, agent 80.70/66.29, error 42.65/42.41
+  - seed 2: pair 32.69/21.44, agent 81.43/67.19, error 41.06/41.21
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.62/20.83, agent 80.44/65.33, error 40.78/40.06
+  - seed 1: pair 33.84/22.24, agent 80.62/66.48, error 42.59/42.32
+  - seed 2: pair 32.69/21.43, agent 81.43/67.11, error 40.93/41.01
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.51/18.48, agent 77.48/58.21, error 39.08/38.12
+  - seed 1: pair 31.02/18.85, agent 77.89/66.40, error 38.23/37.91
+  - seed 2: pair 30.88/18.20, agent 76.49/60.35, error 38.58/38.20
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.43/18.90, agent 81.35/65.17, error 40.13/38.92
+  - seed 1: pair 31.22/20.19, agent 80.70/69.90, error 40.71/40.47
+  - seed 2: pair 31.21/19.47, agent 79.77/62.33, error 40.99/40.43
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/18.52, agent 77.42/58.36, error 39.12/38.10
+  - seed 1: pair 31.02/18.85, agent 77.89/66.40, error 38.23/37.91
+  - seed 2: pair 30.88/18.20, agent 76.49/60.35, error 38.58/38.20
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/18.44, agent 77.82/60.20, error 39.19/38.18
+  - seed 1: pair 31.02/19.04, agent 78.29/67.52, error 38.23/37.89
+  - seed 2: pair 30.95/18.25, agent 77.05/61.29, error 38.58/38.26
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.32/19.77, agent 75.26/58.78, error 38.70/38.16
+  - seed 1: pair 29.71/18.28, agent 75.89/62.03, error 37.32/35.73
+  - seed 2: pair 24.67/18.46, agent 80.85/67.83, error 37.07/37.58
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.41/19.88, agent 78.66/64.50, error 39.30/38.76
+  - seed 1: pair 29.20/18.20, agent 79.48/61.10, error 39.10/37.12
+  - seed 2: pair 27.96/18.96, agent 80.85/67.38, error 39.15/37.03
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.32/19.77, agent 75.26/58.78, error 38.70/38.16
+  - seed 1: pair 29.71/18.28, agent 75.89/62.03, error 37.32/35.73
+  - seed 2: pair 24.67/18.46, agent 80.85/67.83, error 37.07/37.58
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.34/19.62, agent 75.42/60.05, error 38.85/38.35
+  - seed 1: pair 29.72/18.23, agent 76.24/58.71, error 37.10/35.65
+  - seed 2: pair 24.71/18.56, agent 81.18/68.66, error 37.03/37.53
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.62/21.86, agent 80.25/61.17, error 40.27/39.73
+  - seed 1: pair 31.78/20.83, agent 79.95/63.29, error 39.93/39.58
+  - seed 2: pair 29.78/18.31, agent 79.42/61.17, error 38.54/37.29
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.68/20.66, agent 80.51/63.40, error 39.34/37.16
+  - seed 1: pair 30.33/20.31, agent 81.36/64.56, error 39.82/38.19
+  - seed 2: pair 29.41/18.29, agent 80.88/63.66, error 38.96/36.68
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.64/21.82, agent 80.28/61.98, error 40.35/39.77
+  - seed 1: pair 31.78/20.83, agent 79.95/63.29, error 39.93/39.58
+  - seed 2: pair 29.78/18.31, agent 79.42/61.17, error 38.54/37.29
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.55/21.79, agent 80.56/61.96, error 40.20/39.64
+  - seed 1: pair 31.65/20.78, agent 80.03/62.56, error 39.80/39.42
+  - seed 2: pair 29.78/18.31, agent 79.34/61.26, error 38.40/37.14
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.59/19.08, agent 75.18/58.62, error 39.02/37.75
+  - seed 1: pair 30.87/19.16, agent 77.59/61.66, error 37.58/36.86
+  - seed 2: pair 31.44/18.90, agent 76.13/59.85, error 39.19/38.99
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.30/19.21, agent 79.31/64.55, error 39.82/38.82
+  - seed 1: pair 30.85/20.25, agent 80.77/65.20, error 39.79/38.67
+  - seed 2: pair 30.42/18.73, agent 78.86/65.06, error 41.20/39.38
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.59/19.08, agent 75.18/58.62, error 39.02/37.75
+  - seed 1: pair 30.87/19.16, agent 77.59/61.66, error 37.58/36.86
+  - seed 2: pair 31.44/18.90, agent 76.13/59.85, error 39.19/38.99
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.59/19.08, agent 75.59/58.94, error 39.02/37.75
+  - seed 1: pair 30.96/19.28, agent 77.69/61.90, error 37.67/36.92
+  - seed 2: pair 31.44/18.88, agent 76.54/60.41, error 39.19/38.94
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.34/17.97, agent 75.43/63.11, error 38.75/37.10
+  - seed 1: pair 31.07/19.81, agent 76.75/61.27, error 38.73/38.65
+  - seed 2: pair 30.58/19.05, agent 77.10/62.62, error 38.65/37.72
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.31/17.37, agent 78.53/66.71, error 39.65/37.16
+  - seed 1: pair 27.71/18.80, agent 81.97/67.64, error 37.01/37.68
+  - seed 2: pair 30.47/18.64, agent 80.06/67.98, error 39.22/36.50
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.34/17.97, agent 75.43/63.11, error 38.75/37.10
+  - seed 1: pair 31.07/19.81, agent 76.75/61.27, error 38.73/38.65
+  - seed 2: pair 30.58/19.05, agent 77.10/62.62, error 38.65/37.72
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.28/17.91, agent 75.55/63.17, error 38.76/37.04
+  - seed 1: pair 31.20/19.88, agent 77.17/61.86, error 38.95/38.89
+  - seed 2: pair 30.65/19.00, agent 77.35/63.09, error 38.65/37.78
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.99/20.90, agent 79.86/65.84, error 40.70/41.12
+  - seed 1: pair 32.85/21.50, agent 80.23/65.52, error 42.12/42.19
+  - seed 2: pair 32.47/21.68, agent 81.41/64.60, error 41.63/42.24
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.12/21.17, agent 80.63/67.34, error 40.89/41.66
+  - seed 1: pair 31.96/21.10, agent 80.60/66.82, error 41.78/41.46
+  - seed 2: pair 33.94/21.48, agent 78.70/62.70, error 41.51/41.12
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.98/20.89, agent 79.83/65.72, error 40.70/41.12
+  - seed 1: pair 32.87/21.44, agent 80.18/63.53, error 42.22/42.30
+  - seed 2: pair 32.43/21.66, agent 81.36/64.62, error 41.58/42.21
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.02/20.89, agent 80.29/66.95, error 40.65/41.03
+  - seed 1: pair 32.88/21.44, agent 80.21/65.54, error 42.17/42.23
+  - seed 2: pair 32.47/21.68, agent 81.56/64.76, error 41.56/42.17
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.92/19.51, agent 79.24/63.40, error 38.69/37.54
+  - seed 1: pair 32.17/19.33, agent 75.88/61.91, error 38.77/38.33
+  - seed 2: pair 31.31/18.79, agent 76.10/64.17, error 39.00/38.59
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.40/20.04, agent 81.02/66.28, error 39.48/37.14
+  - seed 1: pair 30.81/19.61, agent 79.88/65.93, error 39.49/39.03
+  - seed 2: pair 29.63/18.54, agent 80.22/67.51, error 39.34/37.65
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.92/19.51, agent 79.24/63.40, error 38.69/37.54
+  - seed 1: pair 32.17/19.33, agent 75.88/61.91, error 38.77/38.33
+  - seed 2: pair 31.31/18.79, agent 76.10/64.17, error 39.00/38.59
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.80/19.32, agent 79.06/63.85, error 38.70/37.56
+  - seed 1: pair 32.17/19.35, agent 76.21/63.11, error 38.77/38.35
+  - seed 2: pair 31.16/18.77, agent 76.44/64.46, error 38.77/38.37
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.28/17.97, agent 77.03/64.30, error 39.08/38.48
+  - seed 1: pair 31.83/19.83, agent 78.03/67.60, error 39.27/39.23
+  - seed 2: pair 30.86/19.30, agent 74.98/64.29, error 37.56/36.13
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.16/18.84, agent 79.11/68.58, error 40.87/39.77
+  - seed 1: pair 31.11/19.85, agent 79.85/70.01, error 41.28/40.03
+  - seed 2: pair 28.95/19.29, agent 80.44/69.67, error 36.86/36.51
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.28/17.97, agent 77.03/64.30, error 39.08/38.48
+  - seed 1: pair 31.83/19.83, agent 78.03/67.60, error 39.27/39.23
+  - seed 2: pair 30.86/19.22, agent 74.98/64.41, error 37.56/36.12
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.25/18.01, agent 76.99/63.92, error 38.81/38.20
+  - seed 1: pair 31.55/19.46, agent 77.86/66.54, error 38.75/38.69
+  - seed 2: pair 30.87/19.38, agent 75.52/64.56, error 37.50/36.00
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.81/20.50, agent 80.83/66.14, error 41.79/42.00
+  - seed 1: pair 33.49/20.91, agent 80.89/66.83, error 41.72/41.03
+  - seed 2: pair 31.44/20.24, agent 78.83/61.82, error 39.58/38.77
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.68/20.36, agent 81.81/66.11, error 41.15/41.20
+  - seed 1: pair 33.69/21.28, agent 80.37/66.14, error 42.24/42.18
+  - seed 2: pair 30.91/19.50, agent 80.20/62.12, error 39.04/38.22
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.81/20.50, agent 80.83/66.14, error 41.79/42.00
+  - seed 1: pair 33.48/20.91, agent 80.86/66.81, error 41.71/41.02
+  - seed 2: pair 31.44/20.24, agent 78.83/61.82, error 39.58/38.77
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.66/20.32, agent 80.70/66.04, error 41.64/41.83
+  - seed 1: pair 33.48/20.89, agent 80.78/66.58, error 41.84/41.11
+  - seed 2: pair 31.44/20.31, agent 79.07/61.90, error 39.58/38.76
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.56/18.57, agent 77.00/64.28, error 38.84/38.16
+  - seed 1: pair 30.96/18.31, agent 77.11/63.41, error 37.86/37.03
+  - seed 2: pair 30.50/18.38, agent 77.02/63.23, error 37.92/36.36
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.02/18.13, agent 80.32/66.26, error 39.74/38.69
+  - seed 1: pair 29.86/18.33, agent 81.38/69.09, error 39.52/37.23
+  - seed 2: pair 30.08/18.12, agent 81.34/69.32, error 39.23/36.19
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.56/18.57, agent 77.00/64.28, error 38.84/38.16
+  - seed 1: pair 30.96/18.31, agent 77.11/63.41, error 37.86/37.03
+  - seed 2: pair 30.50/18.38, agent 77.02/63.23, error 37.92/36.36
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.57/18.53, agent 77.44/64.02, error 38.46/37.86
+  - seed 1: pair 30.94/18.29, agent 77.74/63.85, error 37.80/36.96
+  - seed 2: pair 30.65/18.50, agent 77.65/64.39, error 38.12/36.61
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.75/16.85, agent 76.68/65.05, error 37.04/35.96
+  - seed 1: pair 30.36/17.02, agent 76.10/66.40, error 37.41/35.20
+  - seed 2: pair 30.33/18.39, agent 77.40/61.22, error 38.11/37.23
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.82/17.88, agent 78.97/68.44, error 39.61/37.46
+  - seed 1: pair 28.90/18.56, agent 79.31/65.97, error 38.67/37.49
+  - seed 2: pair 30.04/18.75, agent 81.39/68.15, error 39.28/37.99
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.75/16.85, agent 76.68/65.05, error 37.04/35.96
+  - seed 1: pair 30.36/17.02, agent 76.10/66.40, error 37.41/35.20
+  - seed 2: pair 30.33/18.39, agent 77.40/61.22, error 38.11/37.23
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.75/16.86, agent 76.52/64.59, error 37.12/36.11
+  - seed 1: pair 30.29/17.01, agent 76.01/65.11, error 37.34/35.11
+  - seed 2: pair 30.47/18.41, agent 77.72/65.50, error 38.11/37.24
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.02/20.49, agent 80.80/67.81, error 40.19/39.42
+  - seed 1: pair 31.25/20.56, agent 80.30/64.96, error 40.15/39.83
+  - seed 2: pair 32.63/21.25, agent 80.51/65.29, error 40.82/39.94
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.04/20.16, agent 81.00/68.21, error 40.51/37.95
+  - seed 1: pair 31.48/20.75, agent 79.84/64.51, error 40.65/39.96
+  - seed 2: pair 33.08/21.09, agent 82.62/63.97, error 41.98/38.90
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.01/20.49, agent 80.84/67.83, error 40.18/39.41
+  - seed 1: pair 31.24/20.48, agent 80.27/62.80, error 40.20/39.89
+  - seed 2: pair 32.62/21.25, agent 80.40/65.24, error 40.80/39.93
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.02/20.49, agent 80.97/66.42, error 40.10/39.32
+  - seed 1: pair 31.24/20.46, agent 80.42/62.94, error 40.20/39.87
+  - seed 2: pair 32.55/21.14, agent 80.47/65.28, error 40.52/39.64
+- flat_mlp_base_min | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.08/19.69, agent 77.90/66.41, error 39.17/38.39
+  - seed 1: pair 32.29/19.34, agent 76.69/62.34, error 39.64/38.76
+  - seed 2: pair 32.01/19.87, agent 79.77/64.01, error 41.17/40.66
+- flat_mlp_base_perclass | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.37/20.76, agent 81.90/69.29, error 41.22/40.44
+  - seed 1: pair 32.42/20.22, agent 80.80/65.52, error 41.75/41.22
+  - seed 2: pair 31.34/19.96, agent 81.46/67.34, error 41.18/39.46
+- flat_mlp_base_pm | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.08/19.69, agent 77.90/66.41, error 39.17/38.39
+  - seed 1: pair 32.29/19.34, agent 76.69/62.34, error 39.64/38.76
+  - seed 2: pair 32.01/19.87, agent 79.77/64.01, error 41.17/40.66
+- flat_mlp_base_prod | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.08/19.67, agent 78.06/66.72, error 39.09/38.31
+  - seed 1: pair 32.29/19.32, agent 77.04/62.05, error 39.55/38.66
+  - seed 2: pair 32.14/19.99, agent 79.92/65.06, error 41.24/40.69
+- flat_mlp_namedrop_min | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/20.13, agent 78.92/66.96, error 39.14/38.51
+  - seed 1: pair 30.21/18.15, agent 76.05/65.95, error 39.08/37.22
+  - seed 2: pair 30.21/19.17, agent 76.91/64.28, error 38.85/39.09
+- flat_mlp_namedrop_perclass | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.13/20.56, agent 80.98/69.65, error 40.58/39.06
+  - seed 1: pair 27.21/18.21, agent 80.49/64.90, error 37.71/36.69
+  - seed 2: pair 28.99/19.46, agent 81.09/69.44, error 39.30/39.08
+- flat_mlp_namedrop_pm | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/20.13, agent 78.92/66.96, error 39.14/38.51
+  - seed 1: pair 30.21/18.15, agent 76.05/65.95, error 39.08/37.22
+  - seed 2: pair 30.14/19.15, agent 76.83/64.03, error 38.78/39.02
+- flat_mlp_namedrop_prod | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.68/20.01, agent 79.05/67.21, error 39.26/38.69
+  - seed 1: pair 29.84/17.93, agent 76.40/62.78, error 38.46/36.10
+  - seed 2: pair 30.28/19.19, agent 77.39/64.67, error 38.70/38.97
+- flat_mlp_peernd_min | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.11/22.12, agent 80.89/65.06, error 41.33/40.04
+  - seed 1: pair 33.95/22.22, agent 81.49/64.75, error 42.90/42.31
+  - seed 2: pair 31.76/20.96, agent 80.97/64.88, error 41.40/41.14
+- flat_mlp_peernd_perclass | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.85/21.08, agent 80.58/67.00, error 40.88/39.60
+  - seed 1: pair 33.57/21.12, agent 79.39/61.33, error 42.22/40.16
+  - seed 2: pair 32.21/21.16, agent 81.05/65.69, error 41.88/40.35
+- flat_mlp_peernd_pm | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.11/22.12, agent 80.89/65.06, error 41.33/40.04
+  - seed 1: pair 33.95/22.22, agent 81.49/64.75, error 42.90/42.31
+  - seed 2: pair 31.75/20.96, agent 80.94/64.86, error 41.40/41.14
+- flat_mlp_peernd_prod | scored on test | split tag test_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.18/22.24, agent 80.97/66.94, error 41.40/40.10
+  - seed 1: pair 33.89/22.21, agent 81.41/64.62, error 42.90/42.31
+  - seed 2: pair 31.75/20.96, agent 81.09/63.75, error 41.40/41.14
+- flat_mlp_base_min | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.48/20.07, agent 83.31/76.42, error 36.52/35.73
+  - seed 1: pair 24.33/20.60, agent 82.34/75.75, error 36.90/36.26
+  - seed 2: pair 24.02/19.67, agent 82.97/76.52, error 37.36/36.76
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.82/19.89, agent 83.01/74.69, error 37.44/36.57
+  - seed 1: pair 25.42/20.66, agent 82.13/72.88, error 37.97/36.85
+  - seed 2: pair 24.99/19.68, agent 82.40/72.92, error 37.73/36.38
+- flat_mlp_base_pm | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.48/20.07, agent 83.31/76.42, error 36.52/35.73
+  - seed 1: pair 24.33/20.60, agent 82.34/75.75, error 36.90/36.26
+  - seed 2: pair 24.01/19.58, agent 82.97/76.18, error 37.36/36.76
+- flat_mlp_base_prod | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.54/20.04, agent 83.77/74.30, error 36.47/35.70
+  - seed 1: pair 24.38/20.75, agent 82.54/74.65, error 36.76/36.10
+  - seed 2: pair 24.09/19.53, agent 83.26/73.65, error 37.21/36.63
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.52/19.39, agent 81.73/74.96, error 37.13/36.94
+  - seed 1: pair 24.70/19.69, agent 83.18/77.26, error 37.18/36.98
+  - seed 2: pair 25.30/19.61, agent 82.11/73.96, error 37.32/36.91
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.42/19.25, agent 80.95/73.19, error 37.90/36.58
+  - seed 1: pair 24.94/19.44, agent 83.20/77.39, error 37.41/36.52
+  - seed 2: pair 25.72/19.31, agent 82.41/73.95, error 37.50/36.41
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.52/19.39, agent 81.73/74.96, error 37.13/36.94
+  - seed 1: pair 24.70/19.69, agent 83.18/77.26, error 37.18/36.98
+  - seed 2: pair 25.30/19.61, agent 82.11/73.96, error 37.32/36.91
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.53/19.43, agent 81.84/74.58, error 37.10/36.91
+  - seed 1: pair 24.70/19.78, agent 83.22/77.40, error 37.20/36.99
+  - seed 2: pair 25.35/19.67, agent 82.46/74.01, error 37.25/36.84
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.63/19.24, agent 84.30/78.04, error 35.74/35.29
+  - seed 1: pair 23.84/20.59, agent 84.16/77.40, error 37.34/37.04
+  - seed 2: pair 23.37/19.74, agent 83.90/76.47, error 36.83/36.45
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.97/20.00, agent 83.91/77.15, error 37.56/37.72
+  - seed 1: pair 25.34/21.46, agent 83.98/77.21, error 37.93/38.08
+  - seed 2: pair 25.13/19.34, agent 83.39/75.19, error 37.44/37.46
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.63/19.24, agent 84.32/78.05, error 35.74/35.29
+  - seed 1: pair 23.84/20.59, agent 84.17/77.40, error 37.34/37.04
+  - seed 2: pair 23.37/19.74, agent 83.90/76.47, error 36.83/36.45
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.64/19.25, agent 84.56/77.81, error 35.76/35.33
+  - seed 1: pair 23.89/20.67, agent 84.45/77.52, error 37.36/37.05
+  - seed 2: pair 23.44/19.73, agent 84.15/75.85, error 36.84/36.45
+- flat_mlp_base_min | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.42/19.37, agent 83.67/78.81, error 36.13/35.69
+  - seed 1: pair 23.30/18.85, agent 83.04/77.28, error 36.34/35.58
+  - seed 2: pair 23.20/18.96, agent 82.71/77.08, error 36.75/36.42
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.91/18.54, agent 83.46/78.07, error 36.66/35.68
+  - seed 1: pair 23.69/18.07, agent 83.04/76.13, error 36.70/35.21
+  - seed 2: pair 23.57/17.41, agent 82.77/76.57, error 37.07/35.39
+- flat_mlp_base_pm | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.42/19.37, agent 83.67/78.81, error 36.13/35.69
+  - seed 1: pair 23.30/18.85, agent 83.04/77.28, error 36.34/35.58
+  - seed 2: pair 23.21/18.96, agent 82.70/77.08, error 36.75/36.42
+- flat_mlp_base_prod | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.39/19.32, agent 83.99/78.31, error 36.04/35.58
+  - seed 1: pair 23.29/18.79, agent 83.22/76.69, error 36.32/35.55
+  - seed 2: pair 23.16/18.86, agent 83.00/77.44, error 36.72/36.40
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.92/18.15, agent 84.17/78.64, error 35.70/35.07
+  - seed 1: pair 25.05/18.76, agent 81.92/76.99, error 36.99/36.03
+  - seed 2: pair 24.74/18.86, agent 81.36/75.46, error 36.77/36.19
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.34/17.25, agent 84.06/77.11, error 36.14/34.32
+  - seed 1: pair 25.18/18.74, agent 82.06/76.98, error 36.94/35.28
+  - seed 2: pair 24.76/18.93, agent 81.68/74.80, error 36.75/36.16
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.92/18.15, agent 84.17/78.64, error 35.70/35.07
+  - seed 1: pair 25.05/18.76, agent 81.92/76.99, error 36.99/36.03
+  - seed 2: pair 24.74/18.86, agent 81.36/75.46, error 36.77/36.19
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.90/18.09, agent 84.27/77.57, error 35.65/35.02
+  - seed 1: pair 25.07/18.78, agent 82.09/77.13, error 37.01/36.04
+  - seed 2: pair 24.76/18.93, agent 81.68/74.80, error 36.75/36.16
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.62/20.33, agent 84.25/77.23, error 37.89/37.57
+  - seed 1: pair 24.31/20.52, agent 84.23/77.95, error 37.40/37.13
+  - seed 2: pair 25.45/20.40, agent 84.37/78.36, error 37.70/37.50
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.55/19.88, agent 83.45/75.72, error 38.87/37.80
+  - seed 1: pair 26.16/19.42, agent 83.67/73.24, error 38.63/37.17
+  - seed 2: pair 26.24/20.37, agent 83.64/76.66, error 38.39/38.30
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.61/20.32, agent 84.22/77.22, error 37.89/37.57
+  - seed 1: pair 24.31/20.52, agent 84.20/77.94, error 37.40/37.13
+  - seed 2: pair 25.45/20.40, agent 84.37/78.36, error 37.70/37.50
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.63/20.32, agent 84.35/77.86, error 37.89/37.58
+  - seed 1: pair 24.32/20.52, agent 84.42/78.20, error 37.34/37.07
+  - seed 2: pair 25.45/20.40, agent 84.41/78.38, error 37.71/37.51
+- flat_mlp_base_min | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.59/20.60, agent 84.10/78.72, error 36.70/36.45
+  - seed 1: pair 24.18/20.05, agent 83.49/77.72, error 36.44/35.93
+  - seed 2: pair 24.24/18.67, agent 82.24/75.41, error 36.97/36.06
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.82/19.12, agent 83.61/77.84, error 37.27/35.20
+  - seed 1: pair 25.18/19.39, agent 83.82/75.17, error 37.14/35.68
+  - seed 2: pair 24.76/18.35, agent 82.27/72.97, error 37.20/35.56
+- flat_mlp_base_pm | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.59/20.60, agent 84.10/78.72, error 36.70/36.45
+  - seed 1: pair 24.18/20.05, agent 83.47/77.71, error 36.43/35.93
+  - seed 2: pair 24.24/18.67, agent 82.24/75.41, error 36.97/36.06
+- flat_mlp_base_prod | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.59/20.61, agent 84.13/78.73, error 36.70/36.45
+  - seed 1: pair 24.12/19.93, agent 83.89/75.30, error 36.26/35.73
+  - seed 2: pair 24.30/18.73, agent 82.60/73.16, error 36.81/35.91
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.67/19.68, agent 83.22/78.45, error 36.93/36.02
+  - seed 1: pair 25.28/19.33, agent 81.57/74.71, error 36.80/35.90
+  - seed 2: pair 24.09/19.54, agent 83.47/77.60, error 36.66/35.93
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.80/19.85, agent 83.25/77.76, error 37.18/36.74
+  - seed 1: pair 25.91/18.04, agent 81.67/68.58, error 37.04/34.30
+  - seed 2: pair 24.75/18.80, agent 83.83/77.35, error 36.95/34.78
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.67/19.68, agent 83.22/78.45, error 36.93/36.02
+  - seed 1: pair 25.28/19.33, agent 81.57/74.71, error 36.80/35.90
+  - seed 2: pair 24.09/19.54, agent 83.44/77.59, error 36.65/35.92
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.66/19.61, agent 83.61/77.90, error 36.83/35.95
+  - seed 1: pair 25.32/19.26, agent 82.26/73.42, error 36.62/35.79
+  - seed 2: pair 24.13/19.47, agent 83.95/77.39, error 36.53/35.84
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.34/19.56, agent 84.90/77.02, error 36.99/36.80
+  - seed 1: pair 24.22/20.02, agent 84.21/77.44, error 37.69/37.19
+  - seed 2: pair 24.03/20.36, agent 84.43/76.18, error 37.83/37.33
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.15/20.04, agent 84.01/75.55, error 38.21/37.48
+  - seed 1: pair 25.56/20.27, agent 84.35/77.61, error 37.95/37.10
+  - seed 2: pair 25.30/19.35, agent 84.36/74.63, error 38.34/36.37
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.34/19.56, agent 84.90/77.02, error 36.99/36.80
+  - seed 1: pair 24.22/20.02, agent 84.21/77.44, error 37.69/37.19
+  - seed 2: pair 24.02/20.36, agent 84.36/76.15, error 37.83/37.33
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.28/19.54, agent 85.03/77.08, error 36.98/36.80
+  - seed 1: pair 24.25/19.99, agent 84.57/77.53, error 37.62/37.14
+  - seed 2: pair 24.02/20.05, agent 84.79/75.03, error 37.72/37.21
+- flat_mlp_base_min | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.49/20.08, agent 84.04/77.72, error 37.20/36.81
+  - seed 1: pair 24.77/20.92, agent 84.09/76.82, error 36.89/36.53
+  - seed 2: pair 24.24/19.83, agent 83.85/76.02, error 37.01/36.44
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.87/19.53, agent 83.12/73.96, error 38.07/37.00
+  - seed 1: pair 25.81/20.28, agent 83.96/72.03, error 37.30/36.48
+  - seed 2: pair 25.84/19.31, agent 83.62/74.47, error 38.01/36.42
+- flat_mlp_base_pm | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.53/20.09, agent 84.03/77.72, error 37.24/36.84
+  - seed 1: pair 24.77/20.91, agent 84.07/76.82, error 36.88/36.53
+  - seed 2: pair 24.23/19.83, agent 83.81/76.01, error 37.03/36.45
+- flat_mlp_base_prod | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.52/19.75, agent 84.27/74.65, error 37.18/36.79
+  - seed 1: pair 24.78/20.49, agent 84.34/72.07, error 36.71/36.35
+  - seed 2: pair 24.18/19.68, agent 84.20/76.18, error 36.85/36.32
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.36/21.16, agent 83.37/77.19, error 37.30/37.06
+  - seed 1: pair 24.63/21.15, agent 83.51/77.41, error 37.32/36.94
+  - seed 2: pair 23.71/20.47, agent 83.32/75.80, error 36.77/36.39
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.43/20.34, agent 82.62/72.33, error 38.63/36.91
+  - seed 1: pair 25.26/20.59, agent 83.23/77.69, error 37.16/35.63
+  - seed 2: pair 24.99/20.08, agent 83.13/76.10, error 37.39/36.11
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.34/21.06, agent 83.18/76.77, error 37.38/37.11
+  - seed 1: pair 24.63/21.15, agent 83.51/77.41, error 37.32/36.94
+  - seed 2: pair 23.71/20.47, agent 83.32/75.80, error 36.77/36.39
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.45/20.73, agent 83.92/73.06, error 37.14/36.92
+  - seed 1: pair 24.63/21.16, agent 83.55/78.07, error 37.32/36.95
+  - seed 2: pair 23.67/20.45, agent 83.53/77.12, error 36.67/36.31
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.89/20.13, agent 84.36/79.06, error 37.19/36.81
+  - seed 1: pair 23.59/20.23, agent 84.70/77.67, error 37.11/36.95
+  - seed 2: pair 24.06/20.21, agent 84.59/76.72, error 37.41/36.99
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.17/20.14, agent 84.42/76.19, error 37.89/37.67
+  - seed 1: pair 25.08/18.57, agent 84.30/78.75, error 37.98/35.69
+  - seed 2: pair 26.03/19.56, agent 84.40/75.55, error 37.68/36.20
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.89/20.13, agent 84.36/79.06, error 37.19/36.81
+  - seed 1: pair 23.59/20.23, agent 84.70/77.67, error 37.11/36.95
+  - seed 2: pair 24.05/20.21, agent 84.52/76.69, error 37.41/36.99
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.94/19.91, agent 85.03/76.35, error 37.13/36.77
+  - seed 1: pair 23.61/20.35, agent 84.91/79.17, error 37.08/36.90
+  - seed 2: pair 24.10/20.14, agent 84.94/76.32, error 37.33/36.91
+- flat_mlp_base_min | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.50/19.53, agent 83.35/77.30, error 36.72/36.30
+  - seed 1: pair 23.32/18.98, agent 83.14/78.00, error 35.85/35.13
+  - seed 2: pair 24.28/19.04, agent 82.73/78.42, error 36.62/36.05
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.90/19.09, agent 83.26/77.15, error 37.03/36.19
+  - seed 1: pair 24.14/18.00, agent 82.98/75.84, error 36.23/33.77
+  - seed 2: pair 24.86/18.45, agent 82.02/77.94, error 37.26/35.61
+- flat_mlp_base_pm | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.50/19.53, agent 83.35/77.30, error 36.72/36.30
+  - seed 1: pair 23.32/18.98, agent 83.14/78.00, error 35.85/35.13
+  - seed 2: pair 24.28/19.04, agent 82.73/78.42, error 36.62/36.05
+- flat_mlp_base_prod | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.50/19.54, agent 83.32/77.19, error 36.71/36.29
+  - seed 1: pair 23.31/18.63, agent 83.40/76.30, error 35.78/35.07
+  - seed 2: pair 24.26/19.02, agent 82.56/78.14, error 36.59/36.02
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.92/18.00, agent 80.99/76.98, error 36.27/35.17
+  - seed 1: pair 24.04/18.71, agent 81.14/77.96, error 36.30/35.33
+  - seed 2: pair 24.15/19.49, agent 82.26/77.50, error 36.37/35.56
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.96/17.64, agent 81.32/75.52, error 36.23/35.12
+  - seed 1: pair 24.12/18.35, agent 81.15/73.92, error 36.32/35.00
+  - seed 2: pair 24.60/19.51, agent 81.89/77.31, error 37.05/36.18
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.92/18.00, agent 80.99/76.98, error 36.27/35.17
+  - seed 1: pair 24.04/18.71, agent 81.14/77.96, error 36.30/35.33
+  - seed 2: pair 24.15/19.49, agent 82.26/77.50, error 36.37/35.56
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.91/17.93, agent 81.32/75.52, error 36.11/35.06
+  - seed 1: pair 24.05/18.78, agent 81.24/76.04, error 36.30/35.35
+  - seed 2: pair 24.14/19.49, agent 82.26/77.50, error 36.37/35.56
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.38/17.99, agent 83.62/76.95, error 36.18/35.40
+  - seed 1: pair 22.42/17.54, agent 83.57/77.52, error 35.76/35.17
+  - seed 2: pair 22.25/18.93, agent 83.71/72.42, error 36.09/35.69
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.73/17.63, agent 82.81/76.42, error 37.15/35.78
+  - seed 1: pair 23.39/18.14, agent 83.14/76.96, error 36.61/35.59
+  - seed 2: pair 23.25/17.19, agent 83.66/71.32, error 36.46/33.92
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.38/17.99, agent 83.62/76.95, error 36.18/35.40
+  - seed 1: pair 22.42/17.54, agent 83.57/77.52, error 35.76/35.17
+  - seed 2: pair 22.25/18.93, agent 83.71/72.42, error 36.09/35.69
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 22.43/18.05, agent 83.80/77.45, error 36.18/35.40
+  - seed 1: pair 22.42/17.55, agent 83.56/77.57, error 35.76/35.18
+  - seed 2: pair 22.27/18.83, agent 83.95/71.89, error 35.99/35.58
+- flat_mlp_base_min | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.71/25.87, agent 87.48/76.42, error 42.55/43.14
+  - seed 1: pair 31.15/25.54, agent 86.77/72.91, error 42.43/42.88
+  - seed 2: pair 36.92/26.60, agent 80.53/75.59, error 44.02/42.62
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.94/27.20, agent 86.13/79.41, error 44.71/43.28
+  - seed 1: pair 35.06/25.22, agent 84.90/70.54, error 44.86/43.54
+  - seed 2: pair 34.98/27.65, agent 86.71/80.78, error 44.74/44.51
+- flat_mlp_base_pm | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.70/25.75, agent 87.43/76.36, error 42.54/43.13
+  - seed 1: pair 31.16/25.33, agent 86.74/72.92, error 42.45/42.91
+  - seed 2: pair 36.91/26.48, agent 80.51/72.79, error 44.06/42.65
+- flat_mlp_base_prod | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.72/26.01, agent 87.56/79.75, error 42.51/43.08
+  - seed 1: pair 31.15/25.33, agent 86.81/74.05, error 42.45/42.89
+  - seed 2: pair 37.12/26.85, agent 80.80/75.97, error 44.15/42.72
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.20/24.95, agent 87.03/75.57, error 41.84/42.44
+  - seed 1: pair 36.62/25.80, agent 81.50/74.58, error 44.15/42.56
+  - seed 2: pair 36.96/25.90, agent 79.90/67.97, error 43.46/39.47
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.61/26.44, agent 85.69/73.37, error 43.92/41.57
+  - seed 1: pair 34.25/26.65, agent 86.69/78.06, error 43.85/43.34
+  - seed 2: pair 35.04/25.86, agent 85.21/71.41, error 43.72/40.57
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.19/24.83, agent 86.96/75.40, error 41.83/42.43
+  - seed 1: pair 36.60/25.57, agent 81.46/71.82, error 44.18/42.59
+  - seed 2: pair 36.96/25.79, agent 79.88/67.97, error 43.46/39.47
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.22/24.96, agent 86.99/75.54, error 41.89/42.49
+  - seed 1: pair 36.62/25.98, agent 81.68/75.29, error 44.19/42.58
+  - seed 2: pair 37.21/26.34, agent 79.85/66.54, error 43.63/39.61
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.27/27.96, agent 82.79/73.14, error 45.42/44.07
+  - seed 1: pair 38.80/27.35, agent 84.18/75.47, error 46.20/44.08
+  - seed 2: pair 38.26/27.22, agent 81.86/70.27, error 45.74/43.62
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.57/27.82, agent 86.51/74.44, error 45.93/45.48
+  - seed 1: pair 37.73/28.26, agent 86.35/78.14, error 46.45/45.25
+  - seed 2: pair 36.37/27.78, agent 85.91/73.95, error 45.74/44.79
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.27/27.96, agent 82.79/73.14, error 45.42/44.07
+  - seed 1: pair 38.77/27.21, agent 84.10/72.58, error 46.21/44.09
+  - seed 2: pair 38.22/27.07, agent 81.77/69.99, error 45.78/43.66
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.42/28.15, agent 82.81/72.67, error 45.52/44.13
+  - seed 1: pair 38.82/27.36, agent 84.46/75.72, error 46.26/44.17
+  - seed 2: pair 38.26/27.11, agent 81.86/69.98, error 45.69/43.59
+- flat_mlp_base_min | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.24/16.80, agent 83.00/76.47, error 35.20/34.52
+  - seed 0: pair 22.24/16.80, agent 83.00/76.47, error 35.20/34.52
+  - seed 1: pair 22.88/17.58, agent 82.69/75.06, error 35.64/34.94
+  - seed 1: pair 22.88/17.58, agent 82.69/75.06, error 35.64/34.94
+  - seed 2: pair 22.07/17.11, agent 82.96/75.47, error 35.31/34.50
+  - seed 2: pair 22.07/17.11, agent 82.96/75.47, error 35.31/34.50
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 23.22/16.66, agent 82.88/76.25, error 35.66/34.37
+  - seed 0: pair 23.22/16.66, agent 82.88/76.25, error 35.66/34.37
+  - seed 1: pair 22.89/17.58, agent 82.71/75.07, error 35.64/34.94
+  - seed 1: pair 22.89/17.58, agent 82.71/75.07, error 35.64/34.94
+  - seed 2: pair 22.38/16.79, agent 82.91/74.85, error 35.62/34.37
+  - seed 2: pair 22.38/16.79, agent 82.91/74.85, error 35.62/34.37
+- flat_mlp_base_pm | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.24/16.80, agent 83.00/76.47, error 35.20/34.52
+  - seed 0: pair 22.24/16.80, agent 83.00/76.47, error 35.20/34.52
+  - seed 1: pair 22.88/17.58, agent 82.69/75.06, error 35.64/34.94
+  - seed 1: pair 22.88/17.58, agent 82.69/75.06, error 35.64/34.94
+  - seed 2: pair 22.07/17.11, agent 82.96/75.47, error 35.31/34.50
+  - seed 2: pair 22.07/17.11, agent 82.96/75.47, error 35.31/34.50
+- flat_mlp_base_prod | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.25/16.79, agent 83.30/76.44, error 35.16/34.47
+  - seed 0: pair 22.25/16.79, agent 83.30/76.44, error 35.16/34.47
+  - seed 1: pair 22.89/17.58, agent 82.71/75.07, error 35.64/34.94
+  - seed 1: pair 22.89/17.58, agent 82.71/75.07, error 35.64/34.94
+  - seed 2: pair 22.08/17.02, agent 83.06/74.92, error 35.25/34.46
+  - seed 2: pair 22.08/17.02, agent 83.06/74.92, error 35.25/34.46
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.46/16.59, agent 82.52/75.49, error 35.78/34.91
+  - seed 0: pair 22.46/16.59, agent 82.52/75.49, error 35.78/34.91
+  - seed 1: pair 24.12/17.02, agent 80.22/74.45, error 36.05/34.49
+  - seed 1: pair 24.12/17.02, agent 80.22/74.45, error 36.05/34.49
+  - seed 2: pair 22.99/17.59, agent 81.30/72.40, error 35.94/34.82
+  - seed 2: pair 22.99/17.59, agent 81.30/72.40, error 35.94/34.82
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.45/16.57, agent 82.64/75.68, error 35.75/34.89
+  - seed 0: pair 22.45/16.57, agent 82.64/75.68, error 35.75/34.89
+  - seed 1: pair 24.34/16.85, agent 80.06/73.66, error 36.19/34.10
+  - seed 1: pair 24.34/16.85, agent 80.06/73.66, error 36.19/34.10
+  - seed 2: pair 23.23/17.98, agent 81.05/72.29, error 36.05/35.43
+  - seed 2: pair 23.23/17.98, agent 81.05/72.29, error 36.05/35.43
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.46/16.59, agent 82.52/75.49, error 35.78/34.91
+  - seed 0: pair 22.46/16.59, agent 82.52/75.49, error 35.78/34.91
+  - seed 1: pair 24.12/17.02, agent 80.22/74.45, error 36.05/34.49
+  - seed 1: pair 24.12/17.02, agent 80.22/74.45, error 36.05/34.49
+  - seed 2: pair 22.98/17.59, agent 81.28/72.05, error 35.94/34.82
+  - seed 2: pair 22.98/17.59, agent 81.28/72.05, error 35.94/34.82
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 22.45/16.57, agent 82.64/75.68, error 35.75/34.89
+  - seed 0: pair 22.45/16.57, agent 82.64/75.68, error 35.75/34.89
+  - seed 1: pair 24.09/17.04, agent 80.18/73.70, error 36.05/34.53
+  - seed 1: pair 24.09/17.04, agent 80.18/73.70, error 36.05/34.53
+  - seed 2: pair 22.99/17.59, agent 81.32/72.40, error 35.94/34.82
+  - seed 2: pair 22.99/17.59, agent 81.32/72.40, error 35.94/34.82
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 23.08/19.07, agent 84.40/78.28, error 36.32/35.65
+  - seed 0: pair 23.08/19.07, agent 84.40/78.28, error 36.32/35.65
+  - seed 1: pair 22.80/18.12, agent 83.86/75.82, error 36.27/35.56
+  - seed 1: pair 22.80/18.12, agent 83.86/75.82, error 36.27/35.56
+  - seed 2: pair 22.61/18.58, agent 84.46/77.76, error 35.88/35.35
+  - seed 2: pair 22.61/18.58, agent 84.46/77.76, error 35.88/35.35
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 23.57/18.30, agent 83.91/77.41, error 37.11/36.32
+  - seed 0: pair 23.57/18.30, agent 83.91/77.41, error 37.11/36.32
+  - seed 1: pair 23.97/17.28, agent 83.56/73.55, error 37.03/34.99
+  - seed 1: pair 23.97/17.28, agent 83.56/73.55, error 37.03/34.99
+  - seed 2: pair 23.55/18.66, agent 84.59/77.27, error 35.97/34.58
+  - seed 2: pair 23.55/18.66, agent 84.59/77.27, error 35.97/34.58
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 23.08/19.07, agent 84.37/78.27, error 36.32/35.65
+  - seed 0: pair 23.08/19.07, agent 84.37/78.27, error 36.32/35.65
+  - seed 1: pair 22.80/18.12, agent 83.86/75.82, error 36.27/35.56
+  - seed 1: pair 22.80/18.12, agent 83.86/75.82, error 36.27/35.56
+  - seed 2: pair 22.61/18.58, agent 84.46/77.76, error 35.88/35.35
+  - seed 2: pair 22.61/18.58, agent 84.46/77.76, error 35.88/35.35
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 23.07/19.05, agent 84.55/78.20, error 36.27/35.60
+  - seed 0: pair 23.07/19.05, agent 84.55/78.20, error 36.27/35.60
+  - seed 1: pair 22.90/18.05, agent 84.23/74.24, error 36.16/35.48
+  - seed 1: pair 22.90/18.05, agent 84.23/74.24, error 36.16/35.48
+  - seed 2: pair 22.70/18.55, agent 84.70/77.11, error 35.76/35.23
+  - seed 2: pair 22.70/18.55, agent 84.70/77.11, error 35.76/35.23
+- flat_mlp_base_min | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.00/28.11, agent 82.16/75.56, error 44.67/42.74
+  - seed 1: pair 37.50/27.30, agent 81.31/70.44, error 44.62/42.11
+  - seed 2: pair 36.78/27.62, agent 82.81/72.88, error 44.26/42.59
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.94/29.49, agent 85.63/77.99, error 45.29/44.48
+  - seed 1: pair 34.87/27.16, agent 86.33/75.05, error 44.48/42.44
+  - seed 2: pair 35.59/27.37, agent 86.07/77.28, error 44.13/42.08
+- flat_mlp_base_pm | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.00/28.11, agent 82.16/75.56, error 44.67/42.74
+  - seed 1: pair 37.50/27.17, agent 81.29/67.83, error 44.65/42.14
+  - seed 2: pair 36.77/27.49, agent 82.80/70.18, error 44.29/42.62
+- flat_mlp_base_prod | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.96/28.03, agent 82.29/75.61, error 44.63/42.64
+  - seed 1: pair 37.50/27.29, agent 81.40/70.47, error 44.62/42.10
+  - seed 2: pair 36.78/27.63, agent 82.77/72.77, error 44.22/42.56
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.11/26.22, agent 87.17/79.56, error 41.48/42.44
+  - seed 1: pair 35.71/26.80, agent 82.12/73.66, error 43.32/41.08
+  - seed 2: pair 35.57/25.86, agent 80.73/69.39, error 42.57/39.29
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.84/25.11, agent 86.07/79.04, error 42.88/40.27
+  - seed 1: pair 35.09/28.48, agent 86.35/76.68, error 44.06/43.09
+  - seed 2: pair 33.84/26.11, agent 86.19/76.85, error 43.25/40.55
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.10/26.12, agent 87.15/76.61, error 41.48/42.44
+  - seed 1: pair 35.71/26.80, agent 82.12/73.66, error 43.32/41.08
+  - seed 2: pair 35.56/25.74, agent 80.71/66.82, error 42.60/39.32
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.11/26.24, agent 87.33/80.08, error 41.45/42.41
+  - seed 1: pair 35.80/26.86, agent 82.06/73.82, error 43.40/41.14
+  - seed 2: pair 35.54/25.84, agent 80.89/69.59, error 42.52/39.25
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.72/31.29, agent 86.31/76.06, error 46.98/46.66
+  - seed 1: pair 38.93/31.05, agent 86.10/74.83, error 46.62/46.02
+  - seed 2: pair 38.66/30.64, agent 86.21/73.04, error 47.08/46.93
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.56/30.28, agent 87.43/78.24, error 47.14/45.75
+  - seed 1: pair 39.47/30.59, agent 85.82/76.56, error 46.92/45.43
+  - seed 2: pair 39.13/30.89, agent 86.55/76.76, error 47.66/47.11
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.71/31.14, agent 86.25/73.14, error 47.01/46.69
+  - seed 1: pair 38.93/30.93, agent 86.02/72.09, error 46.65/46.04
+  - seed 2: pair 38.63/30.49, agent 86.15/70.32, error 47.11/46.97
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.72/31.29, agent 86.31/76.09, error 46.98/46.66
+  - seed 1: pair 39.04/30.99, agent 86.20/76.73, error 46.70/46.08
+  - seed 2: pair 38.74/30.86, agent 86.28/73.26, error 47.13/46.98
+- flat_mlp_base_min | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.99/26.58, agent 80.08/71.26, error 43.90/41.34
+  - seed 1: pair 37.76/27.21, agent 81.92/71.55, error 44.68/43.04
+  - seed 2: pair 36.93/27.39, agent 81.70/69.87, error 44.95/44.01
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.70/28.04, agent 84.83/76.93, error 44.79/43.90
+  - seed 1: pair 37.22/27.93, agent 84.46/75.51, error 45.59/44.25
+  - seed 2: pair 35.76/26.61, agent 85.30/73.29, error 44.88/43.47
+- flat_mlp_base_pm | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.98/26.46, agent 80.07/68.62, error 43.93/41.37
+  - seed 1: pair 37.75/27.09, agent 81.90/68.90, error 44.71/43.07
+  - seed 2: pair 36.93/27.39, agent 81.70/69.87, error 44.95/44.01
+- flat_mlp_base_prod | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.07/26.63, agent 79.99/71.21, error 43.98/41.41
+  - seed 1: pair 37.76/27.21, agent 81.92/71.55, error 44.68/43.04
+  - seed 2: pair 37.08/27.76, agent 81.75/69.92, error 44.99/44.01
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.70/25.53, agent 81.81/75.15, error 43.58/42.24
+  - seed 1: pair 35.99/24.89, agent 79.38/69.06, error 43.25/40.91
+  - seed 2: pair 35.71/24.32, agent 80.18/70.57, error 43.24/40.08
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.27/25.68, agent 85.61/79.09, error 43.67/42.74
+  - seed 1: pair 33.37/25.04, agent 85.00/76.86, error 43.72/42.72
+  - seed 2: pair 32.75/25.69, agent 86.25/75.53, error 43.80/44.00
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.69/25.41, agent 81.79/72.37, error 43.62/42.27
+  - seed 1: pair 35.99/24.89, agent 79.38/69.06, error 43.25/40.91
+  - seed 2: pair 35.71/24.32, agent 80.18/70.57, error 43.24/40.08
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.73/25.53, agent 81.90/75.18, error 43.54/42.20
+  - seed 1: pair 36.07/24.93, agent 79.33/69.04, error 43.34/41.01
+  - seed 2: pair 35.71/24.33, agent 80.27/70.56, error 43.28/40.16
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.46/30.37, agent 86.68/76.44, error 46.51/45.46
+  - seed 1: pair 39.47/29.96, agent 84.07/73.94, error 47.53/46.61
+  - seed 2: pair 38.44/29.13, agent 84.99/73.04, error 46.63/45.44
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.06/30.04, agent 86.28/75.40, error 46.93/45.48
+  - seed 1: pair 38.93/29.55, agent 85.49/76.02, error 48.04/47.36
+  - seed 2: pair 37.91/28.95, agent 86.27/74.89, error 47.22/45.98
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.44/30.35, agent 86.62/76.18, error 46.50/45.45
+  - seed 1: pair 39.45/29.95, agent 84.04/73.93, error 47.53/46.61
+  - seed 2: pair 38.39/29.11, agent 84.87/72.65, error 46.64/45.45
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.54/30.27, agent 86.80/76.01, error 46.57/45.49
+  - seed 1: pair 39.55/29.81, agent 84.25/73.76, error 47.58/46.60
+  - seed 2: pair 38.40/29.09, agent 85.04/73.06, error 46.67/45.47
+- flat_mlp_base_min | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.79/25.03, agent 86.95/75.31, error 42.42/43.19
+  - seed 1: pair 30.59/23.58, agent 86.96/76.87, error 42.00/42.53
+  - seed 2: pair 30.32/24.94, agent 87.71/75.06, error 41.47/42.28
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.81/25.92, agent 85.90/74.38, error 44.14/42.87
+  - seed 1: pair 33.38/23.09, agent 85.88/76.94, error 42.65/40.10
+  - seed 2: pair 34.46/25.59, agent 85.46/72.02, error 43.92/42.69
+- flat_mlp_base_pm | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.79/25.02, agent 86.91/75.22, error 42.42/43.19
+  - seed 1: pair 30.59/23.51, agent 86.93/77.01, error 42.06/42.60
+  - seed 2: pair 30.33/24.96, agent 87.66/75.19, error 41.49/42.30
+- flat_mlp_base_prod | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.83/25.17, agent 87.04/75.42, error 42.41/43.19
+  - seed 1: pair 30.61/23.34, agent 87.15/77.62, error 41.96/42.50
+  - seed 2: pair 30.33/25.02, agent 87.75/75.33, error 41.40/42.20
+- flat_mlp_peer_min | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.27/26.65, agent 82.87/66.25, error 45.87/44.22
+  - seed 1: pair 37.85/26.50, agent 83.54/67.92, error 45.88/44.17
+  - seed 2: pair 37.38/26.32, agent 81.90/64.22, error 44.46/42.34
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.84/27.23, agent 86.70/69.02, error 46.19/45.83
+  - seed 1: pair 36.82/27.23, agent 86.18/68.92, error 46.22/45.48
+  - seed 2: pair 35.64/26.01, agent 85.92/66.73, error 44.95/43.07
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.28/26.94, agent 82.79/66.79, error 45.96/44.30
+  - seed 1: pair 37.83/26.38, agent 83.49/67.91, error 45.93/44.21
+  - seed 2: pair 37.36/26.09, agent 81.84/64.22, error 44.56/42.43
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.22/26.64, agent 82.78/67.00, error 45.85/44.22
+  - seed 1: pair 37.93/26.72, agent 83.65/67.48, error 45.86/44.17
+  - seed 2: pair 37.39/26.19, agent 81.94/63.00, error 44.42/42.29
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.19/25.79, agent 83.59/72.54, error 44.92/43.88
+  - seed 1: pair 37.46/25.78, agent 84.11/69.56, error 45.31/43.17
+  - seed 2: pair 37.16/26.68, agent 82.14/63.97, error 44.35/42.94
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.32/26.41, agent 84.95/70.31, error 45.30/44.75
+  - seed 1: pair 37.24/26.97, agent 85.77/71.30, error 46.16/44.47
+  - seed 2: pair 36.43/27.02, agent 85.43/68.94, error 45.05/43.77
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/25.46, agent 83.51/69.84, error 45.02/43.98
+  - seed 1: pair 37.42/25.66, agent 83.91/66.14, error 45.25/43.11
+  - seed 2: pair 37.17/26.51, agent 82.11/62.21, error 44.49/43.07
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/25.68, agent 83.57/69.85, error 44.91/43.86
+  - seed 1: pair 37.54/26.04, agent 84.13/69.66, error 45.28/43.17
+  - seed 2: pair 37.30/26.87, agent 82.38/65.97, error 44.52/43.11
+- flat_mlp_base_min | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.23/27.39, agent 79.76/61.26, error 46.71/43.29
+  - seed 1: pair 39.07/25.80, agent 80.06/62.57, error 45.19/41.66
+  - seed 2: pair 39.72/28.53, agent 82.18/68.21, error 47.28/45.07
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.00/28.75, agent 84.37/66.75, error 47.14/44.69
+  - seed 1: pair 37.35/25.28, agent 84.56/70.06, error 45.72/41.23
+  - seed 2: pair 38.27/28.70, agent 84.89/73.48, error 47.29/45.17
+- flat_mlp_base_pm | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.22/27.27, agent 79.72/61.26, error 46.74/43.32
+  - seed 1: pair 39.08/25.58, agent 80.05/62.58, error 45.30/41.75
+  - seed 2: pair 39.71/28.40, agent 82.16/68.21, error 47.31/45.10
+- flat_mlp_base_prod | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.29/27.33, agent 79.92/61.70, error 46.67/43.27
+  - seed 1: pair 39.17/25.76, agent 80.16/62.59, error 45.31/41.81
+  - seed 2: pair 39.79/28.57, agent 82.19/68.31, error 47.30/45.13
+- flat_mlp_peer_min | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.84/31.91, agent 84.85/67.96, error 48.68/47.40
+  - seed 1: pair 42.39/31.33, agent 82.06/65.96, error 49.38/47.98
+  - seed 2: pair 41.82/31.88, agent 85.56/76.14, error 49.46/48.03
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.19/32.08, agent 86.60/71.04, error 48.81/47.43
+  - seed 1: pair 40.83/30.45, agent 85.15/69.17, error 49.33/48.17
+  - seed 2: pair 42.58/32.13, agent 85.07/71.79, error 49.89/48.35
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.90/31.95, agent 84.85/67.76, error 48.78/47.51
+  - seed 1: pair 42.49/31.11, agent 82.05/63.48, error 49.56/48.18
+  - seed 2: pair 41.84/31.46, agent 85.56/73.51, error 49.60/48.15
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.79/31.85, agent 84.83/67.94, error 48.67/47.37
+  - seed 1: pair 42.39/31.07, agent 82.06/65.83, error 49.34/47.95
+  - seed 2: pair 41.80/31.62, agent 85.59/73.10, error 49.43/48.01
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.12/29.99, agent 84.93/70.84, error 47.99/46.66
+  - seed 1: pair 41.23/30.66, agent 86.00/71.75, error 48.50/46.24
+  - seed 2: pair 40.72/30.43, agent 84.14/72.92, error 47.54/46.33
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.36/30.49, agent 85.61/70.31, error 48.58/47.82
+  - seed 1: pair 41.29/32.38, agent 86.87/75.52, error 49.66/48.51
+  - seed 2: pair 40.36/31.71, agent 86.35/73.89, error 49.02/47.86
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.22/29.79, agent 85.00/70.87, error 48.17/46.88
+  - seed 1: pair 41.22/30.24, agent 85.93/68.96, error 48.55/46.29
+  - seed 2: pair 40.75/30.18, agent 84.12/70.09, error 47.65/46.45
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.20/29.91, agent 85.08/70.58, error 48.07/46.80
+  - seed 1: pair 41.19/30.54, agent 85.91/71.40, error 48.46/46.21
+  - seed 2: pair 40.73/30.16, agent 84.11/69.71, error 47.55/46.32
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.22/26.68, agent 81.94/70.60, error 44.88/43.34
+  - seed 1: pair 30.99/25.09, agent 87.77/77.69, error 42.01/42.45
+  - seed 2: pair 36.56/25.65, agent 79.81/74.73, error 43.57/42.00
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.98/26.32, agent 86.48/73.46, error 44.98/42.89
+  - seed 1: pair 32.91/25.26, agent 86.65/76.77, error 43.22/42.00
+  - seed 2: pair 35.75/26.08, agent 84.88/78.69, error 44.60/43.03
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.23/26.58, agent 81.93/67.99, error 44.94/43.41
+  - seed 1: pair 30.98/24.98, agent 87.73/77.63, error 42.01/42.45
+  - seed 2: pair 36.56/25.53, agent 79.80/71.97, error 43.61/42.03
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.22/26.68, agent 81.96/70.57, error 44.85/43.32
+  - seed 1: pair 31.03/25.36, agent 87.69/78.26, error 42.05/42.49
+  - seed 2: pair 30.58/26.04, agent 87.63/80.33, error 41.94/42.82
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.34/25.03, agent 87.05/75.46, error 41.75/42.43
+  - seed 1: pair 31.17/26.72, agent 88.05/79.29, error 42.56/43.79
+  - seed 2: pair 30.45/24.77, agent 87.60/81.22, error 42.03/42.90
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.01/24.69, agent 84.70/75.19, error 43.78/39.92
+  - seed 1: pair 34.57/26.61, agent 86.92/76.25, error 43.96/42.83
+  - seed 2: pair 32.84/24.81, agent 86.91/80.17, error 43.71/42.84
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.34/24.93, agent 87.04/75.46, error 41.75/42.43
+  - seed 1: pair 31.16/26.49, agent 88.00/76.30, error 42.60/43.84
+  - seed 2: pair 30.45/24.67, agent 87.58/78.22, error 42.05/42.92
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.34/25.17, agent 86.95/77.54, error 41.74/42.42
+  - seed 1: pair 31.31/26.81, agent 88.10/76.93, error 42.56/43.80
+  - seed 2: pair 30.45/24.79, agent 87.68/81.42, error 42.06/42.92
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.05/28.20, agent 83.61/69.46, error 46.17/44.59
+  - seed 1: pair 39.18/29.02, agent 83.29/72.91, error 45.92/43.72
+  - seed 2: pair 37.94/27.43, agent 82.47/71.50, error 45.30/43.58
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.07/28.13, agent 87.46/75.82, error 46.17/45.40
+  - seed 1: pair 38.10/29.74, agent 86.70/78.91, error 46.13/44.21
+  - seed 2: pair 36.63/27.96, agent 86.59/77.88, error 45.80/45.33
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.14/28.13, agent 83.67/69.71, error 46.30/44.71
+  - seed 1: pair 39.15/28.76, agent 83.24/70.20, error 45.97/43.77
+  - seed 2: pair 37.94/27.23, agent 82.41/68.80, error 45.37/43.66
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.22/28.34, agent 83.87/69.79, error 46.35/44.75
+  - seed 1: pair 39.15/28.90, agent 83.31/74.53, error 45.89/43.69
+  - seed 2: pair 37.97/27.53, agent 82.66/72.02, error 45.40/43.73
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.24/27.81, agent 83.72/73.17, error 45.81/44.67
+  - seed 1: pair 38.67/28.52, agent 84.89/75.43, error 46.35/43.62
+  - seed 2: pair 38.21/26.94, agent 82.38/69.17, error 45.82/44.14
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.36/27.76, agent 85.96/74.38, error 45.70/44.72
+  - seed 1: pair 37.51/29.25, agent 86.65/79.64, error 46.58/44.51
+  - seed 2: pair 36.75/27.46, agent 86.13/74.06, error 46.22/46.19
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.24/27.81, agent 83.72/73.17, error 45.81/44.67
+  - seed 1: pair 38.65/28.39, agent 84.85/72.63, error 46.38/43.64
+  - seed 2: pair 38.23/26.84, agent 82.37/69.08, error 45.89/44.19
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.16/27.74, agent 83.72/73.10, error 45.73/44.55
+  - seed 1: pair 38.67/28.52, agent 84.94/75.45, error 46.35/43.62
+  - seed 2: pair 38.24/26.82, agent 82.53/68.73, error 45.81/44.09
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.47/24.78, agent 87.79/79.75, error 42.83/43.36
+  - seed 1: pair 31.18/26.22, agent 87.24/77.30, error 42.39/42.63
+  - seed 2: pair 36.92/26.38, agent 80.85/73.39, error 43.84/42.23
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.51/24.58, agent 86.97/77.49, error 43.65/41.60
+  - seed 1: pair 35.00/26.79, agent 85.13/76.54, error 44.73/44.28
+  - seed 2: pair 35.94/27.03, agent 85.05/76.80, error 44.99/44.23
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.49/24.79, agent 87.81/79.75, error 42.86/43.38
+  - seed 1: pair 31.19/26.01, agent 87.23/77.31, error 42.43/42.68
+  - seed 2: pair 36.94/26.16, agent 80.84/70.68, error 43.94/42.32
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.47/24.78, agent 87.79/79.75, error 42.83/43.35
+  - seed 1: pair 31.26/26.39, agent 87.52/81.79, error 42.39/42.62
+  - seed 2: pair 36.91/26.28, agent 80.74/72.92, error 43.91/42.30
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.52/24.92, agent 81.36/70.15, error 43.94/41.56
+  - seed 1: pair 36.66/26.88, agent 80.80/71.85, error 44.14/42.35
+  - seed 2: pair 30.37/24.43, agent 87.44/77.16, error 42.03/42.99
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.25/25.77, agent 86.54/75.95, error 44.17/43.16
+  - seed 1: pair 34.58/27.72, agent 86.74/77.24, error 44.21/42.30
+  - seed 2: pair 33.63/25.48, agent 86.46/78.30, error 43.86/42.79
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.56/24.74, agent 81.34/67.49, error 44.08/41.69
+  - seed 1: pair 36.65/26.64, agent 80.76/69.19, error 44.21/42.41
+  - seed 2: pair 30.37/24.42, agent 87.42/77.10, error 42.03/42.99
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.48/24.82, agent 81.46/70.45, error 43.81/41.30
+  - seed 1: pair 31.34/27.47, agent 87.91/79.38, error 42.53/43.66
+  - seed 2: pair 30.31/24.61, agent 87.67/79.67, error 41.93/42.87
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.44/28.49, agent 83.34/69.17, error 46.41/45.09
+  - seed 1: pair 39.03/29.80, agent 83.66/71.63, error 46.52/44.35
+  - seed 2: pair 37.83/27.21, agent 82.74/67.54, error 45.51/43.21
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.03/27.99, agent 86.46/74.65, error 46.72/45.52
+  - seed 1: pair 38.07/30.14, agent 85.80/74.31, error 46.78/44.99
+  - seed 2: pair 37.08/27.95, agent 85.76/72.19, error 46.15/45.38
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.44/28.35, agent 83.34/69.03, error 46.45/45.12
+  - seed 1: pair 39.06/29.56, agent 83.64/69.16, error 46.67/44.51
+  - seed 2: pair 37.82/27.40, agent 82.66/67.42, error 45.49/43.18
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.37/28.14, agent 83.49/70.07, error 46.33/44.94
+  - seed 1: pair 39.03/29.84, agent 83.78/71.85, error 46.52/44.36
+  - seed 2: pair 37.83/27.20, agent 82.77/67.72, error 45.54/43.25
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.10/27.82, agent 83.61/74.49, error 45.38/44.26
+  - seed 1: pair 38.10/27.65, agent 85.32/73.47, error 45.66/43.03
+  - seed 2: pair 38.22/27.32, agent 82.80/68.63, error 45.97/43.58
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.67/26.98, agent 86.45/76.94, error 45.54/44.51
+  - seed 1: pair 37.54/28.96, agent 86.89/77.61, error 46.49/45.16
+  - seed 2: pair 37.72/28.59, agent 85.04/71.80, error 46.47/45.15
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.09/27.70, agent 83.59/74.49, error 45.41/44.29
+  - seed 1: pair 38.09/27.53, agent 85.28/73.46, error 45.68/43.04
+  - seed 2: pair 38.21/27.31, agent 82.78/68.55, error 45.96/43.57
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.09/27.70, agent 83.55/74.45, error 45.41/44.29
+  - seed 1: pair 38.11/27.79, agent 85.41/76.58, error 45.62/42.96
+  - seed 2: pair 38.34/27.23, agent 83.00/70.30, error 46.06/43.73
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.62/27.42, agent 81.48/69.71, error 45.28/43.79
+  - seed 1: pair 31.09/26.28, agent 87.37/77.80, error 42.31/42.71
+  - seed 2: pair 36.62/26.55, agent 80.44/73.69, error 43.59/41.95
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.95/26.95, agent 85.55/76.48, error 45.46/44.20
+  - seed 1: pair 35.27/26.91, agent 85.29/76.23, error 44.43/43.55
+  - seed 2: pair 35.50/26.93, agent 85.89/76.94, error 44.47/43.72
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.62/27.29, agent 81.46/67.12, error 45.31/43.82
+  - seed 1: pair 31.08/26.17, agent 87.33/77.79, error 42.31/42.70
+  - seed 2: pair 36.61/26.43, agent 80.42/70.96, error 43.62/41.97
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.61/27.26, agent 81.55/71.49, error 45.16/43.62
+  - seed 1: pair 31.09/26.21, agent 87.37/78.61, error 42.26/42.66
+  - seed 2: pair 36.75/26.70, agent 80.59/73.95, error 43.64/41.95
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.45/29.24, agent 83.56/71.63, error 46.51/45.10
+  - seed 1: pair 39.27/29.29, agent 82.90/72.31, error 46.75/44.71
+  - seed 2: pair 38.02/27.77, agent 82.83/68.75, error 45.44/43.63
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.92/29.30, agent 86.72/76.65, error 46.28/44.72
+  - seed 1: pair 38.29/30.06, agent 86.23/75.74, error 46.50/44.99
+  - seed 2: pair 37.33/28.78, agent 86.21/72.59, error 46.34/44.89
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.46/29.23, agent 83.51/71.38, error 46.56/45.13
+  - seed 1: pair 39.26/29.15, agent 82.86/72.30, error 46.77/44.73
+  - seed 2: pair 37.99/27.65, agent 82.71/68.74, error 45.57/43.74
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.49/29.36, agent 83.60/72.63, error 46.60/45.19
+  - seed 1: pair 39.29/29.18, agent 83.03/72.74, error 46.77/44.73
+  - seed 2: pair 38.01/28.22, agent 82.86/69.17, error 45.43/43.62
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.08/28.27, agent 83.60/74.93, error 45.24/43.95
+  - seed 1: pair 38.57/28.67, agent 84.85/75.78, error 46.67/44.81
+  - seed 2: pair 37.06/26.51, agent 82.42/71.30, error 44.85/43.33
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.96/27.49, agent 87.69/78.46, error 45.02/42.21
+  - seed 1: pair 37.83/28.87, agent 86.98/78.42, error 47.49/46.23
+  - seed 2: pair 35.82/26.28, agent 86.45/74.79, error 45.16/44.51
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.06/28.02, agent 83.56/74.93, error 45.27/43.98
+  - seed 1: pair 38.59/28.57, agent 84.84/73.17, error 46.72/44.85
+  - seed 2: pair 37.08/26.30, agent 82.34/71.50, error 44.96/43.41
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.04/28.25, agent 83.46/74.84, error 45.24/43.98
+  - seed 1: pair 38.59/28.72, agent 84.90/77.13, error 46.69/44.83
+  - seed 2: pair 37.20/26.64, agent 82.43/70.74, error 45.00/43.52
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.16/26.48, agent 87.46/75.32, error 43.17/43.93
+  - seed 1: pair 30.76/25.43, agent 87.82/78.99, error 42.57/43.27
+  - seed 2: pair 36.18/25.07, agent 80.75/65.68, error 44.21/41.23
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.74/26.68, agent 86.90/75.66, error 44.70/43.43
+  - seed 1: pair 34.20/25.40, agent 86.37/75.14, error 43.29/40.48
+  - seed 2: pair 34.30/25.95, agent 86.11/74.72, error 44.37/43.59
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.14/26.25, agent 87.40/72.65, error 43.21/43.97
+  - seed 1: pair 30.76/25.32, agent 87.81/78.99, error 42.57/43.27
+  - seed 2: pair 36.18/25.07, agent 80.75/65.68, error 44.21/41.23
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.17/26.58, agent 87.50/76.04, error 43.21/43.94
+  - seed 1: pair 30.76/25.50, agent 87.77/77.51, error 42.55/43.25
+  - seed 2: pair 36.19/25.21, agent 80.74/67.53, error 44.27/41.26
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.05/28.04, agent 83.81/65.95, error 46.46/45.21
+  - seed 1: pair 38.24/26.76, agent 80.68/67.95, error 45.36/44.09
+  - seed 2: pair 37.35/27.14, agent 83.14/65.76, error 45.19/43.54
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.71/27.78, agent 85.60/71.25, error 46.67/44.74
+  - seed 1: pair 36.73/26.48, agent 86.04/73.34, error 45.95/44.55
+  - seed 2: pair 36.21/27.95, agent 86.99/74.19, error 45.72/44.68
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.05/27.94, agent 83.80/66.07, error 46.51/45.28
+  - seed 1: pair 38.23/26.52, agent 80.60/65.38, error 45.47/44.19
+  - seed 2: pair 37.39/27.15, agent 83.13/65.60, error 45.23/43.60
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.10/28.01, agent 83.76/66.31, error 46.54/45.28
+  - seed 1: pair 38.20/26.75, agent 80.64/67.91, error 45.27/44.00
+  - seed 2: pair 37.45/27.13, agent 83.25/67.54, error 45.17/43.53
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.80/27.41, agent 84.74/72.10, error 45.02/44.17
+  - seed 1: pair 36.95/26.85, agent 84.27/69.80, error 44.74/43.42
+  - seed 2: pair 37.15/26.94, agent 83.39/70.65, error 45.33/44.23
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.14/27.28, agent 86.34/74.07, error 44.84/44.44
+  - seed 1: pair 36.40/27.87, agent 86.98/71.80, error 45.80/44.96
+  - seed 2: pair 36.47/26.81, agent 86.07/73.76, error 45.43/44.21
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.79/27.29, agent 84.70/72.10, error 45.08/44.23
+  - seed 1: pair 36.96/26.52, agent 84.20/64.67, error 44.86/43.56
+  - seed 2: pair 37.18/26.88, agent 83.37/67.99, error 45.41/44.30
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.83/27.43, agent 84.77/72.40, error 45.05/44.20
+  - seed 1: pair 36.95/26.73, agent 84.30/67.23, error 44.77/43.46
+  - seed 2: pair 37.20/27.07, agent 83.57/71.64, error 45.38/44.27
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.21/26.08, agent 87.51/75.97, error 42.91/43.52
+  - seed 1: pair 30.77/24.77, agent 86.85/75.55, error 41.97/42.38
+  - seed 2: pair 36.50/26.14, agent 83.49/75.20, error 44.42/42.86
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.93/26.35, agent 86.67/75.30, error 44.58/42.73
+  - seed 1: pair 34.17/25.78, agent 85.21/73.37, error 44.18/42.47
+  - seed 2: pair 35.76/26.59, agent 86.71/80.16, error 44.41/41.69
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.21/25.97, agent 87.49/75.97, error 42.94/43.54
+  - seed 1: pair 30.77/24.66, agent 86.83/75.55, error 41.99/42.40
+  - seed 2: pair 36.52/25.92, agent 83.48/72.43, error 44.48/42.92
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.24/25.99, agent 87.77/77.12, error 42.95/43.56
+  - seed 1: pair 30.74/24.92, agent 86.93/75.80, error 41.90/42.27
+  - seed 2: pair 36.57/26.35, agent 83.57/75.86, error 44.44/42.85
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.95/28.78, agent 82.73/68.07, error 47.16/45.36
+  - seed 1: pair 38.72/27.65, agent 82.76/72.12, error 46.53/44.98
+  - seed 2: pair 37.63/26.83, agent 81.90/68.38, error 45.05/43.25
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.19/28.64, agent 87.04/72.99, error 46.74/45.07
+  - seed 1: pair 37.76/28.33, agent 86.34/72.01, error 46.82/45.29
+  - seed 2: pair 37.56/27.18, agent 85.29/71.78, error 45.92/44.27
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.95/28.65, agent 82.66/67.99, error 47.19/45.38
+  - seed 1: pair 38.71/27.53, agent 82.73/69.53, error 46.55/45.00
+  - seed 2: pair 37.66/26.74, agent 81.88/68.39, error 45.13/43.35
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.03/28.84, agent 82.82/68.11, error 47.20/45.38
+  - seed 1: pair 38.68/27.51, agent 82.61/69.49, error 46.52/44.98
+  - seed 2: pair 37.66/26.72, agent 81.97/68.56, error 45.13/43.35
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.82/27.79, agent 83.55/70.19, error 45.54/44.24
+  - seed 1: pair 37.49/27.79, agent 84.14/76.18, error 45.58/42.92
+  - seed 2: pair 37.95/27.37, agent 81.30/68.11, error 45.34/43.12
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.03/28.65, agent 85.19/73.81, error 45.90/45.76
+  - seed 1: pair 36.61/29.42, agent 87.19/80.39, error 46.68/45.10
+  - seed 2: pair 36.84/28.17, agent 85.62/73.33, error 46.08/45.28
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.81/27.67, agent 83.51/70.19, error 45.60/44.30
+  - seed 1: pair 37.47/27.65, agent 84.08/73.34, error 45.59/42.93
+  - seed 2: pair 37.96/27.09, agent 81.23/64.66, error 45.50/43.29
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.84/28.00, agent 83.52/72.41, error 45.60/44.27
+  - seed 1: pair 37.46/27.77, agent 84.13/76.26, error 45.56/42.90
+  - seed 2: pair 38.01/27.47, agent 81.57/68.86, error 45.46/43.25
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.49/26.87, agent 82.38/71.53, error 45.56/43.72
+  - seed 1: pair 31.06/24.50, agent 87.28/74.83, error 42.41/42.87
+  - seed 2: pair 37.49/26.93, agent 81.98/74.47, error 44.84/43.66
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.75/28.12, agent 87.44/77.85, error 46.17/45.88
+  - seed 1: pair 33.37/24.39, agent 86.50/75.58, error 43.53/41.87
+  - seed 2: pair 36.11/26.78, agent 85.30/78.43, error 45.36/44.50
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.48/26.64, agent 82.34/68.88, error 45.62/43.78
+  - seed 1: pair 31.06/24.40, agent 87.26/74.83, error 42.43/42.89
+  - seed 2: pair 37.49/26.81, agent 81.96/71.71, error 44.87/43.69
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.45/26.75, agent 82.29/71.33, error 45.51/43.70
+  - seed 1: pair 31.06/24.81, agent 87.35/76.20, error 42.44/42.90
+  - seed 2: pair 37.58/26.95, agent 81.95/74.54, error 44.92/43.74
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.60/28.87, agent 83.73/69.89, error 47.61/45.83
+  - seed 1: pair 32.80/28.36, agent 87.95/78.42, error 43.44/44.45
+  - seed 2: pair 39.02/30.18, agent 85.75/77.72, error 46.80/45.28
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.65/28.75, agent 85.69/73.58, error 47.73/46.46
+  - seed 1: pair 37.97/28.52, agent 85.72/74.21, error 46.65/44.60
+  - seed 2: pair 38.78/29.85, agent 86.87/79.37, error 46.69/44.91
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.61/28.65, agent 83.67/67.17, error 47.71/45.92
+  - seed 1: pair 32.81/28.14, agent 87.93/75.52, error 43.50/44.53
+  - seed 2: pair 39.00/29.79, agent 85.66/72.04, error 46.90/45.37
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.70/28.94, agent 83.82/69.91, error 47.67/45.88
+  - seed 1: pair 32.80/28.25, agent 87.86/78.26, error 43.44/44.45
+  - seed 2: pair 39.02/30.19, agent 85.75/77.79, error 46.79/45.27
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.05/27.78, agent 82.81/72.41, error 45.13/43.97
+  - seed 1: pair 38.44/28.21, agent 85.20/76.44, error 46.37/44.61
+  - seed 2: pair 37.44/26.48, agent 81.67/67.53, error 45.21/43.03
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.45/28.43, agent 86.78/75.44, error 45.08/43.51
+  - seed 1: pair 37.87/29.58, agent 86.98/75.75, error 46.65/45.52
+  - seed 2: pair 36.12/28.18, agent 85.99/71.86, error 45.86/45.61
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.04/27.66, agent 82.80/72.41, error 45.16/43.99
+  - seed 1: pair 38.45/28.12, agent 85.18/73.84, error 46.40/44.63
+  - seed 2: pair 37.43/26.35, agent 81.63/66.21, error 45.19/43.01
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.01/27.71, agent 82.86/72.39, error 45.09/43.90
+  - seed 1: pair 38.50/28.39, agent 85.11/75.00, error 46.40/44.65
+  - seed 2: pair 37.44/26.47, agent 81.76/65.99, error 45.26/43.08
+- flat_mlp_base_min | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.91/24.75, agent 87.26/76.92, error 42.04/42.62
+  - seed 1: pair 31.23/25.47, agent 87.35/75.60, error 42.47/42.91
+  - seed 2: pair 36.74/25.62, agent 81.02/68.25, error 44.27/43.33
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.69/24.33, agent 86.36/75.48, error 43.15/40.28
+  - seed 1: pair 33.48/27.18, agent 86.30/74.94, error 43.71/44.39
+  - seed 2: pair 36.10/26.10, agent 85.31/74.21, error 45.09/44.60
+- flat_mlp_base_pm | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.90/24.64, agent 87.24/76.92, error 42.04/42.62
+  - seed 1: pair 31.22/25.25, agent 87.32/75.60, error 42.47/42.91
+  - seed 2: pair 36.74/25.62, agent 81.02/68.25, error 44.27/43.33
+- flat_mlp_base_prod | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.96/24.77, agent 87.41/77.47, error 42.08/42.66
+  - seed 1: pair 31.23/25.58, agent 87.43/75.75, error 42.48/42.93
+  - seed 2: pair 36.79/25.79, agent 81.29/71.06, error 44.08/43.08
+- flat_mlp_peer_min | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.40/28.93, agent 82.71/68.78, error 46.57/44.75
+  - seed 1: pair 39.16/28.22, agent 83.92/72.32, error 46.34/44.01
+  - seed 2: pair 37.68/26.75, agent 82.01/66.16, error 45.02/42.70
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.35/29.18, agent 85.30/72.59, error 46.83/45.91
+  - seed 1: pair 37.92/29.42, agent 86.86/75.57, error 46.98/47.26
+  - seed 2: pair 36.51/26.35, agent 86.25/70.02, error 45.11/43.16
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.44/28.84, agent 82.71/68.78, error 46.68/44.89
+  - seed 1: pair 39.16/28.22, agent 83.92/72.32, error 46.34/44.01
+  - seed 2: pair 37.64/26.45, agent 81.91/63.49, error 45.06/42.74
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.46/28.87, agent 82.70/69.75, error 46.66/44.87
+  - seed 1: pair 39.20/28.24, agent 83.92/72.32, error 46.38/44.05
+  - seed 2: pair 37.65/26.78, agent 82.07/64.76, error 45.04/42.73
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.79/28.14, agent 83.50/71.08, error 45.61/44.29
+  - seed 1: pair 38.77/28.26, agent 85.11/77.41, error 46.29/44.19
+  - seed 2: pair 38.15/28.31, agent 82.03/73.11, error 45.86/43.85
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/28.51, agent 85.86/72.72, error 45.32/44.00
+  - seed 1: pair 38.83/29.43, agent 85.79/76.52, error 47.00/44.88
+  - seed 2: pair 37.32/28.42, agent 85.22/76.24, error 46.97/46.11
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.81/28.02, agent 83.51/71.09, error 45.67/44.35
+  - seed 1: pair 38.78/28.01, agent 85.08/73.31, error 46.33/44.24
+  - seed 2: pair 38.17/28.07, agent 81.99/73.04, error 45.95/43.93
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.85/28.17, agent 83.48/71.04, error 45.68/44.37
+  - seed 1: pair 38.76/28.12, agent 85.12/76.13, error 46.27/44.15
+  - seed 2: pair 38.18/28.04, agent 82.10/71.99, error 45.92/43.91
+- flat_mlp_base_min | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.93/26.74, agent 79.21/64.24, error 45.67/42.47
+  - seed 1: pair 38.31/24.95, agent 80.00/71.65, error 45.07/41.55
+  - seed 2: pair 37.55/27.58, agent 82.67/72.31, error 45.62/44.37
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.64/26.51, agent 85.39/69.25, error 45.89/43.90
+  - seed 1: pair 37.37/26.28, agent 84.37/77.30, error 46.27/45.17
+  - seed 2: pair 35.83/26.07, agent 87.01/71.56, error 45.74/43.36
+- flat_mlp_base_pm | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.96/26.76, agent 79.23/64.25, error 45.70/42.51
+  - seed 1: pair 38.29/24.73, agent 79.91/66.40, error 45.19/41.66
+  - seed 2: pair 37.56/27.23, agent 82.64/69.74, error 45.75/44.51
+- flat_mlp_base_prod | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.93/26.80, agent 79.25/64.00, error 45.56/42.36
+  - seed 1: pair 38.32/24.95, agent 80.02/71.67, error 45.04/41.54
+  - seed 2: pair 37.54/27.41, agent 82.52/69.74, error 45.57/44.33
+- flat_mlp_peer_min | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.92/29.16, agent 83.06/67.51, error 47.50/46.13
+  - seed 1: pair 40.31/29.02, agent 83.80/66.81, error 47.55/45.81
+  - seed 2: pair 39.67/29.28, agent 85.68/72.31, error 47.22/46.13
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.76/29.47, agent 86.80/72.08, error 47.29/47.38
+  - seed 1: pair 38.52/29.26, agent 87.54/68.03, error 47.60/46.32
+  - seed 2: pair 39.08/29.20, agent 86.88/73.45, error 47.51/46.45
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.99/28.99, agent 83.13/68.11, error 47.65/46.30
+  - seed 1: pair 40.35/28.81, agent 83.80/66.82, error 47.71/45.98
+  - seed 2: pair 39.72/29.10, agent 85.66/72.77, error 47.36/46.27
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.98/29.22, agent 83.10/68.08, error 47.56/46.19
+  - seed 1: pair 40.33/28.90, agent 83.79/66.80, error 47.64/45.92
+  - seed 2: pair 39.70/29.20, agent 85.72/72.87, error 47.27/46.15
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.60/28.53, agent 83.98/74.62, error 45.60/44.93
+  - seed 1: pair 39.35/28.94, agent 84.00/71.16, error 46.33/44.02
+  - seed 2: pair 39.02/27.91, agent 82.73/72.33, error 46.65/44.44
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.59/27.95, agent 86.37/72.28, error 46.12/45.31
+  - seed 1: pair 38.15/30.31, agent 87.33/77.27, error 47.14/46.91
+  - seed 2: pair 38.97/28.13, agent 84.98/75.19, error 47.37/45.28
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.58/28.25, agent 83.90/71.80, error 45.70/45.03
+  - seed 1: pair 39.38/28.83, agent 84.01/71.17, error 46.39/44.09
+  - seed 2: pair 39.01/27.80, agent 82.64/69.60, error 46.73/44.50
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.60/28.54, agent 84.03/73.99, error 45.64/44.99
+  - seed 1: pair 39.38/28.96, agent 84.07/71.19, error 46.48/44.16
+  - seed 2: pair 39.10/28.17, agent 82.86/72.85, error 46.74/44.48
+- flat_mlp_base_min | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.27/29.01, agent 83.48/71.93, error 48.39/46.20
+  - seed 1: pair 40.92/28.00, agent 81.98/76.73, error 47.49/44.57
+  - seed 2: pair 40.67/28.88, agent 83.05/70.50, error 47.85/44.86
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.06/29.17, agent 86.81/78.37, error 48.50/46.55
+  - seed 1: pair 39.70/29.24, agent 85.97/79.89, error 47.96/47.16
+  - seed 2: pair 38.29/29.40, agent 87.86/77.62, error 47.66/46.82
+- flat_mlp_base_pm | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.25/28.80, agent 83.38/69.29, error 48.42/46.23
+  - seed 1: pair 40.90/27.87, agent 81.94/73.98, error 47.48/44.56
+  - seed 2: pair 40.64/28.63, agent 82.93/67.93, error 47.92/44.94
+- flat_mlp_base_prod | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.31/29.03, agent 83.60/72.07, error 48.42/46.22
+  - seed 1: pair 40.94/27.97, agent 81.93/76.05, error 47.51/44.59
+  - seed 2: pair 40.71/28.88, agent 83.19/70.61, error 47.94/44.99
+- flat_mlp_peer_min | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.63/33.92, agent 86.40/77.57, error 50.24/49.33
+  - seed 1: pair 43.51/34.82, agent 86.47/80.01, error 50.50/49.49
+  - seed 2: pair 43.28/34.49, agent 86.70/78.90, error 50.83/49.55
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 44.05/33.91, agent 86.25/77.64, error 50.59/49.55
+  - seed 1: pair 43.79/35.65, agent 87.58/83.03, error 51.46/50.44
+  - seed 2: pair 42.94/34.67, agent 87.79/83.33, error 51.03/49.82
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.64/33.39, agent 86.38/72.89, error 50.39/49.49
+  - seed 1: pair 43.50/34.36, agent 86.40/74.49, error 50.59/49.58
+  - seed 2: pair 43.32/34.36, agent 86.71/76.19, error 50.91/49.64
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.72/33.99, agent 86.39/77.77, error 50.33/49.44
+  - seed 1: pair 43.56/35.00, agent 86.45/80.17, error 50.46/49.45
+  - seed 2: pair 43.31/34.63, agent 86.82/82.35, error 50.82/49.52
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.35/31.54, agent 85.44/78.01, error 49.14/48.45
+  - seed 1: pair 42.50/33.20, agent 86.73/80.34, error 49.95/48.05
+  - seed 2: pair 42.08/32.13, agent 83.89/76.09, error 48.84/47.25
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.14/31.81, agent 87.33/80.88, error 49.18/47.89
+  - seed 1: pair 42.63/34.12, agent 87.49/81.12, error 50.35/48.68
+  - seed 2: pair 41.09/32.41, agent 87.14/80.12, error 49.24/47.80
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.38/31.41, agent 85.44/78.01, error 49.20/48.51
+  - seed 1: pair 42.49/32.90, agent 86.70/77.47, error 49.98/48.07
+  - seed 2: pair 42.14/31.97, agent 83.90/71.30, error 49.00/47.40
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.38/31.62, agent 85.46/77.97, error 49.17/48.50
+  - seed 1: pair 42.46/33.16, agent 86.69/80.32, error 49.95/48.04
+  - seed 2: pair 42.14/32.14, agent 84.01/77.85, error 48.90/47.29
+- flat_mlp_base_min | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.16/30.46, agent 82.33/64.45, error 48.94/46.70
+  - seed 1: pair 42.33/29.51, agent 81.94/71.39, error 48.46/44.73
+  - seed 2: pair 41.76/32.87, agent 84.34/78.30, error 49.46/49.02
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.50/30.24, agent 87.48/75.97, error 49.31/47.18
+  - seed 1: pair 40.86/31.26, agent 85.41/76.13, error 48.70/47.30
+  - seed 2: pair 41.46/32.83, agent 85.91/77.10, error 49.76/49.49
+- flat_mlp_base_pm | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.18/30.35, agent 82.33/62.24, error 48.97/46.75
+  - seed 1: pair 42.35/29.40, agent 81.95/68.76, error 48.50/44.79
+  - seed 2: pair 41.82/32.49, agent 84.34/72.74, error 49.62/49.20
+- flat_mlp_base_prod | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.19/30.65, agent 82.49/66.98, error 48.92/46.69
+  - seed 1: pair 42.24/29.44, agent 81.93/70.97, error 48.36/44.67
+  - seed 2: pair 41.88/32.81, agent 84.45/76.18, error 49.60/49.18
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.99/32.18, agent 85.69/75.37, error 49.47/48.48
+  - seed 1: pair 42.42/33.34, agent 86.84/79.18, error 49.26/47.77
+  - seed 2: pair 43.19/32.57, agent 86.73/74.10, error 50.34/49.28
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.71/32.66, agent 88.09/77.25, error 49.80/49.37
+  - seed 1: pair 43.81/33.95, agent 85.64/76.72, error 50.44/49.30
+  - seed 2: pair 43.08/33.11, agent 87.52/75.96, error 50.67/50.80
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.98/32.04, agent 85.65/75.37, error 49.53/48.54
+  - seed 1: pair 42.38/33.18, agent 86.83/75.88, error 49.22/47.74
+  - seed 2: pair 43.22/32.46, agent 86.75/71.20, error 50.38/49.34
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.09/32.66, agent 85.98/78.69, error 49.50/48.51
+  - seed 1: pair 42.48/33.36, agent 86.89/78.06, error 49.34/47.91
+  - seed 2: pair 43.23/32.49, agent 86.77/74.42, error 50.38/49.36
+- flat_mlp_base_min | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.51/28.40, agent 81.54/73.23, error 47.03/44.29
+  - seed 1: pair 41.30/28.44, agent 81.41/72.98, error 47.98/44.66
+  - seed 2: pair 40.67/28.64, agent 83.75/71.75, error 47.77/45.63
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.19/28.48, agent 86.42/76.80, error 47.67/45.34
+  - seed 1: pair 40.00/28.80, agent 85.70/79.60, error 48.23/45.57
+  - seed 2: pair 38.67/28.14, agent 86.99/73.53, error 47.85/46.36
+- flat_mlp_base_pm | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.52/28.07, agent 81.51/65.92, error 47.10/44.35
+  - seed 1: pair 41.32/28.32, agent 81.40/70.28, error 48.00/44.68
+  - seed 2: pair 40.65/28.08, agent 83.62/67.13, error 47.94/45.77
+- flat_mlp_base_prod | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.58/28.58, agent 81.66/73.57, error 47.11/44.36
+  - seed 1: pair 41.33/28.36, agent 81.37/73.95, error 48.00/44.70
+  - seed 2: pair 40.64/28.19, agent 83.54/70.87, error 47.86/45.71
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.00/33.22, agent 85.73/78.47, error 50.00/49.26
+  - seed 1: pair 42.42/32.13, agent 86.64/80.23, error 49.53/47.73
+  - seed 2: pair 42.49/32.01, agent 85.12/77.90, error 49.65/48.73
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.53/32.69, agent 87.30/83.07, error 50.45/49.20
+  - seed 1: pair 42.41/33.19, agent 87.79/83.89, error 50.31/48.92
+  - seed 2: pair 42.73/32.27, agent 86.70/81.08, error 50.30/48.73
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.98/33.07, agent 85.74/78.60, error 50.02/49.28
+  - seed 1: pair 42.42/32.03, agent 86.68/77.57, error 49.55/47.74
+  - seed 2: pair 42.48/31.75, agent 85.09/72.79, error 49.65/48.73
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 43.05/33.61, agent 85.85/81.99, error 50.05/49.31
+  - seed 1: pair 42.39/32.13, agent 86.66/80.53, error 49.51/47.68
+  - seed 2: pair 42.46/31.99, agent 85.08/78.42, error 49.61/48.66
+- flat_mlp_base_min | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.42/30.14, agent 82.53/74.11, error 45.87/44.51
+  - seed 1: pair 39.84/30.11, agent 83.50/75.18, error 46.30/44.64
+  - seed 2: pair 38.94/28.51, agent 82.41/74.67, error 46.02/43.92
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.04/30.81, agent 86.49/82.44, error 46.36/45.19
+  - seed 1: pair 39.42/30.56, agent 85.78/77.97, error 47.02/45.70
+  - seed 2: pair 37.12/30.09, agent 86.96/80.36, error 46.77/46.95
+- flat_mlp_base_pm | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.41/30.00, agent 82.52/71.47, error 45.90/44.54
+  - seed 1: pair 39.84/30.11, agent 83.50/75.18, error 46.30/44.64
+  - seed 2: pair 38.94/28.51, agent 82.41/74.67, error 46.02/43.92
+- flat_mlp_base_prod | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.50/30.14, agent 82.53/79.06, error 45.91/44.54
+  - seed 1: pair 39.88/30.09, agent 83.54/75.17, error 46.34/44.69
+  - seed 2: pair 38.98/28.53, agent 82.41/74.59, error 46.07/43.96
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.72/29.86, agent 81.84/74.12, error 46.39/44.62
+  - seed 1: pair 38.24/28.09, agent 82.97/81.51, error 46.08/44.38
+  - seed 2: pair 38.03/28.00, agent 82.02/69.18, error 44.90/42.29
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.72/30.28, agent 88.11/81.02, error 46.37/45.56
+  - seed 1: pair 36.72/28.78, agent 87.42/83.99, error 46.14/44.47
+  - seed 2: pair 38.06/28.72, agent 83.39/74.04, error 45.38/42.98
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.75/29.91, agent 81.86/74.49, error 46.42/44.64
+  - seed 1: pair 38.23/27.97, agent 82.95/78.49, error 46.12/44.40
+  - seed 2: pair 38.02/27.87, agent 82.00/69.18, error 44.94/42.31
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.75/29.91, agent 81.86/74.48, error 46.42/44.64
+  - seed 1: pair 38.26/28.10, agent 83.05/81.68, error 46.10/44.39
+  - seed 2: pair 38.19/27.79, agent 81.81/70.78, error 44.93/42.25
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.79/32.29, agent 87.63/79.79, error 49.00/49.21
+  - seed 1: pair 41.62/33.74, agent 88.22/76.96, error 49.02/48.37
+  - seed 2: pair 41.62/35.07, agent 88.28/81.24, error 49.19/49.16
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.87/32.68, agent 87.66/78.86, error 50.31/49.87
+  - seed 1: pair 42.74/33.36, agent 87.17/76.30, error 49.87/47.62
+  - seed 2: pair 42.28/34.08, agent 87.72/81.78, error 49.48/47.74
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.83/32.17, agent 87.62/79.79, error 49.06/49.30
+  - seed 1: pair 41.60/33.58, agent 88.18/76.89, error 49.04/48.39
+  - seed 2: pair 41.59/34.90, agent 88.24/81.23, error 49.21/49.17
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.87/32.32, agent 87.77/80.21, error 49.04/49.27
+  - seed 1: pair 41.64/33.75, agent 88.28/77.06, error 49.01/48.36
+  - seed 2: pair 41.59/34.94, agent 88.42/81.25, error 49.09/49.08
+- flat_mlp_base_min | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.26/29.39, agent 81.43/69.40, error 47.12/45.17
+  - seed 1: pair 39.55/26.64, agent 79.08/67.81, error 46.23/42.02
+  - seed 2: pair 39.75/28.97, agent 79.79/70.54, error 46.18/44.43
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.98/29.33, agent 85.54/74.28, error 47.54/46.05
+  - seed 1: pair 37.83/29.10, agent 84.87/73.63, error 47.00/45.75
+  - seed 2: pair 37.66/27.95, agent 86.24/77.86, error 46.45/44.49
+- flat_mlp_base_pm | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.25/29.25, agent 81.44/67.06, error 47.12/45.17
+  - seed 1: pair 39.54/26.40, agent 79.01/65.29, error 46.28/42.06
+  - seed 2: pair 39.74/28.84, agent 79.77/67.93, error 46.18/44.43
+- flat_mlp_base_prod | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.30/29.39, agent 81.42/69.61, error 47.17/45.21
+  - seed 1: pair 39.50/26.53, agent 79.13/67.82, error 46.09/41.90
+  - seed 2: pair 39.87/28.94, agent 79.97/70.16, error 46.25/44.50
+- flat_mlp_peer_min | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.90/31.62, agent 85.10/71.06, error 49.70/48.21
+  - seed 1: pair 43.10/32.83, agent 85.07/72.96, error 50.22/48.54
+  - seed 2: pair 41.36/31.16, agent 84.36/75.84, error 48.58/47.19
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.09/32.20, agent 86.35/71.92, error 50.11/48.61
+  - seed 1: pair 43.16/33.37, agent 85.71/73.37, error 50.85/50.35
+  - seed 2: pair 40.15/30.89, agent 86.43/76.80, error 48.93/47.99
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.93/31.23, agent 85.03/68.53, error 49.92/48.42
+  - seed 1: pair 43.23/32.76, agent 85.19/70.60, error 50.36/48.75
+  - seed 2: pair 41.35/30.82, agent 84.29/70.56, error 48.71/47.33
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.89/31.31, agent 85.06/68.40, error 49.72/48.20
+  - seed 1: pair 43.21/32.87, agent 85.36/73.44, error 50.33/48.70
+  - seed 2: pair 41.32/30.96, agent 84.45/75.49, error 48.58/47.18
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.04/29.70, agent 83.06/71.44, error 48.36/46.66
+  - seed 1: pair 41.18/29.97, agent 84.76/71.40, error 48.68/46.12
+  - seed 2: pair 42.19/31.21, agent 85.02/70.50, error 49.67/48.92
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.71/29.15, agent 86.38/73.41, error 48.34/47.43
+  - seed 1: pair 40.76/30.83, agent 86.11/74.32, error 49.40/48.18
+  - seed 2: pair 41.18/31.45, agent 87.34/73.43, error 49.66/48.88
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.04/29.47, agent 82.98/71.44, error 48.53/46.85
+  - seed 1: pair 41.20/29.86, agent 84.76/68.76, error 48.74/46.19
+  - seed 2: pair 42.23/31.14, agent 84.95/70.66, error 49.78/49.04
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.03/29.47, agent 82.99/71.11, error 48.35/46.70
+  - seed 1: pair 41.21/29.86, agent 84.74/71.09, error 48.71/46.18
+  - seed 2: pair 42.25/31.14, agent 84.99/70.39, error 49.75/49.03
+- flat_mlp_base_min | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.25/27.93, agent 87.66/77.45, error 44.83/45.95
+  - seed 1: pair 39.57/26.45, agent 79.42/64.63, error 46.93/43.28
+  - seed 2: pair 40.14/29.80, agent 81.66/65.26, error 47.91/45.68
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.70/28.34, agent 86.18/73.22, error 47.04/44.68
+  - seed 1: pair 36.74/27.90, agent 86.03/76.07, error 46.75/45.01
+  - seed 2: pair 38.41/29.24, agent 86.14/70.28, error 47.75/46.21
+- flat_mlp_base_pm | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.23/27.58, agent 87.59/74.58, error 44.87/46.00
+  - seed 1: pair 39.54/26.10, agent 79.32/62.22, error 47.05/43.39
+  - seed 2: pair 40.12/29.65, agent 81.60/65.15, error 47.89/45.66
+- flat_mlp_base_prod | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.26/28.06, agent 87.81/77.80, error 44.81/45.95
+  - seed 1: pair 39.53/26.15, agent 79.38/65.57, error 46.93/43.34
+  - seed 2: pair 40.10/29.83, agent 81.71/65.23, error 47.91/45.67
+- flat_mlp_peer_min | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.96/31.70, agent 84.48/65.33, error 49.29/48.10
+  - seed 1: pair 41.97/30.05, agent 82.33/67.37, error 48.73/46.92
+  - seed 2: pair 41.45/30.48, agent 86.06/73.25, error 49.14/47.11
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.63/31.50, agent 86.17/71.37, error 49.38/47.93
+  - seed 1: pair 40.55/30.95, agent 86.57/73.91, error 48.83/47.79
+  - seed 2: pair 41.61/30.49, agent 85.66/69.51, error 49.78/48.71
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.95/31.42, agent 84.40/62.91, error 49.43/48.22
+  - seed 1: pair 41.99/29.70, agent 82.24/62.43, error 48.96/47.12
+  - seed 2: pair 41.47/30.24, agent 85.96/70.50, error 49.31/47.25
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.00/31.84, agent 84.62/68.17, error 49.13/47.95
+  - seed 1: pair 42.03/29.98, agent 82.22/67.20, error 48.83/47.01
+  - seed 2: pair 41.48/30.35, agent 86.07/70.64, error 49.20/47.16
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.59/28.94, agent 85.01/70.79, error 47.91/46.27
+  - seed 1: pair 41.01/31.35, agent 86.18/71.32, error 48.23/46.08
+  - seed 2: pair 40.55/28.67, agent 84.05/68.58, error 47.97/46.42
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.72/29.60, agent 86.43/71.76, error 47.79/46.74
+  - seed 1: pair 41.12/32.11, agent 87.01/74.37, error 49.02/47.37
+  - seed 2: pair 39.98/28.89, agent 86.30/70.76, error 48.38/46.83
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.58/28.69, agent 84.94/70.78, error 47.98/46.34
+  - seed 1: pair 41.10/31.29, agent 86.25/69.06, error 48.32/46.16
+  - seed 2: pair 40.59/28.64, agent 84.00/68.85, error 48.18/46.59
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.59/28.83, agent 84.92/70.15, error 47.86/46.23
+  - seed 1: pair 41.11/31.46, agent 86.31/73.37, error 48.36/46.23
+  - seed 2: pair 40.71/28.84, agent 83.96/67.41, error 48.17/46.60
+- flat_mlp_base_min | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.16/28.82, agent 81.52/66.91, error 47.29/45.20
+  - seed 1: pair 40.16/28.67, agent 81.21/67.73, error 47.25/44.16
+  - seed 2: pair 39.90/29.00, agent 81.20/65.63, error 47.04/44.96
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.11/29.12, agent 85.56/69.57, error 47.75/46.39
+  - seed 1: pair 37.59/28.99, agent 87.08/75.89, error 46.67/45.30
+  - seed 2: pair 38.10/30.21, agent 86.36/70.89, error 47.18/46.52
+- flat_mlp_base_pm | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.10/28.55, agent 81.44/61.98, error 47.28/45.19
+  - seed 1: pair 40.16/28.67, agent 81.21/67.73, error 47.25/44.16
+  - seed 2: pair 39.88/28.99, agent 81.17/65.57, error 47.06/44.99
+- flat_mlp_base_prod | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.18/28.78, agent 81.63/65.67, error 47.14/45.11
+  - seed 1: pair 40.11/28.73, agent 81.28/70.37, error 47.19/44.09
+  - seed 2: pair 39.98/29.47, agent 81.35/66.96, error 46.83/44.92
+- flat_mlp_peer_min | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.60/32.53, agent 85.63/70.12, error 49.36/48.50
+  - seed 1: pair 42.01/31.65, agent 82.76/65.03, error 48.81/47.77
+  - seed 2: pair 40.87/30.59, agent 84.10/67.64, error 47.67/46.16
+- flat_mlp_peer_perclass | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.50/32.69, agent 86.98/71.99, error 49.57/47.70
+  - seed 1: pair 41.11/32.38, agent 86.18/68.57, error 49.73/48.96
+  - seed 2: pair 39.86/30.55, agent 87.73/68.96, error 48.02/46.66
+- flat_mlp_peer_pm | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.61/32.47, agent 85.61/67.93, error 49.41/48.56
+  - seed 1: pair 42.00/31.23, agent 82.63/60.53, error 48.96/47.89
+  - seed 2: pair 40.92/30.30, agent 84.04/65.30, error 47.85/46.37
+- flat_mlp_peer_prod | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.88/32.96, agent 85.78/70.43, error 49.25/48.33
+  - seed 1: pair 42.09/31.73, agent 82.90/65.38, error 48.94/47.92
+  - seed 2: pair 41.06/30.84, agent 84.25/66.21, error 47.68/46.23
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.83/31.22, agent 85.33/70.10, error 47.95/46.89
+  - seed 1: pair 41.89/32.08, agent 86.22/71.19, error 49.16/47.29
+  - seed 2: pair 41.35/31.41, agent 85.09/70.75, error 48.19/47.00
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.86/31.00, agent 86.78/70.36, error 48.43/46.48
+  - seed 1: pair 42.16/31.28, agent 86.28/71.17, error 49.60/47.63
+  - seed 2: pair 40.86/31.60, agent 87.06/73.09, error 48.37/46.62
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.80/31.08, agent 85.27/70.10, error 48.04/46.96
+  - seed 1: pair 41.89/31.81, agent 86.18/68.67, error 49.26/47.40
+  - seed 2: pair 41.38/31.15, agent 85.07/68.14, error 48.31/47.11
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.12/31.56, agent 85.37/70.45, error 47.99/46.98
+  - seed 1: pair 41.89/32.08, agent 86.22/71.19, error 49.16/47.30
+  - seed 2: pair 41.37/31.48, agent 85.32/70.88, error 48.19/46.99
+- flat_mlp_base_min | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.10/28.21, agent 87.51/73.97, error 44.25/45.24
+  - seed 1: pair 39.64/26.79, agent 79.27/63.51, error 46.26/42.40
+  - seed 2: pair 39.50/28.13, agent 81.13/66.91, error 47.10/44.86
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.65/28.14, agent 85.75/69.34, error 46.17/43.83
+  - seed 1: pair 37.10/28.33, agent 85.57/70.69, error 46.50/44.90
+  - seed 2: pair 38.88/28.74, agent 85.56/70.82, error 47.43/45.57
+- flat_mlp_base_pm | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.09/28.09, agent 87.46/73.97, error 44.30/45.29
+  - seed 1: pair 39.62/26.56, agent 79.18/63.50, error 46.34/42.46
+  - seed 2: pair 39.48/28.12, agent 81.07/66.82, error 47.12/44.88
+- flat_mlp_base_prod | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.50/27.17, agent 79.26/62.98, error 46.32/42.98
+  - seed 1: pair 39.66/26.86, agent 79.33/63.87, error 46.27/42.41
+  - seed 2: pair 39.56/28.22, agent 81.36/66.93, error 47.11/44.89
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.17/29.03, agent 81.98/69.65, error 47.01/45.43
+  - seed 1: pair 38.48/27.01, agent 81.12/64.09, error 45.65/43.17
+  - seed 2: pair 39.11/30.04, agent 83.49/73.90, error 46.61/45.35
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.43/30.21, agent 85.95/73.39, error 47.64/47.02
+  - seed 1: pair 35.77/27.87, agent 86.85/70.20, error 45.43/44.20
+  - seed 2: pair 39.03/30.24, agent 86.79/76.02, error 47.41/46.27
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.14/28.77, agent 81.90/67.06, error 47.03/45.45
+  - seed 1: pair 38.46/26.89, agent 81.08/64.09, error 45.68/43.21
+  - seed 2: pair 39.09/30.02, agent 83.45/73.88, error 46.59/45.33
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.23/29.05, agent 81.90/69.85, error 47.07/45.46
+  - seed 1: pair 38.48/27.01, agent 81.21/64.23, error 45.60/43.13
+  - seed 2: pair 39.17/30.15, agent 83.67/72.67, error 46.61/45.29
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.18/29.35, agent 84.50/71.71, error 47.27/46.18
+  - seed 1: pair 41.44/30.05, agent 84.96/71.04, error 49.01/46.43
+  - seed 2: pair 41.30/30.05, agent 83.74/69.12, error 49.19/47.72
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.12/29.94, agent 87.20/74.67, error 47.77/46.52
+  - seed 1: pair 41.20/31.41, agent 86.57/73.69, error 49.85/48.27
+  - seed 2: pair 40.66/30.34, agent 85.95/71.47, error 49.06/48.12
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.17/29.22, agent 84.46/71.71, error 47.33/46.23
+  - seed 1: pair 41.43/29.89, agent 84.89/68.10, error 49.01/46.43
+  - seed 2: pair 41.27/29.79, agent 83.66/66.56, error 49.29/47.81
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.18/29.37, agent 84.50/71.65, error 47.27/46.18
+  - seed 1: pair 41.44/30.05, agent 84.91/70.76, error 49.01/46.42
+  - seed 2: pair 41.30/30.06, agent 83.74/69.06, error 49.19/47.71
+- flat_mlp_base_min | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.82/26.53, agent 80.48/67.33, error 45.25/43.34
+  - seed 1: pair 37.62/26.69, agent 80.49/68.28, error 44.33/41.58
+  - seed 2: pair 37.58/26.89, agent 80.63/69.11, error 44.51/42.80
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.71/26.74, agent 84.79/73.04, error 46.01/44.97
+  - seed 1: pair 35.56/26.95, agent 85.63/73.76, error 45.64/43.36
+  - seed 2: pair 36.13/27.71, agent 86.24/73.60, error 45.47/44.40
+- flat_mlp_base_pm | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.82/26.53, agent 80.48/67.33, error 45.25/43.34
+  - seed 1: pair 37.61/26.57, agent 80.47/68.28, error 44.36/41.60
+  - seed 2: pair 37.57/26.77, agent 80.61/69.11, error 44.54/42.83
+- flat_mlp_base_prod | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.74/26.48, agent 80.53/68.34, error 45.16/43.24
+  - seed 1: pair 37.63/26.69, agent 80.55/68.31, error 44.33/41.59
+  - seed 2: pair 37.62/26.95, agent 80.97/70.47, error 44.52/42.80
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.21/25.76, agent 81.25/65.55, error 43.66/42.23
+  - seed 1: pair 31.56/25.88, agent 86.82/73.89, error 42.61/43.41
+  - seed 2: pair 36.64/26.81, agent 80.54/71.79, error 43.03/41.23
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.91/27.05, agent 85.62/71.18, error 45.41/44.25
+  - seed 1: pair 34.28/26.35, agent 85.76/71.36, error 44.00/43.08
+  - seed 2: pair 35.98/27.42, agent 84.06/75.90, error 44.48/42.38
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.21/25.65, agent 81.23/65.55, error 43.69/42.26
+  - seed 1: pair 31.56/25.88, agent 86.82/73.89, error 42.61/43.41
+  - seed 2: pair 36.64/26.81, agent 80.54/71.79, error 43.03/41.23
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.33/26.49, agent 81.39/68.37, error 43.82/42.44
+  - seed 1: pair 31.60/26.12, agent 86.84/73.57, error 42.60/43.39
+  - seed 2: pair 36.60/26.75, agent 80.68/72.12, error 42.98/41.18
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.51/29.53, agent 84.46/75.43, error 47.37/46.75
+  - seed 1: pair 38.66/27.22, agent 82.58/68.71, error 45.82/43.33
+  - seed 2: pair 39.73/29.75, agent 83.26/68.19, error 46.99/46.12
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.57/29.52, agent 84.97/72.94, error 47.47/46.67
+  - seed 1: pair 37.57/28.60, agent 86.12/74.29, error 46.63/45.64
+  - seed 2: pair 38.56/30.18, agent 85.37/73.10, error 47.11/47.19
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.53/29.54, agent 84.46/75.38, error 47.40/46.79
+  - seed 1: pair 38.65/27.11, agent 82.56/68.71, error 45.86/43.35
+  - seed 2: pair 39.74/29.51, agent 83.23/68.59, error 47.05/46.19
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.53/29.54, agent 84.54/75.73, error 47.34/46.73
+  - seed 1: pair 38.65/27.33, agent 82.56/68.77, error 45.86/43.44
+  - seed 2: pair 39.73/29.69, agent 83.39/69.53, error 47.00/46.13
+- flat_mlp_base_min | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.55/27.66, agent 81.08/68.62, error 46.15/43.69
+  - seed 1: pair 37.92/27.08, agent 80.35/68.49, error 44.67/42.00
+  - seed 2: pair 37.26/25.98, agent 79.89/70.76, error 45.14/42.38
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.40/26.99, agent 85.79/72.37, error 45.81/43.45
+  - seed 1: pair 35.72/28.09, agent 86.38/77.16, error 44.81/43.57
+  - seed 2: pair 36.05/27.27, agent 85.75/74.36, error 45.96/44.87
+- flat_mlp_base_pm | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.54/27.52, agent 81.05/68.52, error 46.17/43.71
+  - seed 1: pair 37.91/26.95, agent 80.31/68.39, error 44.69/42.02
+  - seed 2: pair 37.25/25.97, agent 79.85/70.67, error 45.13/42.37
+- flat_mlp_base_prod | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.55/27.67, agent 81.02/68.02, error 46.14/43.70
+  - seed 1: pair 37.93/27.08, agent 80.37/68.50, error 44.54/41.83
+  - seed 2: pair 37.31/25.90, agent 79.95/70.44, error 45.18/42.36
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.70/26.17, agent 80.78/70.47, error 43.16/41.44
+  - seed 1: pair 36.97/27.38, agent 80.19/73.81, error 44.62/42.28
+  - seed 2: pair 36.62/26.68, agent 81.54/76.25, error 43.85/41.73
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.90/27.59, agent 85.35/75.75, error 44.43/43.34
+  - seed 1: pair 34.15/27.11, agent 86.40/77.43, error 43.82/42.99
+  - seed 2: pair 35.95/27.67, agent 85.55/80.12, error 44.66/42.55
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.69/25.94, agent 80.75/67.86, error 43.22/41.49
+  - seed 1: pair 36.96/27.14, agent 80.15/71.08, error 44.69/42.33
+  - seed 2: pair 36.62/26.68, agent 81.54/76.25, error 43.85/41.73
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.77/26.28, agent 80.99/71.32, error 43.20/41.48
+  - seed 1: pair 36.95/27.32, agent 80.13/72.96, error 44.59/42.23
+  - seed 2: pair 36.70/26.70, agent 81.63/76.29, error 43.93/41.80
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.13/29.36, agent 84.66/74.60, error 47.02/46.11
+  - seed 1: pair 39.00/28.60, agent 82.45/70.98, error 46.58/44.24
+  - seed 2: pair 39.53/30.27, agent 84.78/72.32, error 47.15/46.43
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.44/29.69, agent 86.52/76.38, error 47.24/46.17
+  - seed 1: pair 37.59/29.19, agent 86.31/74.13, error 46.40/44.71
+  - seed 2: pair 38.85/30.13, agent 86.27/73.85, error 47.50/46.54
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.12/29.24, agent 84.62/71.89, error 46.97/46.03
+  - seed 1: pair 39.03/28.36, agent 82.42/68.46, error 46.73/44.37
+  - seed 2: pair 39.47/30.11, agent 84.66/72.14, error 47.13/46.42
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.18/29.40, agent 84.85/74.97, error 46.97/46.02
+  - seed 1: pair 39.05/28.50, agent 82.62/71.50, error 46.55/44.21
+  - seed 2: pair 39.53/30.26, agent 84.83/71.81, error 47.26/46.53
+- flat_mlp_base_min | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.28/26.64, agent 82.00/71.52, error 46.65/44.00
+  - seed 1: pair 39.65/26.80, agent 80.76/73.27, error 46.11/42.30
+  - seed 2: pair 39.53/26.43, agent 81.46/71.21, error 46.13/43.42
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.65/28.41, agent 85.75/69.56, error 48.16/47.10
+  - seed 1: pair 39.00/27.64, agent 85.17/76.89, error 46.99/44.34
+  - seed 2: pair 36.85/27.71, agent 87.14/77.74, error 46.43/44.85
+- flat_mlp_base_pm | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.27/26.64, agent 81.98/71.52, error 46.68/44.03
+  - seed 1: pair 39.64/26.80, agent 80.74/73.26, error 46.10/42.29
+  - seed 2: pair 39.51/26.43, agent 81.38/71.15, error 46.20/43.48
+- flat_mlp_base_prod | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.47/27.12, agent 82.05/69.65, error 46.58/44.02
+  - seed 1: pair 39.65/26.80, agent 80.80/73.30, error 46.11/42.30
+  - seed 2: pair 39.70/26.74, agent 81.46/71.29, error 46.26/43.56
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.21/26.44, agent 80.22/66.89, error 46.07/42.23
+  - seed 1: pair 39.59/26.46, agent 81.75/70.10, error 46.51/43.09
+  - seed 2: pair 38.98/27.86, agent 81.74/76.43, error 45.75/43.46
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.64/26.84, agent 85.60/73.14, error 46.59/43.91
+  - seed 1: pair 38.22/27.48, agent 85.70/74.56, error 46.53/44.75
+  - seed 2: pair 37.52/28.03, agent 86.22/79.95, error 46.13/43.92
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.18/26.32, agent 80.16/66.89, error 46.14/42.29
+  - seed 1: pair 39.56/26.34, agent 81.68/70.10, error 46.57/43.14
+  - seed 2: pair 39.03/27.90, agent 81.76/76.55, error 45.80/43.50
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.28/26.35, agent 80.30/66.93, error 46.11/42.28
+  - seed 1: pair 39.59/26.44, agent 81.80/70.17, error 46.51/43.09
+  - seed 2: pair 38.95/27.85, agent 81.87/76.62, error 45.68/43.37
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.14/30.09, agent 84.44/76.08, error 49.39/48.26
+  - seed 1: pair 41.15/30.36, agent 85.40/75.46, error 48.86/48.14
+  - seed 2: pair 41.50/31.20, agent 84.97/79.51, error 49.07/47.59
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 41.57/30.62, agent 85.85/77.76, error 49.13/48.25
+  - seed 1: pair 41.23/30.36, agent 86.37/76.76, error 49.23/48.30
+  - seed 2: pair 41.35/31.56, agent 85.79/78.70, error 49.64/49.01
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.18/30.00, agent 84.34/76.08, error 49.60/48.43
+  - seed 1: pair 41.12/30.36, agent 85.32/75.45, error 48.95/48.21
+  - seed 2: pair 41.49/30.95, agent 84.88/79.70, error 49.24/47.74
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 42.28/30.40, agent 84.54/76.48, error 49.54/48.40
+  - seed 1: pair 41.16/30.52, agent 85.48/75.73, error 48.87/48.14
+  - seed 2: pair 41.51/31.10, agent 84.93/78.93, error 49.10/47.62
+- flat_mlp_base_min | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.40/26.46, agent 82.28/70.24, error 44.79/43.03
+  - seed 1: pair 31.06/25.41, agent 87.51/77.07, error 41.98/42.52
+  - seed 2: pair 36.81/25.82, agent 79.98/73.97, error 43.79/42.14
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.43/25.43, agent 87.39/77.24, error 44.44/43.42
+  - seed 1: pair 33.71/24.24, agent 86.26/74.66, error 42.84/41.05
+  - seed 2: pair 35.40/26.26, agent 85.58/76.59, error 44.21/43.52
+- flat_mlp_base_pm | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.39/26.35, agent 82.26/67.64, error 44.82/43.06
+  - seed 1: pair 31.05/25.08, agent 87.44/74.27, error 42.00/42.55
+  - seed 2: pair 36.80/25.71, agent 79.96/71.23, error 43.82/42.17
+- flat_mlp_base_prod | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.42/26.34, agent 82.40/72.30, error 44.73/42.98
+  - seed 1: pair 31.06/25.57, agent 87.59/78.81, error 41.95/42.48
+  - seed 2: pair 36.76/25.69, agent 80.15/71.29, error 43.74/42.06
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.20/24.86, agent 87.02/76.95, error 41.75/42.19
+  - seed 1: pair 31.33/27.16, agent 87.84/79.05, error 43.00/44.04
+  - seed 2: pair 30.68/25.80, agent 87.26/78.68, error 42.10/42.96
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.83/24.13, agent 84.81/73.09, error 43.92/39.83
+  - seed 1: pair 34.65/27.20, agent 86.74/75.76, error 44.26/42.69
+  - seed 2: pair 34.57/25.65, agent 85.69/77.00, error 43.96/41.63
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.20/24.65, agent 86.99/76.95, error 41.77/42.21
+  - seed 1: pair 31.32/26.93, agent 87.79/76.07, error 43.02/44.07
+  - seed 2: pair 30.69/25.59, agent 87.23/78.64, error 42.15/43.02
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.20/24.86, agent 87.02/76.95, error 41.75/42.19
+  - seed 1: pair 31.38/27.19, agent 87.96/79.01, error 43.00/44.04
+  - seed 2: pair 30.66/25.90, agent 87.31/81.80, error 42.16/43.01
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.80/26.60, agent 83.55/72.86, error 45.29/44.19
+  - seed 1: pair 38.47/28.58, agent 84.18/74.60, error 45.99/43.03
+  - seed 2: pair 37.95/27.43, agent 81.97/69.43, error 44.99/43.15
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.98/26.83, agent 86.11/74.50, error 45.21/43.59
+  - seed 1: pair 37.74/29.46, agent 86.82/76.31, error 46.31/43.66
+  - seed 2: pair 37.28/28.07, agent 85.38/72.49, error 45.68/45.01
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.79/26.48, agent 83.53/72.86, error 45.32/44.23
+  - seed 1: pair 38.49/28.46, agent 84.16/71.76, error 46.04/43.10
+  - seed 2: pair 37.91/27.27, agent 81.86/69.06, error 45.05/43.20
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.72/26.62, agent 83.60/73.94, error 45.25/44.14
+  - seed 1: pair 38.45/28.72, agent 84.12/74.16, error 45.97/42.98
+  - seed 2: pair 37.97/27.41, agent 82.20/69.71, error 44.97/43.15
+- flat_mlp_base_min | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.33/24.98, agent 87.84/75.98, error 43.00/43.43
+  - seed 1: pair 31.49/26.14, agent 87.28/80.25, error 42.61/42.72
+  - seed 2: pair 30.49/26.18, agent 87.78/80.47, error 42.07/43.04
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.07/25.02, agent 87.29/78.04, error 43.83/42.04
+  - seed 1: pair 35.16/26.39, agent 85.68/76.02, error 44.77/43.50
+  - seed 2: pair 35.36/26.17, agent 85.80/79.00, error 44.87/43.72
+- flat_mlp_base_pm | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.33/24.98, agent 87.84/75.98, error 43.00/43.43
+  - seed 1: pair 31.47/25.80, agent 87.21/77.27, error 42.65/42.76
+  - seed 2: pair 30.48/25.95, agent 87.72/77.48, error 42.11/43.08
+- flat_mlp_base_prod | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.36/25.13, agent 87.99/80.37, error 42.97/43.39
+  - seed 1: pair 31.55/26.27, agent 87.59/79.66, error 42.58/42.69
+  - seed 2: pair 30.59/26.21, agent 88.20/80.42, error 42.12/43.06
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.39/24.67, agent 87.32/73.51, error 41.62/42.05
+  - seed 1: pair 36.45/26.55, agent 81.20/71.81, error 44.57/42.70
+  - seed 2: pair 30.15/24.34, agent 87.23/76.02, error 41.59/42.72
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.28/24.43, agent 86.32/74.88, error 43.51/40.49
+  - seed 1: pair 33.84/27.25, agent 86.62/76.82, error 44.17/43.81
+  - seed 2: pair 33.70/23.18, agent 85.59/74.69, error 43.24/40.25
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.39/24.67, agent 87.32/73.51, error 41.62/42.05
+  - seed 1: pair 36.44/26.32, agent 81.16/69.15, error 44.64/42.76
+  - seed 2: pair 30.15/24.34, agent 87.23/76.02, error 41.59/42.72
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.38/24.67, agent 87.47/74.95, error 41.36/41.73
+  - seed 1: pair 36.53/26.62, agent 81.27/71.83, error 44.60/42.74
+  - seed 2: pair 30.15/24.34, agent 87.27/75.70, error 41.59/42.71
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.49/27.90, agent 83.54/73.39, error 45.94/44.74
+  - seed 1: pair 37.80/27.35, agent 84.97/73.65, error 46.31/43.96
+  - seed 2: pair 37.58/26.69, agent 81.88/71.80, error 45.32/42.68
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.62/27.91, agent 86.61/76.54, error 45.55/44.64
+  - seed 1: pair 37.16/28.22, agent 87.16/77.72, error 47.08/45.59
+  - seed 2: pair 36.45/26.30, agent 85.83/74.48, error 45.20/42.75
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.48/27.78, agent 83.52/73.39, error 45.97/44.77
+  - seed 1: pair 37.78/27.22, agent 84.96/70.92, error 46.32/43.97
+  - seed 2: pair 37.57/26.47, agent 81.79/67.85, error 45.34/42.71
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.49/27.89, agent 83.74/73.82, error 45.87/44.69
+  - seed 1: pair 37.80/27.43, agent 84.97/73.33, error 46.31/43.90
+  - seed 2: pair 37.65/26.62, agent 82.11/72.07, error 45.29/42.68
+- flat_mlp_base_min | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.91/19.88, agent 85.02/78.12, error 37.82/37.30
+  - seed 1: pair 24.48/20.00, agent 84.03/79.44, error 36.94/36.65
+  - seed 2: pair 25.64/22.15, agent 85.05/78.84, error 38.13/37.99
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.94/20.00, agent 84.43/76.53, error 38.37/38.00
+  - seed 1: pair 26.16/19.73, agent 83.43/74.97, error 38.01/36.61
+  - seed 2: pair 26.84/21.89, agent 84.09/78.05, error 39.28/38.77
+- flat_mlp_base_pm | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.91/19.88, agent 85.02/78.12, error 37.82/37.30
+  - seed 1: pair 24.48/19.99, agent 84.01/79.39, error 36.94/36.65
+  - seed 2: pair 25.64/22.14, agent 85.03/78.84, error 38.13/37.99
+- flat_mlp_base_prod | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.91/19.88, agent 84.99/78.11, error 37.82/37.30
+  - seed 1: pair 24.53/20.09, agent 84.16/76.44, error 36.90/36.63
+  - seed 2: pair 25.64/22.15, agent 85.01/78.69, error 38.13/38.00
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.27/18.72, agent 83.17/75.44, error 35.87/35.55
+  - seed 1: pair 23.37/19.12, agent 83.94/76.83, error 36.37/36.43
+  - seed 2: pair 23.21/19.94, agent 84.76/77.31, error 37.00/36.75
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 24.62/18.14, agent 82.83/71.48, error 36.58/35.54
+  - seed 1: pair 24.51/18.51, agent 83.12/74.19, error 36.91/34.86
+  - seed 2: pair 25.09/19.46, agent 84.52/75.46, error 38.00/36.18
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.27/18.72, agent 83.17/75.44, error 35.87/35.55
+  - seed 1: pair 23.37/19.12, agent 83.94/76.83, error 36.37/36.43
+  - seed 2: pair 23.21/19.94, agent 84.76/77.31, error 37.00/36.75
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 23.27/18.72, agent 83.17/75.44, error 35.87/35.55
+  - seed 1: pair 23.37/19.12, agent 83.94/76.83, error 36.37/36.43
+  - seed 2: pair 23.19/20.00, agent 84.88/77.32, error 36.98/36.74
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.32/22.17, agent 85.62/78.93, error 39.34/39.68
+  - seed 1: pair 26.23/21.27, agent 84.77/78.96, error 38.92/38.79
+  - seed 2: pair 26.30/21.77, agent 85.28/77.11, error 38.85/39.25
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 30.70/23.08, agent 83.27/76.23, error 41.36/40.06
+  - seed 1: pair 28.51/18.75, agent 83.85/73.47, error 39.58/35.95
+  - seed 2: pair 30.18/21.70, agent 83.43/72.37, error 40.88/37.72
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.32/22.17, agent 85.62/78.93, error 39.34/39.68
+  - seed 1: pair 26.23/21.27, agent 84.77/78.96, error 38.92/38.79
+  - seed 2: pair 26.33/21.84, agent 85.30/77.36, error 38.85/39.25
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.32/22.15, agent 85.67/78.38, error 39.38/39.72
+  - seed 1: pair 26.25/21.31, agent 85.07/77.78, error 38.96/38.82
+  - seed 2: pair 26.61/21.45, agent 85.32/73.73, error 39.04/39.40
+- flat_mlp_base_min | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.53/24.55, agent 86.82/79.07, error 40.13/40.26
+  - seed 1: pair 34.24/23.63, agent 79.39/68.69, error 41.56/39.68
+  - seed 2: pair 35.00/24.54, agent 80.70/69.26, error 43.73/42.09
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.86/24.45, agent 85.01/76.65, error 42.01/40.49
+  - seed 1: pair 31.34/24.29, agent 85.71/75.88, error 42.14/41.74
+  - seed 2: pair 33.61/24.68, agent 85.31/74.42, error 43.61/42.17
+- flat_mlp_base_pm | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.53/24.55, agent 86.82/79.07, error 40.13/40.26
+  - seed 1: pair 34.23/23.63, agent 79.37/68.63, error 41.56/39.68
+  - seed 2: pair 35.04/24.56, agent 80.70/69.26, error 43.77/42.12
+- flat_mlp_base_prod | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 28.55/24.57, agent 86.96/79.65, error 40.13/40.26
+  - seed 1: pair 34.23/23.60, agent 79.56/68.90, error 41.56/39.66
+  - seed 2: pair 34.97/24.51, agent 80.74/69.38, error 43.74/42.12
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.16/24.11, agent 79.74/67.52, error 41.26/39.95
+  - seed 1: pair 28.18/23.91, agent 86.30/76.86, error 40.14/39.99
+  - seed 2: pair 32.75/23.72, agent 79.31/67.34, error 40.08/37.84
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.51/24.55, agent 85.60/76.63, error 41.18/39.13
+  - seed 1: pair 31.35/24.92, agent 85.17/75.23, error 42.39/41.13
+  - seed 2: pair 30.29/23.17, agent 86.04/76.13, error 40.37/37.79
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.19/24.13, agent 79.71/67.45, error 41.30/39.98
+  - seed 1: pair 28.20/23.92, agent 86.31/76.87, error 40.14/39.99
+  - seed 2: pair 32.75/23.72, agent 79.31/67.34, error 40.08/37.84
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 33.30/24.26, agent 80.01/67.79, error 41.25/39.96
+  - seed 1: pair 28.25/23.97, agent 86.69/77.46, error 40.11/39.95
+  - seed 2: pair 32.76/23.69, agent 79.49/67.74, error 40.09/37.84
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.85/25.93, agent 81.87/70.50, error 43.25/41.78
+  - seed 1: pair 35.93/24.94, agent 81.88/72.72, error 43.27/41.06
+  - seed 2: pair 36.63/28.10, agent 83.69/75.08, error 44.71/43.71
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.38/26.44, agent 87.24/77.68, error 42.93/41.67
+  - seed 1: pair 33.98/27.10, agent 86.41/77.44, error 44.36/44.47
+  - seed 2: pair 35.98/28.07, agent 85.74/76.55, error 45.24/44.74
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.85/25.93, agent 81.87/70.50, error 43.25/41.78
+  - seed 1: pair 35.93/24.94, agent 81.88/72.72, error 43.27/41.06
+  - seed 2: pair 36.63/28.10, agent 83.72/75.10, error 44.70/43.70
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.84/25.90, agent 81.92/70.82, error 43.24/41.73
+  - seed 1: pair 35.93/24.93, agent 81.92/72.72, error 43.27/41.06
+  - seed 2: pair 36.72/28.05, agent 83.92/75.70, error 44.79/43.77
+- flat_mlp_base_min | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.01/20.93, agent 84.77/77.46, error 38.79/38.14
+  - seed 1: pair 25.22/20.88, agent 85.17/77.22, error 37.93/37.68
+  - seed 2: pair 25.43/20.79, agent 85.09/76.45, error 37.88/37.86
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.94/21.21, agent 84.65/78.11, error 39.75/38.57
+  - seed 1: pair 27.30/20.29, agent 84.62/74.89, error 39.52/38.76
+  - seed 2: pair 27.11/20.80, agent 84.41/75.64, error 39.22/38.37
+- flat_mlp_base_pm | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.00/20.93, agent 84.76/77.46, error 38.79/38.14
+  - seed 1: pair 25.22/20.88, agent 85.17/77.22, error 37.93/37.68
+  - seed 2: pair 25.43/20.79, agent 85.08/76.44, error 37.90/37.87
+- flat_mlp_base_prod | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.07/20.97, agent 84.99/77.07, error 38.73/38.04
+  - seed 1: pair 25.26/20.82, agent 85.53/76.23, error 37.83/37.60
+  - seed 2: pair 25.49/20.83, agent 85.28/76.30, error 37.95/37.92
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.82/21.57, agent 84.63/75.02, error 38.22/37.92
+  - seed 1: pair 24.34/19.47, agent 84.67/76.80, error 36.81/36.61
+  - seed 2: pair 25.32/21.17, agent 85.44/78.32, error 37.72/37.31
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 27.19/22.55, agent 84.41/74.16, error 39.18/39.02
+  - seed 1: pair 25.87/19.25, agent 83.91/74.76, error 38.02/35.89
+  - seed 2: pair 26.72/20.58, agent 85.13/76.63, error 38.78/37.68
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.82/21.57, agent 84.63/75.02, error 38.22/37.92
+  - seed 1: pair 24.34/19.47, agent 84.67/76.80, error 36.81/36.61
+  - seed 2: pair 25.32/21.17, agent 85.42/78.31, error 37.72/37.31
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 25.84/21.57, agent 84.77/74.99, error 38.19/37.88
+  - seed 1: pair 24.43/19.44, agent 84.89/75.92, error 36.76/36.53
+  - seed 2: pair 25.38/21.19, agent 85.59/77.36, error 37.70/37.29
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.56/22.01, agent 85.66/78.28, error 39.21/39.15
+  - seed 1: pair 26.15/20.56, agent 86.34/77.59, error 38.36/37.88
+  - seed 2: pair 26.38/21.65, agent 85.38/76.27, error 38.66/38.45
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 29.78/22.19, agent 84.60/75.27, error 41.06/40.50
+  - seed 1: pair 29.34/20.25, agent 84.23/76.26, error 40.08/38.32
+  - seed 2: pair 30.39/21.36, agent 84.19/69.76, error 41.03/39.33
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.55/22.01, agent 85.59/78.25, error 39.21/39.15
+  - seed 1: pair 26.15/20.56, agent 86.34/77.59, error 38.36/37.88
+  - seed 2: pair 26.38/21.65, agent 85.38/76.27, error 38.66/38.45
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 26.73/21.79, agent 85.97/76.12, error 39.25/39.09
+  - seed 1: pair 26.18/20.58, agent 86.40/77.72, error 38.39/37.92
+  - seed 2: pair 26.60/21.83, agent 85.65/70.44, error 38.71/38.48
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.74/26.69, agent 80.31/71.16, error 44.24/41.96
+  - seed 1: pair 37.09/29.50, agent 82.64/72.50, error 44.85/43.65
+  - seed 2: pair 36.67/28.08, agent 83.82/74.24, error 44.81/44.13
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.78/27.58, agent 86.10/77.99, error 44.19/42.85
+  - seed 1: pair 35.94/28.97, agent 85.68/76.61, error 44.85/43.57
+  - seed 2: pair 35.39/27.91, agent 85.94/75.73, error 44.82/44.15
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.73/26.57, agent 80.29/68.52, error 44.27/41.99
+  - seed 1: pair 37.08/29.37, agent 82.62/69.81, error 44.88/43.68
+  - seed 2: pair 36.67/28.08, agent 83.82/74.24, error 44.81/44.13
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.70/26.63, agent 80.36/71.20, error 44.15/41.87
+  - seed 1: pair 37.14/29.38, agent 82.88/74.58, error 44.91/43.72
+  - seed 2: pair 36.67/28.04, agent 84.09/74.43, error 44.81/44.12
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.71/27.35, agent 80.98/70.47, error 43.81/42.28
+  - seed 1: pair 35.51/25.77, agent 80.98/71.39, error 43.27/41.02
+  - seed 2: pair 36.01/26.33, agent 80.95/68.43, error 43.28/41.66
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.67/28.03, agent 84.46/72.38, error 44.15/42.89
+  - seed 1: pair 34.38/26.71, agent 84.66/74.40, error 43.21/41.85
+  - seed 2: pair 35.58/26.95, agent 84.22/72.15, error 43.62/42.19
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.71/27.23, agent 80.96/67.86, error 43.84/42.31
+  - seed 1: pair 35.51/25.65, agent 80.96/68.75, error 43.30/41.05
+  - seed 2: pair 36.01/26.33, agent 80.95/68.43, error 43.28/41.66
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.73/27.36, agent 81.13/70.09, error 43.79/42.29
+  - seed 1: pair 35.54/25.66, agent 81.05/71.32, error 43.28/41.07
+  - seed 2: pair 35.97/26.29, agent 80.99/68.46, error 43.16/41.53
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.17/31.99, agent 86.31/75.00, error 47.60/47.34
+  - seed 1: pair 40.64/31.99, agent 85.54/71.88, error 48.43/48.18
+  - seed 2: pair 38.77/31.20, agent 85.97/71.52, error 47.11/47.02
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 40.65/32.63, agent 85.48/75.65, error 48.46/47.65
+  - seed 1: pair 41.10/32.51, agent 86.44/72.39, error 48.92/48.64
+  - seed 2: pair 40.64/30.99, agent 85.54/74.37, error 48.44/46.01
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.20/31.91, agent 86.34/75.33, error 47.69/47.41
+  - seed 1: pair 40.71/32.04, agent 85.58/72.09, error 48.51/48.27
+  - seed 2: pair 38.77/31.20, agent 85.97/71.52, error 47.11/47.02
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.24/32.27, agent 86.58/76.16, error 47.65/47.42
+  - seed 1: pair 40.75/32.05, agent 85.76/72.16, error 48.51/48.25
+  - seed 2: pair 39.06/31.46, agent 86.07/73.59, error 47.27/47.14
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.16/27.11, agent 79.38/67.60, error 43.57/41.35
+  - seed 1: pair 36.20/27.11, agent 81.15/70.72, error 43.46/42.58
+  - seed 2: pair 35.18/25.32, agent 79.97/70.32, error 42.63/41.09
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.50/27.36, agent 84.27/71.98, error 44.03/43.26
+  - seed 1: pair 36.29/28.26, agent 83.63/72.50, error 44.04/43.64
+  - seed 2: pair 32.98/26.44, agent 86.17/75.08, error 42.48/42.53
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.16/27.11, agent 79.38/67.60, error 43.57/41.35
+  - seed 1: pair 36.20/26.99, agent 81.13/68.10, error 43.49/42.61
+  - seed 2: pair 35.18/25.32, agent 79.97/70.32, error 42.63/41.09
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.20/27.12, agent 79.38/67.59, error 43.61/41.40
+  - seed 1: pair 36.25/27.20, agent 81.21/69.10, error 43.53/42.64
+  - seed 2: pair 35.14/25.31, agent 79.97/70.33, error 42.59/41.05
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.17/24.81, agent 79.54/71.95, error 42.06/40.19
+  - seed 1: pair 35.01/26.01, agent 80.27/67.01, error 42.22/41.19
+  - seed 2: pair 29.47/24.64, agent 86.45/74.69, error 40.69/41.42
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 32.76/25.52, agent 86.24/76.94, error 42.04/41.36
+  - seed 1: pair 33.57/25.81, agent 85.08/71.73, error 43.07/41.97
+  - seed 2: pair 32.84/26.02, agent 85.44/72.85, error 42.67/42.55
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.16/24.70, agent 79.52/69.28, error 42.09/40.22
+  - seed 1: pair 34.97/25.89, agent 80.25/64.88, error 42.28/41.23
+  - seed 2: pair 29.47/24.64, agent 86.45/74.69, error 40.69/41.42
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.23/24.79, agent 79.71/71.94, error 42.18/40.27
+  - seed 1: pair 35.03/26.06, agent 80.42/67.31, error 42.09/41.06
+  - seed 2: pair 29.49/24.53, agent 86.71/75.09, error 40.67/41.41
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.63/30.79, agent 84.58/73.29, error 46.43/46.16
+  - seed 1: pair 38.09/31.23, agent 85.87/77.70, error 46.66/46.10
+  - seed 2: pair 38.25/29.74, agent 85.74/71.28, error 46.57/46.07
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.13/31.18, agent 85.82/75.71, error 47.35/47.51
+  - seed 1: pair 38.46/31.23, agent 85.69/77.56, error 46.97/46.14
+  - seed 2: pair 37.85/29.79, agent 87.13/74.66, error 47.25/46.94
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.62/30.65, agent 84.56/73.04, error 46.42/46.15
+  - seed 1: pair 38.08/31.23, agent 85.85/77.69, error 46.66/46.10
+  - seed 2: pair 38.25/29.74, agent 85.74/71.28, error 46.57/46.07
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.63/30.77, agent 84.58/73.23, error 46.43/46.16
+  - seed 1: pair 38.12/31.36, agent 85.95/77.78, error 46.74/46.20
+  - seed 2: pair 38.25/29.60, agent 85.65/71.13, error 46.61/46.08
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.95/27.39, agent 79.33/69.31, error 44.09/41.79
+  - seed 1: pair 36.79/28.13, agent 80.44/68.37, error 44.32/42.72
+  - seed 2: pair 37.36/28.18, agent 80.70/72.24, error 44.50/42.88
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.99/28.28, agent 84.42/75.53, error 44.91/43.51
+  - seed 1: pair 36.69/28.87, agent 83.68/69.91, error 45.21/43.46
+  - seed 2: pair 35.69/28.92, agent 85.00/75.84, error 44.73/43.30
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.93/27.26, agent 79.33/66.94, error 44.19/41.85
+  - seed 1: pair 36.79/28.13, agent 80.44/68.37, error 44.32/42.72
+  - seed 2: pair 37.36/28.05, agent 80.68/69.56, error 44.53/42.91
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 31.25/28.81, agent 86.82/78.45, error 42.28/42.91
+  - seed 1: pair 36.95/28.04, agent 80.52/66.75, error 44.36/42.80
+  - seed 2: pair 37.36/28.18, agent 80.70/72.22, error 44.45/42.85
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.53/27.99, agent 80.83/69.71, error 44.29/43.27
+  - seed 1: pair 36.68/26.81, agent 80.29/67.24, error 44.53/43.10
+  - seed 2: pair 36.83/26.99, agent 79.94/70.42, error 44.18/42.91
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.28/28.40, agent 85.60/76.84, error 44.76/43.36
+  - seed 1: pair 35.68/27.94, agent 84.44/75.75, error 45.05/44.01
+  - seed 2: pair 34.18/27.05, agent 85.42/75.26, error 44.55/43.74
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.53/27.99, agent 80.83/69.71, error 44.29/43.27
+  - seed 1: pair 36.67/26.68, agent 80.27/64.75, error 44.57/43.13
+  - seed 2: pair 36.82/26.86, agent 79.92/67.81, error 44.21/42.94
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.53/27.97, agent 80.79/69.65, error 44.33/43.31
+  - seed 1: pair 36.66/26.80, agent 80.28/67.35, error 44.55/43.12
+  - seed 2: pair 36.96/27.19, agent 79.82/70.30, error 44.32/43.11
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.50/30.26, agent 83.71/75.68, error 47.11/45.67
+  - seed 1: pair 39.36/30.36, agent 85.99/78.24, error 47.30/46.34
+  - seed 2: pair 38.79/29.66, agent 84.33/71.51, error 47.27/46.32
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.64/31.09, agent 85.24/78.65, error 47.21/46.72
+  - seed 1: pair 40.23/30.90, agent 84.92/74.80, error 48.12/47.32
+  - seed 2: pair 38.36/30.52, agent 85.82/74.06, error 48.01/47.01
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.50/30.14, agent 83.64/72.83, error 47.12/45.68
+  - seed 1: pair 39.46/30.53, agent 86.09/78.72, error 47.42/46.49
+  - seed 2: pair 38.78/29.66, agent 84.31/71.50, error 47.26/46.31
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.47/30.24, agent 83.84/75.83, error 47.07/45.65
+  - seed 1: pair 39.47/30.52, agent 86.03/77.28, error 47.42/46.49
+  - seed 2: pair 38.84/29.83, agent 84.52/71.75, error 47.35/46.37
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.34/26.27, agent 77.29/68.14, error 43.96/41.21
+  - seed 1: pair 36.68/27.60, agent 81.77/72.02, error 44.25/43.12
+  - seed 2: pair 38.02/28.48, agent 80.87/70.71, error 45.09/43.94
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.18/26.61, agent 84.39/72.77, error 44.01/42.25
+  - seed 1: pair 35.59/28.03, agent 85.31/76.36, error 45.30/45.03
+  - seed 2: pair 35.76/27.81, agent 85.71/74.88, error 44.93/44.27
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.34/26.15, agent 77.27/65.62, error 44.00/41.24
+  - seed 1: pair 36.68/27.60, agent 81.77/72.02, error 44.25/43.12
+  - seed 2: pair 38.02/28.48, agent 80.87/70.71, error 45.09/43.94
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.26/26.21, agent 77.44/68.20, error 43.87/41.15
+  - seed 1: pair 36.60/27.53, agent 81.77/72.05, error 44.29/43.17
+  - seed 2: pair 38.06/28.54, agent 80.97/70.58, error 45.00/43.85
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.81/26.65, agent 80.95/70.96, error 43.06/41.09
+  - seed 1: pair 35.89/26.37, agent 80.82/63.64, error 43.73/41.90
+  - seed 2: pair 36.11/24.91, agent 78.23/66.32, error 43.05/39.40
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.84/26.01, agent 84.10/73.95, error 43.60/41.30
+  - seed 1: pair 34.05/27.51, agent 84.82/71.81, error 44.15/43.31
+  - seed 2: pair 32.97/25.80, agent 85.58/76.17, error 43.35/42.05
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.80/26.53, agent 80.93/68.33, error 43.09/41.12
+  - seed 1: pair 35.89/26.37, agent 80.82/63.64, error 43.73/41.90
+  - seed 2: pair 36.11/24.91, agent 78.23/66.32, error 43.05/39.40
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.81/26.62, agent 80.90/70.96, error 43.14/41.19
+  - seed 1: pair 35.89/26.38, agent 80.78/63.61, error 43.73/41.91
+  - seed 2: pair 36.07/24.90, agent 78.23/66.32, error 43.10/39.49
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.17/29.49, agent 85.31/73.45, error 46.89/45.99
+  - seed 1: pair 38.44/30.80, agent 85.59/77.72, error 46.58/46.05
+  - seed 2: pair 38.93/29.71, agent 83.31/69.46, error 46.59/45.64
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.47/29.54, agent 85.17/73.29, error 47.11/46.22
+  - seed 1: pair 38.48/30.82, agent 85.66/77.58, error 46.60/46.00
+  - seed 2: pair 38.08/30.46, agent 86.40/72.92, error 46.84/44.92
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.17/29.49, agent 85.33/73.46, error 46.89/45.99
+  - seed 1: pair 38.42/30.66, agent 85.55/74.83, error 46.61/46.08
+  - seed 2: pair 38.89/29.71, agent 83.26/69.53, error 46.59/45.64
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.17/29.49, agent 85.38/73.45, error 46.89/45.98
+  - seed 1: pair 38.48/30.82, agent 85.66/77.58, error 46.60/46.00
+  - seed 2: pair 38.92/29.67, agent 83.34/69.68, error 46.58/45.60
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.68/28.03, agent 80.08/70.38, error 43.85/41.25
+  - seed 1: pair 36.62/28.49, agent 81.28/74.24, error 44.64/43.60
+  - seed 2: pair 36.19/27.57, agent 81.44/74.59, error 44.20/43.50
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.41/29.66, agent 85.05/76.75, error 44.66/44.51
+  - seed 1: pair 35.82/29.51, agent 84.09/75.56, error 44.97/44.63
+  - seed 2: pair 34.50/26.85, agent 85.51/77.94, error 44.62/43.32
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.67/27.91, agent 80.06/67.77, error 43.88/41.28
+  - seed 1: pair 36.61/28.36, agent 81.26/71.49, error 44.67/43.63
+  - seed 2: pair 36.18/27.45, agent 81.42/71.83, error 44.23/43.53
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.66/28.03, agent 79.97/70.47, error 43.82/41.25
+  - seed 1: pair 36.65/28.52, agent 81.33/73.76, error 44.67/43.63
+  - seed 2: pair 36.24/27.58, agent 81.43/74.59, error 44.29/43.57
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.36/27.40, agent 80.82/70.46, error 43.36/41.64
+  - seed 1: pair 35.77/26.49, agent 80.62/72.51, error 43.27/41.37
+  - seed 2: pair 35.64/26.40, agent 80.29/69.74, error 43.58/41.75
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.27/28.36, agent 83.52/74.14, error 44.27/42.81
+  - seed 1: pair 34.90/26.75, agent 85.00/75.43, error 43.72/42.48
+  - seed 2: pair 34.57/26.88, agent 84.38/72.84, error 43.48/42.28
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.36/27.27, agent 80.81/67.85, error 43.39/41.67
+  - seed 1: pair 35.76/26.36, agent 80.61/69.83, error 43.31/41.40
+  - seed 2: pair 35.64/26.40, agent 80.29/69.74, error 43.58/41.75
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.36/27.37, agent 80.92/70.38, error 43.40/41.70
+  - seed 1: pair 35.91/26.61, agent 80.60/72.37, error 43.31/41.36
+  - seed 2: pair 35.72/26.43, agent 80.34/69.66, error 43.66/41.83
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.79/31.00, agent 84.35/75.87, error 46.34/45.76
+  - seed 1: pair 39.22/31.62, agent 86.26/76.58, error 47.55/47.10
+  - seed 2: pair 38.93/30.81, agent 85.85/74.68, error 47.74/47.79
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.05/30.54, agent 86.02/77.56, error 46.57/45.34
+  - seed 1: pair 39.09/31.47, agent 86.91/76.94, error 48.26/47.86
+  - seed 2: pair 39.30/30.72, agent 87.05/77.88, error 48.27/47.52
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.80/31.04, agent 84.33/76.01, error 46.36/45.78
+  - seed 1: pair 39.27/31.65, agent 86.31/76.60, error 47.61/47.20
+  - seed 2: pair 39.01/30.90, agent 85.91/75.03, error 47.82/47.87
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.80/31.01, agent 84.33/75.95, error 46.28/45.67
+  - seed 1: pair 39.34/31.92, agent 86.31/76.64, error 47.57/47.14
+  - seed 2: pair 39.04/30.91, agent 86.04/75.12, error 47.86/47.90
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.79/27.87, agent 80.76/69.19, error 44.44/42.28
+  - seed 1: pair 35.35/26.62, agent 81.85/71.59, error 43.99/42.72
+  - seed 2: pair 35.92/27.71, agent 81.80/71.93, error 44.34/43.20
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.12/29.20, agent 86.14/75.38, error 44.76/44.25
+  - seed 1: pair 34.45/27.50, agent 85.57/76.97, error 44.39/44.17
+  - seed 2: pair 34.85/28.01, agent 84.62/74.35, error 44.53/44.31
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.79/27.87, agent 80.76/69.19, error 44.44/42.28
+  - seed 1: pair 35.34/26.51, agent 81.83/68.93, error 44.02/42.75
+  - seed 2: pair 35.92/27.71, agent 81.80/71.93, error 44.34/43.20
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.79/27.86, agent 80.85/69.24, error 44.48/42.32
+  - seed 1: pair 35.42/26.66, agent 81.94/71.65, error 44.03/42.78
+  - seed 2: pair 35.92/27.64, agent 81.89/72.06, error 44.34/43.19
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.64/26.95, agent 79.16/65.67, error 44.94/43.69
+  - seed 1: pair 35.74/26.25, agent 80.54/67.42, error 42.90/40.79
+  - seed 2: pair 29.12/25.14, agent 86.45/73.71, error 41.38/42.67
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.61/27.94, agent 83.92/71.93, error 45.18/44.81
+  - seed 1: pair 34.71/26.77, agent 83.65/68.23, error 43.46/42.01
+  - seed 2: pair 32.53/26.18, agent 85.79/73.83, error 43.74/42.39
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.64/26.95, agent 79.16/65.67, error 44.94/43.69
+  - seed 1: pair 35.74/26.25, agent 80.54/67.42, error 42.90/40.79
+  - seed 2: pair 29.12/25.14, agent 86.45/73.71, error 41.38/42.67
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.57/27.01, agent 79.29/68.10, error 44.73/43.57
+  - seed 1: pair 35.84/26.18, agent 80.66/66.31, error 42.86/40.78
+  - seed 2: pair 29.13/25.10, agent 86.58/73.66, error 41.38/42.67
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.01/30.72, agent 85.20/73.85, error 46.75/46.15
+  - seed 1: pair 37.41/28.98, agent 84.19/69.75, error 46.43/45.93
+  - seed 2: pair 37.23/27.69, agent 84.61/71.54, error 46.52/45.51
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.25/30.76, agent 85.95/76.74, error 46.76/44.87
+  - seed 1: pair 36.48/28.70, agent 86.56/74.02, error 46.20/45.14
+  - seed 2: pair 36.73/27.69, agent 86.33/72.87, error 46.78/45.21
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.02/30.78, agent 85.12/73.70, error 46.79/46.19
+  - seed 1: pair 37.41/28.98, agent 84.18/69.74, error 46.43/45.93
+  - seed 2: pair 37.23/27.69, agent 84.61/71.54, error 46.52/45.51
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.01/30.71, agent 85.38/73.94, error 46.71/46.08
+  - seed 1: pair 37.38/28.97, agent 84.15/69.67, error 46.43/45.92
+  - seed 2: pair 37.23/27.67, agent 84.74/71.71, error 46.52/45.52
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.68/26.94, agent 79.72/66.68, error 44.59/42.29
+  - seed 1: pair 35.55/26.62, agent 81.16/70.24, error 43.18/41.48
+  - seed 2: pair 36.94/27.93, agent 81.19/73.68, error 44.40/42.90
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.16/26.91, agent 83.66/74.48, error 44.42/43.04
+  - seed 1: pair 34.97/27.09, agent 84.65/74.26, error 43.88/43.20
+  - seed 2: pair 35.79/27.84, agent 84.86/74.94, error 45.17/43.37
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.68/26.94, agent 79.72/66.68, error 44.59/42.29
+  - seed 1: pair 35.54/26.50, agent 81.14/70.24, error 43.22/41.50
+  - seed 2: pair 36.94/27.93, agent 81.19/73.68, error 44.40/42.90
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.68/26.81, agent 79.91/68.70, error 44.46/42.11
+  - seed 1: pair 35.52/26.59, agent 81.25/70.47, error 43.14/41.44
+  - seed 2: pair 36.98/27.90, agent 81.24/73.59, error 44.49/42.96
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.72/25.94, agent 79.82/71.97, error 43.06/40.93
+  - seed 1: pair 35.66/27.00, agent 80.17/72.13, error 43.70/42.66
+  - seed 2: pair 35.10/24.90, agent 80.23/68.94, error 42.40/40.56
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.25/25.34, agent 83.08/74.29, error 42.82/40.47
+  - seed 1: pair 33.33/27.65, agent 84.98/77.81, error 43.47/43.40
+  - seed 2: pair 34.33/25.81, agent 83.57/75.02, error 43.36/40.91
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.71/25.82, agent 79.80/69.30, error 43.10/40.96
+  - seed 1: pair 35.66/26.87, agent 80.15/69.46, error 43.73/42.69
+  - seed 2: pair 35.10/24.90, agent 80.23/68.94, error 42.40/40.56
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.77/25.99, agent 79.95/71.64, error 43.12/41.00
+  - seed 1: pair 35.70/27.02, agent 80.12/72.12, error 43.79/42.74
+  - seed 2: pair 35.03/24.79, agent 80.27/70.88, error 42.40/40.59
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.91/31.66, agent 84.37/76.50, error 46.80/46.74
+  - seed 1: pair 38.56/30.65, agent 85.58/75.79, error 47.68/47.22
+  - seed 2: pair 38.70/31.79, agent 86.29/80.76, error 47.31/47.42
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.24/31.78, agent 85.27/77.57, error 47.28/47.46
+  - seed 1: pair 39.17/31.56, agent 86.08/76.58, error 47.98/47.55
+  - seed 2: pair 40.69/32.21, agent 84.30/77.98, error 48.25/47.67
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.93/31.73, agent 84.38/76.66, error 46.82/46.76
+  - seed 1: pair 38.56/30.67, agent 85.60/76.05, error 47.69/47.23
+  - seed 2: pair 38.69/31.51, agent 86.22/77.76, error 47.37/47.49
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.97/31.77, agent 84.51/76.78, error 46.88/46.81
+  - seed 1: pair 38.60/30.71, agent 85.79/76.23, error 47.74/47.28
+  - seed 2: pair 38.73/31.91, agent 86.25/81.08, error 47.31/47.40
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.29/27.59, agent 81.06/68.03, error 43.88/42.20
+  - seed 1: pair 37.17/27.76, agent 79.37/69.16, error 44.08/42.67
+  - seed 2: pair 36.62/26.24, agent 80.00/70.89, error 44.27/42.88
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.05/28.11, agent 84.51/72.82, error 43.88/42.24
+  - seed 1: pair 35.46/28.50, agent 85.79/73.76, error 43.80/43.51
+  - seed 2: pair 35.40/25.89, agent 84.17/73.18, error 44.05/42.26
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.27/27.59, agent 81.02/67.82, error 43.88/42.20
+  - seed 1: pair 37.17/27.76, agent 79.37/69.16, error 44.08/42.67
+  - seed 2: pair 36.62/26.24, agent 80.00/70.89, error 44.27/42.88
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.35/27.62, agent 81.13/68.00, error 43.93/42.26
+  - seed 1: pair 37.21/27.77, agent 79.39/69.23, error 44.09/42.69
+  - seed 2: pair 36.70/26.29, agent 79.95/70.85, error 44.31/42.93
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.42/26.96, agent 81.06/66.24, error 44.12/42.46
+  - seed 1: pair 35.61/26.93, agent 81.14/70.05, error 43.36/42.29
+  - seed 2: pair 36.29/27.44, agent 79.18/67.99, error 43.74/41.70
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.35/27.60, agent 84.21/70.76, error 44.34/43.40
+  - seed 1: pair 34.31/27.00, agent 85.14/73.54, error 43.88/42.94
+  - seed 2: pair 35.08/28.02, agent 84.41/74.55, error 44.05/43.43
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.42/26.96, agent 81.06/66.24, error 44.12/42.46
+  - seed 1: pair 35.61/26.93, agent 81.14/70.05, error 43.36/42.29
+  - seed 2: pair 36.29/27.44, agent 79.18/67.99, error 43.74/41.70
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.42/26.90, agent 81.21/66.19, error 44.13/42.46
+  - seed 1: pair 35.61/26.93, agent 81.09/70.02, error 43.41/42.33
+  - seed 2: pair 36.28/27.42, agent 79.16/67.99, error 43.65/41.60
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.28/31.54, agent 85.14/76.09, error 46.61/46.63
+  - seed 1: pair 39.42/32.38, agent 85.68/77.20, error 47.51/46.76
+  - seed 2: pair 38.06/31.62, agent 84.07/71.71, error 46.74/45.88
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.14/31.69, agent 86.80/77.47, error 46.87/46.75
+  - seed 1: pair 40.01/32.68, agent 85.68/77.40, error 47.98/47.44
+  - seed 2: pair 37.81/31.54, agent 86.12/73.13, error 46.46/45.23
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.27/31.54, agent 85.12/76.08, error 46.60/46.62
+  - seed 1: pair 39.53/32.46, agent 85.81/77.26, error 47.62/46.91
+  - seed 2: pair 38.05/31.61, agent 84.05/71.65, error 46.74/45.88
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.41/31.75, agent 85.39/76.17, error 46.75/46.76
+  - seed 1: pair 39.49/32.45, agent 85.94/77.28, error 47.58/46.86
+  - seed 2: pair 38.06/31.61, agent 84.11/71.70, error 46.74/45.89
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.16/27.70, agent 80.05/67.99, error 44.32/42.48
+  - seed 1: pair 37.32/27.33, agent 80.15/71.38, error 44.12/41.90
+  - seed 2: pair 36.02/26.49, agent 80.40/69.91, error 43.98/41.56
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.03/27.65, agent 84.71/74.70, error 44.83/43.77
+  - seed 1: pair 35.79/27.67, agent 85.10/80.09, error 44.55/42.85
+  - seed 2: pair 34.65/27.13, agent 84.83/75.25, error 43.92/41.71
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.16/27.70, agent 80.05/67.99, error 44.32/42.48
+  - seed 1: pair 37.32/27.33, agent 80.15/71.38, error 44.12/41.90
+  - seed 2: pair 36.02/26.49, agent 80.40/69.91, error 43.98/41.56
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/27.77, agent 80.22/70.98, error 44.26/42.42
+  - seed 1: pair 37.43/27.43, agent 80.41/72.75, error 44.09/41.80
+  - seed 2: pair 36.08/26.56, agent 80.48/70.14, error 44.03/41.60
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.68/26.01, agent 79.97/73.52, error 43.05/41.14
+  - seed 1: pair 34.95/25.70, agent 78.56/69.93, error 42.38/39.56
+  - seed 2: pair 35.55/26.22, agent 80.24/70.03, error 43.80/42.37
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 34.54/26.49, agent 84.98/75.51, error 43.68/42.14
+  - seed 1: pair 33.80/27.46, agent 84.25/75.11, error 42.74/41.41
+  - seed 2: pair 34.83/26.92, agent 84.61/75.07, error 43.93/43.29
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.68/25.89, agent 79.95/70.80, error 43.08/41.17
+  - seed 1: pair 34.95/25.58, agent 78.54/67.34, error 42.41/39.59
+  - seed 2: pair 35.55/26.22, agent 80.24/70.03, error 43.80/42.37
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.83/26.02, agent 80.24/70.94, error 43.38/41.52
+  - seed 1: pair 34.95/25.76, agent 78.66/69.95, error 42.38/39.56
+  - seed 2: pair 35.55/26.13, agent 80.29/72.07, error 43.75/42.39
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.39/30.96, agent 84.23/71.33, error 47.41/46.51
+  - seed 1: pair 39.01/30.65, agent 84.35/67.64, error 47.95/47.41
+  - seed 2: pair 38.61/30.17, agent 83.28/68.07, error 46.83/45.78
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.52/30.62, agent 85.03/73.55, error 48.13/46.74
+  - seed 1: pair 38.84/30.56, agent 85.43/69.53, error 48.11/47.68
+  - seed 2: pair 37.75/29.83, agent 86.15/71.70, error 47.41/44.88
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.37/30.95, agent 84.22/71.32, error 47.40/46.50
+  - seed 1: pair 39.01/30.65, agent 84.35/67.64, error 47.95/47.41
+  - seed 2: pair 38.63/30.18, agent 83.34/68.10, error 46.85/45.80
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.57/30.94, agent 84.52/73.70, error 47.53/46.58
+  - seed 1: pair 39.01/30.65, agent 84.43/67.74, error 47.95/47.41
+  - seed 2: pair 38.70/30.34, agent 83.47/68.17, error 47.09/46.08
+- flat_mlp_base_min | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/28.07, agent 80.91/72.69, error 44.54/42.71
+  - seed 1: pair 37.25/27.45, agent 80.75/73.11, error 43.99/41.81
+  - seed 2: pair 36.24/28.68, agent 83.20/76.18, error 44.59/44.05
+- flat_mlp_base_perclass | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.57/30.65, agent 85.46/77.76, error 45.58/45.51
+  - seed 1: pair 35.95/28.32, agent 84.15/76.55, error 44.73/44.14
+  - seed 2: pair 35.99/29.10, agent 85.73/79.09, error 44.94/44.04
+- flat_mlp_base_pm | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.18/27.94, agent 80.89/70.00, error 44.57/42.74
+  - seed 1: pair 37.25/27.32, agent 80.73/70.41, error 44.03/41.84
+  - seed 2: pair 36.25/28.56, agent 83.19/73.36, error 44.65/44.10
+- flat_mlp_base_prod | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 37.14/28.06, agent 80.87/72.66, error 44.54/42.75
+  - seed 1: pair 37.24/27.31, agent 80.65/72.31, error 43.83/41.62
+  - seed 2: pair 36.29/28.70, agent 83.21/76.19, error 44.70/44.15
+- flat_mlp_namedrop_min | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.24/27.31, agent 81.91/73.60, error 43.29/42.04
+  - seed 1: pair 34.94/25.31, agent 80.05/71.20, error 42.85/40.72
+  - seed 2: pair 35.82/27.12, agent 82.25/70.47, error 43.27/42.27
+- flat_mlp_namedrop_perclass | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 35.26/28.04, agent 84.40/76.18, error 43.61/42.50
+  - seed 1: pair 33.82/26.67, agent 83.99/74.69, error 43.24/42.93
+  - seed 2: pair 34.46/28.09, agent 85.71/73.88, error 44.20/43.95
+- flat_mlp_namedrop_pm | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.23/27.18, agent 81.92/70.88, error 43.31/42.06
+  - seed 1: pair 34.94/25.31, agent 80.05/71.20, error 42.85/40.72
+  - seed 2: pair 35.82/27.12, agent 82.25/70.47, error 43.27/42.27
+- flat_mlp_namedrop_prod | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 36.18/27.27, agent 81.88/73.81, error 43.28/42.02
+  - seed 1: pair 35.16/25.47, agent 79.84/71.88, error 42.79/40.44
+  - seed 2: pair 35.82/27.12, agent 82.25/70.44, error 43.27/42.27
+- flat_mlp_peernd_min | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.43/30.34, agent 85.12/74.08, error 47.11/45.61
+  - seed 1: pair 39.54/32.17, agent 85.18/75.41, error 47.33/46.82
+  - seed 2: pair 38.42/30.21, agent 85.94/72.50, error 46.12/45.90
+- flat_mlp_peernd_perclass | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 38.88/30.67, agent 85.95/75.76, error 47.27/46.20
+  - seed 1: pair 40.78/32.02, agent 83.80/74.56, error 48.16/46.54
+  - seed 2: pair 39.21/29.64, agent 85.17/73.58, error 47.34/45.84
+- flat_mlp_peernd_pm | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.48/30.36, agent 85.15/74.01, error 47.16/45.69
+  - seed 1: pair 39.54/31.89, agent 85.16/72.57, error 47.39/46.89
+  - seed 2: pair 38.42/30.21, agent 85.94/72.50, error 46.12/45.90
+- flat_mlp_peernd_prod | scored on val | split tag val_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 39.48/30.36, agent 85.06/73.94, error 47.20/45.73
+  - seed 1: pair 39.58/32.28, agent 85.28/75.41, error 47.37/46.87
+  - seed 2: pair 38.38/30.19, agent 85.94/72.50, error 46.08/45.84
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.93/2.37, agent 43.09/36.65, error 13.18/9.65
+  - seed 1: pair 4.86/2.72, agent 43.18/38.97, error 13.55/10.69
+  - seed 2: pair 3.75/1.88, agent 43.53/38.44, error 10.66/9.50
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.70/2.71, agent 44.38/37.81, error 14.94/8.74
+  - seed 1: pair 4.18/2.60, agent 42.32/36.11, error 12.40/9.88
+  - seed 2: pair 4.17/2.09, agent 44.35/38.73, error 11.72/9.43
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.93/2.37, agent 43.09/36.65, error 13.18/9.65
+  - seed 1: pair 4.86/2.72, agent 43.18/38.97, error 13.55/10.69
+  - seed 2: pair 3.75/1.88, agent 43.47/38.44, error 10.66/9.50
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.99/2.39, agent 42.39/35.74, error 13.16/9.48
+  - seed 1: pair 4.76/2.68, agent 42.49/37.91, error 13.31/10.40
+  - seed 2: pair 3.77/1.89, agent 43.97/38.84, error 10.70/9.50
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.71/2.99, agent 41.30/31.93, error 15.24/10.30
+  - seed 1: pair 4.21/2.72, agent 41.32/34.90, error 9.51/6.21
+  - seed 2: pair 4.44/2.64, agent 41.43/32.96, error 12.43/9.03
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.80/2.23, agent 42.17/32.33, error 11.14/8.03
+  - seed 1: pair 4.42/2.72, agent 41.33/35.11, error 10.01/6.31
+  - seed 2: pair 4.73/2.83, agent 40.91/31.90, error 13.04/9.03
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.85/3.02, agent 41.42/32.28, error 15.40/10.40
+  - seed 1: pair 4.43/2.85, agent 41.32/34.90, error 9.75/6.53
+  - seed 2: pair 4.44/2.63, agent 41.29/32.78, error 12.43/9.03
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.94/3.04, agent 41.72/32.02, error 15.40/10.29
+  - seed 1: pair 4.43/2.85, agent 41.32/34.90, error 9.75/6.53
+  - seed 2: pair 4.49/2.67, agent 41.03/31.98, error 12.44/9.03
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.38/2.67, agent 36.40/32.34, error 13.91/8.43
+  - seed 1: pair 4.53/3.47, agent 39.30/37.29, error 13.52/9.98
+  - seed 2: pair 3.36/2.14, agent 39.41/34.77, error 11.43/10.57
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.18/2.86, agent 35.14/32.07, error 13.10/6.77
+  - seed 1: pair 3.13/2.56, agent 36.59/35.43, error 11.58/8.97
+  - seed 2: pair 4.08/2.65, agent 39.62/35.61, error 12.56/9.73
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.15/2.54, agent 36.33/32.34, error 13.89/8.41
+  - seed 1: pair 4.53/3.47, agent 39.30/37.29, error 13.52/9.96
+  - seed 2: pair 3.36/2.14, agent 39.41/34.77, error 11.43/10.57
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_advfw | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.76/2.42, agent 35.86/32.16, error 12.80/7.61
+  - seed 1: pair 4.60/3.52, agent 38.00/36.74, error 13.68/10.05
+  - seed 2: pair 3.38/2.15, agent 39.40/35.43, error 11.28/10.43
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.12/2.55, agent 41.33/38.62, error 13.06/10.31
+  - seed 1: pair 5.55/3.19, agent 42.88/38.61, error 14.53/11.14
+  - seed 2: pair 4.06/2.73, agent 43.38/37.80, error 13.47/11.35
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.22/2.65, agent 41.42/37.77, error 13.20/9.34
+  - seed 1: pair 4.75/2.57, agent 43.34/39.09, error 12.51/9.30
+  - seed 2: pair 3.53/2.49, agent 43.62/36.79, error 10.41/8.82
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.12/2.55, agent 41.33/38.62, error 13.06/10.31
+  - seed 1: pair 5.55/3.19, agent 42.88/38.61, error 14.53/11.14
+  - seed 2: pair 4.06/2.73, agent 43.31/37.80, error 13.47/11.35
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.04/2.54, agent 41.54/38.29, error 12.99/10.24
+  - seed 1: pair 5.57/3.20, agent 43.21/38.87, error 14.56/11.14
+  - seed 2: pair 4.08/2.73, agent 43.76/37.83, error 13.50/11.35
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.84/3.02, agent 38.65/32.45, error 15.78/11.34
+  - seed 1: pair 3.98/2.11, agent 37.93/34.08, error 14.69/9.31
+  - seed 2: pair 3.53/1.78, agent 38.51/31.00, error 14.13/8.93
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.81/2.17, agent 39.20/32.61, error 13.04/9.48
+  - seed 1: pair 3.85/1.96, agent 36.58/31.55, error 14.87/9.15
+  - seed 2: pair 3.86/2.01, agent 40.27/31.79, error 14.09/8.79
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.83/3.01, agent 38.58/32.45, error 15.78/11.34
+  - seed 1: pair 3.98/2.10, agent 38.24/33.97, error 14.67/9.30
+  - seed 2: pair 3.73/1.97, agent 38.45/31.00, error 14.35/9.06
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/3.04, agent 39.49/33.21, error 15.84/11.36
+  - seed 1: pair 3.75/1.90, agent 36.54/31.12, error 14.45/9.15
+  - seed 2: pair 3.86/2.01, agent 40.27/31.79, error 14.09/8.79
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.94/1.73, agent 39.18/35.93, error 10.26/7.34
+  - seed 1: pair 2.85/1.68, agent 39.06/34.12, error 11.23/9.50
+  - seed 2: pair 4.06/2.19, agent 36.52/29.93, error 10.10/7.81
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.93/2.26, agent 38.86/35.73, error 11.37/6.85
+  - seed 1: pair 3.31/1.55, agent 37.83/34.00, error 9.92/6.39
+  - seed 2: pair 3.32/2.01, agent 36.04/29.76, error 7.84/5.22
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.94/1.73, agent 39.18/35.93, error 10.26/7.34
+  - seed 1: pair 2.85/1.68, agent 39.06/34.12, error 11.23/9.50
+  - seed 2: pair 4.06/2.18, agent 36.44/29.93, error 10.10/7.81
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_advfw1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.18/1.93, agent 39.75/36.02, error 10.54/7.51
+  - seed 1: pair 2.85/1.68, agent 38.28/33.96, error 11.23/9.49
+  - seed 2: pair 4.12/2.23, agent 35.85/29.79, error 10.17/7.83
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.76/2.26, agent 40.80/36.78, error 12.36/10.81
+  - seed 1: pair 2.79/1.45, agent 41.49/37.61, error 12.75/11.29
+  - seed 2: pair 3.86/2.24, agent 44.97/38.82, error 13.90/11.83
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.30/1.36, agent 39.75/37.11, error 8.70/7.69
+  - seed 1: pair 3.40/1.78, agent 40.89/37.66, error 12.65/9.73
+  - seed 2: pair 4.51/2.63, agent 45.04/38.82, error 15.86/11.87
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.76/2.25, agent 40.74/36.78, error 12.36/10.81
+  - seed 1: pair 2.79/1.45, agent 41.49/37.61, error 12.75/11.29
+  - seed 2: pair 3.86/2.24, agent 44.97/38.82, error 13.90/11.83
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.76/2.26, agent 40.80/36.78, error 12.36/10.81
+  - seed 1: pair 2.82/1.49, agent 41.28/37.52, error 12.68/11.23
+  - seed 2: pair 3.86/2.24, agent 45.04/38.82, error 13.90/11.83
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.08/2.11, agent 41.82/36.47, error 11.78/9.26
+  - seed 1: pair 2.46/1.58, agent 40.43/36.47, error 10.68/8.19
+  - seed 2: pair 3.95/2.15, agent 42.91/35.17, error 13.28/10.66
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.00/2.11, agent 42.39/36.02, error 11.55/8.97
+  - seed 1: pair 1.64/1.16, agent 39.63/35.05, error 7.37/5.57
+  - seed 2: pair 3.13/1.56, agent 42.68/34.86, error 9.52/7.23
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.08/2.11, agent 41.82/36.47, error 11.78/9.24
+  - seed 1: pair 2.46/1.58, agent 40.43/36.47, error 10.68/8.17
+  - seed 2: pair 3.95/2.15, agent 42.91/35.17, error 13.28/10.65
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.01/2.11, agent 42.39/36.02, error 11.84/9.33
+  - seed 1: pair 2.47/1.59, agent 40.00/35.65, error 10.73/8.18
+  - seed 2: pair 3.95/2.15, agent 42.91/35.17, error 13.28/10.65
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.32/2.01, agent 36.66/34.75, error 11.55/9.34
+  - seed 1: pair 3.05/1.95, agent 40.93/38.60, error 8.75/7.38
+  - seed 2: pair 2.80/1.80, agent 41.04/36.80, error 8.47/7.81
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.39/2.01, agent 35.47/34.87, error 11.75/8.15
+  - seed 1: pair 3.37/2.25, agent 40.00/38.62, error 8.96/6.70
+  - seed 2: pair 2.85/1.83, agent 40.07/37.79, error 7.64/6.02
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.32/2.03, agent 36.66/34.75, error 11.55/9.37
+  - seed 1: pair 3.05/1.96, agent 40.93/38.60, error 8.75/7.52
+  - seed 2: pair 2.65/1.78, agent 41.04/36.80, error 8.29/7.72
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_advfw_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.35/2.06, agent 36.46/34.95, error 11.60/9.41
+  - seed 1: pair 3.06/1.97, agent 41.08/38.27, error 8.77/7.54
+  - seed 2: pair 2.69/1.81, agent 40.07/36.56, error 8.20/7.72
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.21/2.31, agent 44.18/39.49, error 14.36/12.16
+  - seed 1: pair 5.11/2.53, agent 44.30/37.75, error 14.26/11.51
+  - seed 2: pair 4.73/2.33, agent 41.89/37.74, error 15.36/10.71
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.99/2.26, agent 43.31/38.47, error 15.25/11.50
+  - seed 1: pair 4.88/2.46, agent 43.03/36.26, error 13.41/9.47
+  - seed 2: pair 4.21/1.92, agent 43.37/38.68, error 14.00/8.15
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.31/2.34, agent 44.28/39.34, error 14.47/12.31
+  - seed 1: pair 5.11/2.53, agent 44.30/37.75, error 14.26/11.51
+  - seed 2: pair 4.73/2.33, agent 41.89/37.74, error 15.36/10.71
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.29/2.34, agent 43.92/38.27, error 14.28/11.95
+  - seed 1: pair 4.95/2.54, agent 42.76/36.29, error 14.24/11.39
+  - seed 2: pair 4.77/2.34, agent 42.51/37.80, error 15.25/10.32
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.54/3.35, agent 40.07/32.86, error 16.95/10.18
+  - seed 1: pair 4.98/2.25, agent 42.83/35.85, error 14.09/9.61
+  - seed 2: pair 5.29/2.91, agent 38.58/34.69, error 16.35/10.67
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.79/2.06, agent 35.99/25.83, error 15.00/8.53
+  - seed 1: pair 5.55/2.57, agent 43.45/36.12, error 15.61/9.78
+  - seed 2: pair 6.12/3.46, agent 39.17/35.71, error 18.62/11.78
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.54/3.35, agent 40.00/32.86, error 16.95/10.17
+  - seed 1: pair 4.98/2.25, agent 42.76/35.82, error 14.09/9.61
+  - seed 2: pair 5.29/2.91, agent 38.58/34.69, error 16.35/10.68
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.39/3.27, agent 39.02/31.47, error 17.06/10.07
+  - seed 1: pair 4.98/2.25, agent 42.83/35.83, error 14.09/9.63
+  - seed 2: pair 5.30/2.91, agent 38.98/35.49, error 16.36/10.70
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.10/2.05, agent 35.57/32.12, error 11.35/8.68
+  - seed 1: pair 5.43/3.35, agent 34.99/30.99, error 13.14/9.37
+  - seed 2: pair 2.59/1.46, agent 34.30/31.53, error 11.19/7.45
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.72/1.82, agent 34.01/30.32, error 10.66/8.28
+  - seed 1: pair 4.92/2.76, agent 34.88/30.98, error 11.76/6.18
+  - seed 2: pair 3.00/1.74, agent 33.41/30.52, error 11.05/6.83
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.09/2.04, agent 35.50/31.91, error 11.33/8.66
+  - seed 1: pair 5.43/3.35, agent 34.91/30.79, error 13.13/9.37
+  - seed 2: pair 2.59/1.46, agent 34.30/31.53, error 11.19/7.45
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_advsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.14/2.09, agent 34.51/31.39, error 11.27/8.65
+  - seed 1: pair 5.47/3.37, agent 35.01/31.23, error 13.19/9.39
+  - seed 2: pair 2.62/1.48, agent 34.09/31.12, error 11.26/7.50
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.60/1.96, agent 39.88/38.82, error 11.39/10.58
+  - seed 1: pair 4.12/2.44, agent 44.73/39.15, error 12.32/11.09
+  - seed 2: pair 4.05/2.12, agent 39.75/38.14, error 11.64/10.31
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/2.09, agent 40.36/39.25, error 12.29/10.18
+  - seed 1: pair 4.27/2.43, agent 44.77/38.64, error 12.12/9.82
+  - seed 2: pair 4.32/2.17, agent 39.75/38.07, error 11.27/8.66
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.60/1.96, agent 39.82/38.82, error 11.39/10.58
+  - seed 1: pair 4.12/2.44, agent 44.73/39.15, error 12.32/11.09
+  - seed 2: pair 4.05/2.12, agent 39.75/38.14, error 11.64/10.31
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.60/1.96, agent 39.88/38.82, error 11.39/10.58
+  - seed 1: pair 4.14/2.45, agent 44.38/38.62, error 12.39/11.13
+  - seed 2: pair 4.05/2.12, agent 39.75/38.14, error 11.64/10.31
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.33/1.93, agent 39.30/36.53, error 12.14/9.77
+  - seed 1: pair 4.05/2.42, agent 40.46/36.25, error 12.63/9.90
+  - seed 2: pair 4.03/2.04, agent 41.07/34.68, error 13.09/11.36
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.57/2.08, agent 39.35/36.78, error 12.99/9.79
+  - seed 1: pair 3.13/1.84, agent 41.61/36.46, error 9.79/7.38
+  - seed 2: pair 4.33/2.21, agent 41.32/34.68, error 13.96/11.50
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.33/1.92, agent 39.30/36.53, error 12.14/9.77
+  - seed 1: pair 4.03/2.42, agent 40.19/36.25, error 12.58/9.83
+  - seed 2: pair 4.03/2.04, agent 41.01/34.68, error 13.08/11.33
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.93, agent 39.23/36.39, error 12.23/9.79
+  - seed 1: pair 4.10/2.43, agent 41.54/36.45, error 12.62/9.90
+  - seed 2: pair 4.04/2.04, agent 41.13/34.68, error 13.09/11.35
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/2.81, agent 42.18/39.39, error 14.16/11.37
+  - seed 1: pair 4.10/2.32, agent 45.35/38.76, error 11.62/9.80
+  - seed 2: pair 4.44/2.59, agent 42.08/39.49, error 12.98/9.85
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.67/2.25, agent 40.08/37.67, error 10.29/8.72
+  - seed 1: pair 4.09/2.25, agent 45.36/38.80, error 11.14/8.05
+  - seed 2: pair 4.04/2.42, agent 41.04/38.33, error 11.45/7.76
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/2.81, agent 42.18/39.39, error 14.16/11.38
+  - seed 1: pair 4.10/2.32, agent 45.35/38.76, error 11.62/9.81
+  - seed 2: pair 4.44/2.59, agent 42.00/39.25, error 12.96/9.84
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_advsup_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.32/2.83, agent 42.37/39.46, error 14.18/11.38
+  - seed 1: pair 4.11/2.33, agent 45.32/38.85, error 11.62/9.82
+  - seed 2: pair 4.37/2.52, agent 40.95/38.10, error 13.04/9.87
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/3.86, agent 42.81/38.56, error 16.30/11.82
+  - seed 1: pair 5.60/2.99, agent 41.14/38.16, error 14.95/10.68
+  - seed 2: pair 5.43/3.14, agent 40.65/33.68, error 14.06/9.90
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 8.73/5.15, agent 44.33/38.99, error 21.16/15.03
+  - seed 1: pair 2.63/1.67, agent 39.78/34.70, error 11.80/9.10
+  - seed 2: pair 8.51/4.35, agent 42.83/36.17, error 19.66/12.67
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/3.86, agent 42.75/38.56, error 16.30/11.82
+  - seed 1: pair 5.59/2.99, agent 41.01/38.16, error 14.95/10.68
+  - seed 2: pair 5.43/3.14, agent 40.65/33.68, error 14.06/9.90
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.61/3.87, agent 43.14/38.77, error 16.31/11.83
+  - seed 1: pair 5.61/2.99, agent 41.34/38.16, error 14.95/10.68
+  - seed 2: pair 5.45/3.15, agent 40.87/33.72, error 14.08/9.93
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.75/3.18, agent 43.47/39.40, error 14.98/11.20
+  - seed 1: pair 4.77/2.07, agent 45.35/34.35, error 13.33/10.61
+  - seed 2: pair 3.46/1.44, agent 45.42/33.97, error 11.03/8.21
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.74/4.52, agent 43.63/37.34, error 19.00/13.25
+  - seed 1: pair 5.63/2.62, agent 45.23/37.66, error 14.36/10.73
+  - seed 2: pair 6.82/3.41, agent 46.63/39.31, error 17.62/11.66
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.75/3.18, agent 43.40/39.40, error 14.98/11.20
+  - seed 1: pair 4.74/2.07, agent 45.00/34.15, error 13.33/10.61
+  - seed 2: pair 3.45/1.45, agent 45.16/33.97, error 11.03/8.21
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.75/3.18, agent 43.47/39.40, error 14.98/11.20
+  - seed 1: pair 4.74/2.07, agent 45.38/34.13, error 12.61/10.18
+  - seed 2: pair 3.16/1.43, agent 44.15/33.92, error 11.03/8.22
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.10/1.91, agent 40.38/32.54, error 10.77/8.81
+  - seed 1: pair 5.64/3.09, agent 45.33/38.56, error 12.78/9.60
+  - seed 2: pair 4.71/2.19, agent 43.55/34.31, error 12.82/10.54
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.33/3.12, agent 43.36/36.12, error 14.48/11.93
+  - seed 1: pair 6.96/4.01, agent 46.21/39.78, error 15.02/10.58
+  - seed 2: pair 6.17/3.16, agent 44.01/35.32, error 15.51/12.38
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.09/1.91, agent 40.31/32.54, error 11.11/8.98
+  - seed 1: pair 5.63/3.10, agent 45.25/38.56, error 13.08/9.75
+  - seed 2: pair 4.35/2.17, agent 42.59/34.28, error 12.75/10.53
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_attn | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.11/1.90, agent 41.01/32.97, error 9.81/8.28
+  - seed 1: pair 5.65/3.09, agent 45.51/38.57, error 12.48/9.46
+  - seed 2: pair 4.71/2.19, agent 43.55/34.32, error 13.15/10.96
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 4.20/2.42, agent 44.04/38.45, error 11.85/11.15
+  - seed 0: pair 4.20/2.42, agent 44.04/38.45, error 11.85/11.15
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 2: pair 4.33/2.42, agent 47.50/37.76, error 11.80/10.91
+  - seed 2: pair 4.33/2.42, agent 47.50/37.76, error 11.80/10.91
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 5.06/2.89, agent 45.22/38.37, error 13.86/10.55
+  - seed 0: pair 5.06/2.89, agent 45.22/38.37, error 13.86/10.55
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 2: pair 4.47/2.45, agent 47.87/38.15, error 12.31/10.76
+  - seed 2: pair 4.47/2.45, agent 47.87/38.15, error 12.31/10.76
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 4.20/2.42, agent 44.04/38.45, error 11.85/11.15
+  - seed 0: pair 4.20/2.42, agent 44.04/38.45, error 11.85/11.15
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 2: pair 4.33/2.42, agent 47.50/37.76, error 11.80/10.91
+  - seed 2: pair 4.33/2.42, agent 47.50/37.76, error 11.80/10.91
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 4.24/2.43, agent 44.70/38.35, error 11.77/11.08
+  - seed 0: pair 4.24/2.43, agent 44.70/38.35, error 11.77/11.08
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 1: pair 5.19/2.77, agent 44.94/37.19, error 14.27/11.45
+  - seed 2: pair 4.34/2.43, agent 47.80/37.96, error 11.81/10.91
+  - seed 2: pair 4.34/2.43, agent 47.80/37.96, error 11.81/10.91
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 3.34/1.29, agent 44.57/29.73, error 11.11/6.71
+  - seed 0: pair 3.34/1.29, agent 44.57/29.73, error 11.11/6.71
+  - seed 1: pair 2.88/1.08, agent 44.48/35.78, error 9.31/6.66
+  - seed 1: pair 2.88/1.08, agent 44.48/35.78, error 9.31/6.66
+  - seed 2: pair 3.11/1.68, agent 39.51/32.90, error 8.70/7.19
+  - seed 2: pair 3.11/1.68, agent 39.51/32.90, error 8.70/7.19
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.30, agent 45.27/30.49, error 11.13/6.74
+  - seed 0: pair 3.36/1.30, agent 45.27/30.49, error 11.13/6.74
+  - seed 1: pair 2.27/0.90, agent 41.83/32.11, error 9.10/6.00
+  - seed 1: pair 2.27/0.90, agent 41.83/32.11, error 9.10/6.00
+  - seed 2: pair 3.29/1.79, agent 38.77/30.87, error 8.59/6.54
+  - seed 2: pair 3.29/1.79, agent 38.77/30.87, error 8.59/6.54
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 3.34/1.29, agent 44.57/29.73, error 11.11/6.72
+  - seed 0: pair 3.34/1.29, agent 44.57/29.73, error 11.11/6.72
+  - seed 1: pair 2.86/1.08, agent 44.37/36.15, error 9.30/6.64
+  - seed 1: pair 2.86/1.08, agent 44.37/36.15, error 9.30/6.64
+  - seed 2: pair 3.11/1.68, agent 39.44/32.71, error 8.94/7.29
+  - seed 2: pair 3.11/1.68, agent 39.44/32.71, error 8.94/7.29
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.30, agent 45.27/30.49, error 11.13/6.74
+  - seed 0: pair 3.36/1.30, agent 45.27/30.49, error 11.13/6.74
+  - seed 1: pair 2.44/1.09, agent 41.76/32.11, error 9.10/6.55
+  - seed 1: pair 2.44/1.09, agent 41.76/32.11, error 9.10/6.55
+  - seed 2: pair 3.16/1.70, agent 38.99/31.29, error 8.80/7.19
+  - seed 2: pair 3.16/1.70, agent 38.99/31.29, error 8.80/7.19
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 6.99/3.35, agent 45.58/36.00, error 15.35/9.18
+  - seed 0: pair 6.99/3.35, agent 45.58/36.00, error 15.35/9.18
+  - seed 1: pair 4.72/2.18, agent 45.99/37.22, error 13.51/10.80
+  - seed 1: pair 4.72/2.18, agent 45.99/37.22, error 13.51/10.80
+  - seed 2: pair 3.51/1.98, agent 48.60/39.27, error 11.51/8.89
+  - seed 2: pair 3.51/1.98, agent 48.60/39.27, error 11.51/8.89
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 6.31/3.10, agent 45.08/36.18, error 13.28/7.15
+  - seed 0: pair 6.31/3.10, agent 45.08/36.18, error 13.28/7.15
+  - seed 1: pair 5.00/2.33, agent 44.44/38.30, error 13.64/8.39
+  - seed 1: pair 5.00/2.33, agent 44.44/38.30, error 13.64/8.39
+  - seed 2: pair 2.94/1.44, agent 44.05/34.00, error 11.60/7.70
+  - seed 2: pair 2.94/1.44, agent 44.05/34.00, error 11.60/7.70
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 6.99/3.35, agent 45.58/36.00, error 15.35/9.18
+  - seed 0: pair 6.99/3.35, agent 45.58/36.00, error 15.35/9.18
+  - seed 1: pair 4.72/2.18, agent 45.99/37.22, error 13.51/10.80
+  - seed 1: pair 4.72/2.18, agent 45.99/37.22, error 13.51/10.80
+  - seed 2: pair 3.50/1.97, agent 48.70/38.99, error 11.49/8.87
+  - seed 2: pair 3.50/1.97, agent 48.70/38.99, error 11.49/8.87
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_attnadvsup | 6 run(s); each value is micro/macro F1
+  - seed 0: pair 6.91/3.32, agent 46.10/36.82, error 15.22/9.07
+  - seed 0: pair 6.91/3.32, agent 46.10/36.82, error 15.22/9.07
+  - seed 1: pair 4.66/2.21, agent 45.14/37.82, error 13.49/10.78
+  - seed 1: pair 4.66/2.21, agent 45.14/37.82, error 13.49/10.78
+  - seed 2: pair 3.56/1.95, agent 43.63/33.72, error 11.44/8.75
+  - seed 2: pair 3.56/1.95, agent 43.63/33.72, error 11.44/8.75
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.06/2.71, agent 41.68/35.43, error 12.32/8.37
+  - seed 1: pair 5.04/2.34, agent 41.03/37.87, error 15.56/10.43
+  - seed 2: pair 5.71/2.82, agent 41.23/35.86, error 15.62/9.82
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.58/3.00, agent 42.67/36.24, error 16.75/11.19
+  - seed 1: pair 4.35/2.08, agent 40.71/37.98, error 15.32/11.06
+  - seed 2: pair 5.67/2.98, agent 40.85/36.58, error 16.83/11.22
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.05/2.71, agent 41.60/35.43, error 12.30/8.37
+  - seed 1: pair 5.04/2.34, agent 41.03/37.87, error 15.56/10.43
+  - seed 2: pair 5.71/2.82, agent 41.23/35.86, error 15.62/9.82
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.05/2.71, agent 42.80/35.50, error 12.30/8.32
+  - seed 1: pair 5.04/2.34, agent 41.03/37.87, error 15.56/10.45
+  - seed 2: pair 5.71/2.83, agent 41.23/35.90, error 15.32/9.64
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.25/2.86, agent 45.61/40.26, error 14.76/11.85
+  - seed 1: pair 4.53/2.45, agent 48.62/38.96, error 11.59/9.44
+  - seed 2: pair 5.21/2.24, agent 46.18/35.58, error 12.99/8.87
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.98/2.45, agent 46.36/38.21, error 11.23/7.54
+  - seed 1: pair 6.82/3.59, agent 50.85/39.64, error 16.30/11.30
+  - seed 2: pair 5.12/2.00, agent 46.04/35.17, error 12.54/8.60
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.25/2.86, agent 45.61/40.26, error 14.76/11.85
+  - seed 1: pair 4.52/2.45, agent 48.52/38.96, error 11.59/9.44
+  - seed 2: pair 5.21/2.24, agent 46.18/35.58, error 12.99/8.87
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.25/2.86, agent 46.67/40.30, error 14.76/11.85
+  - seed 1: pair 4.55/2.44, agent 49.70/39.44, error 11.31/9.00
+  - seed 2: pair 5.21/2.24, agent 46.59/35.60, error 12.99/8.93
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.51/3.37, agent 43.00/37.67, error 14.03/10.56
+  - seed 1: pair 4.74/2.35, agent 43.98/37.55, error 10.42/8.09
+  - seed 2: pair 4.63/2.55, agent 42.66/37.21, error 9.46/7.10
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.58/3.39, agent 43.61/37.51, error 14.29/9.35
+  - seed 1: pair 4.78/2.36, agent 43.55/36.93, error 10.53/8.73
+  - seed 2: pair 4.24/2.56, agent 42.58/37.98, error 11.06/7.94
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.51/3.37, agent 43.00/37.67, error 14.03/10.56
+  - seed 1: pair 4.73/2.34, agent 44.19/38.15, error 10.08/7.90
+  - seed 2: pair 4.61/2.54, agent 42.48/36.76, error 9.44/7.09
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_attnsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.51/3.36, agent 43.41/37.69, error 14.03/10.56
+  - seed 1: pair 4.77/2.35, agent 43.55/36.93, error 10.49/8.11
+  - seed 2: pair 4.64/2.55, agent 42.83/37.22, error 9.49/7.13
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.15/3.09, agent 45.12/37.84, error 14.68/8.07
+  - seed 1: pair 5.99/3.20, agent 45.71/38.46, error 14.13/9.10
+  - seed 2: pair 5.56/2.90, agent 44.77/36.32, error 13.95/9.43
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.30/3.67, agent 46.08/37.70, error 17.64/10.46
+  - seed 1: pair 7.47/3.82, agent 47.90/38.47, error 16.90/11.55
+  - seed 2: pair 4.73/2.39, agent 45.82/37.52, error 11.73/7.86
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.15/3.09, agent 45.12/37.84, error 14.68/8.07
+  - seed 1: pair 5.99/3.20, agent 45.71/38.46, error 14.13/9.10
+  - seed 2: pair 5.56/2.90, agent 44.77/36.32, error 13.95/9.43
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.15/3.09, agent 45.83/38.12, error 14.68/8.06
+  - seed 1: pair 5.99/3.19, agent 47.50/38.52, error 14.13/9.09
+  - seed 2: pair 5.56/2.90, agent 44.77/36.33, error 13.95/9.43
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.21/2.03, agent 49.10/38.39, error 8.90/6.11
+  - seed 1: pair 6.40/3.02, agent 48.96/37.51, error 12.73/9.49
+  - seed 2: pair 7.02/3.61, agent 49.10/38.86, error 13.91/9.28
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.57/3.09, agent 50.94/39.32, error 16.47/9.87
+  - seed 1: pair 6.04/3.05, agent 49.73/38.78, error 13.85/9.90
+  - seed 2: pair 7.58/3.68, agent 48.96/37.88, error 15.94/10.03
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.21/2.03, agent 49.10/38.39, error 8.90/6.11
+  - seed 1: pair 6.40/3.02, agent 48.96/37.51, error 12.73/9.49
+  - seed 2: pair 7.02/3.61, agent 49.10/38.86, error 13.91/9.28
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.54/2.05, agent 49.50/39.21, error 9.96/7.00
+  - seed 1: pair 6.40/3.01, agent 48.58/37.15, error 13.07/9.70
+  - seed 2: pair 7.33/3.83, agent 49.50/38.83, error 14.57/9.93
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.74/3.39, agent 44.68/38.50, error 16.01/9.69
+  - seed 1: pair 5.38/2.08, agent 47.89/35.08, error 12.18/7.62
+  - seed 2: pair 4.56/2.76, agent 43.81/37.79, error 11.08/6.94
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.86/3.59, agent 45.76/39.65, error 16.51/9.71
+  - seed 1: pair 5.19/2.11, agent 48.92/36.19, error 12.97/9.04
+  - seed 2: pair 4.97/3.00, agent 45.07/39.00, error 12.91/8.36
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.44/3.37, agent 43.94/38.49, error 15.97/9.66
+  - seed 1: pair 5.37/2.09, agent 47.80/35.08, error 12.18/7.60
+  - seed 2: pair 4.56/2.75, agent 44.11/38.38, error 11.06/6.92
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_attnsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.60/3.40, agent 45.37/39.20, error 15.86/9.61
+  - seed 1: pair 5.41/2.09, agent 47.78/35.51, error 12.24/7.66
+  - seed 2: pair 4.56/2.76, agent 43.43/37.76, error 11.08/6.94
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.47, agent 45.28/37.04, error 14.72/12.08
+  - seed 1: pair 4.65/2.57, agent 45.21/37.47, error 11.93/9.88
+  - seed 2: pair 6.59/3.59, agent 44.81/36.33, error 15.29/11.13
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.83/2.53, agent 44.37/35.54, error 11.05/7.78
+  - seed 1: pair 2.89/1.30, agent 45.63/37.17, error 8.17/6.37
+  - seed 2: pair 5.36/2.92, agent 43.22/32.07, error 12.97/10.74
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.47, agent 45.28/37.04, error 14.72/12.08
+  - seed 1: pair 4.65/2.57, agent 45.14/37.47, error 11.93/9.88
+  - seed 2: pair 6.59/3.59, agent 44.81/36.33, error 15.29/11.13
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.23/3.47, agent 45.69/37.05, error 14.77/12.15
+  - seed 1: pair 4.68/2.58, agent 45.86/37.67, error 11.96/9.91
+  - seed 2: pair 6.61/3.59, agent 45.08/36.34, error 15.29/11.13
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.87/3.09, agent 40.29/33.32, error 12.36/9.55
+  - seed 1: pair 3.60/2.27, agent 41.68/33.36, error 11.57/7.70
+  - seed 2: pair 5.64/3.22, agent 43.86/36.97, error 12.67/10.07
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.26/2.85, agent 42.01/32.75, error 12.62/8.65
+  - seed 1: pair 5.05/2.95, agent 43.89/33.92, error 13.97/9.39
+  - seed 2: pair 6.90/3.98, agent 46.02/35.42, error 13.71/12.01
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.85/3.08, agent 40.07/33.11, error 12.35/9.54
+  - seed 1: pair 3.60/2.27, agent 41.68/33.36, error 11.57/7.70
+  - seed 2: pair 5.63/3.21, agent 43.78/36.75, error 12.67/10.07
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.85/3.09, agent 40.80/33.14, error 12.35/9.54
+  - seed 1: pair 3.66/2.30, agent 42.62/33.79, error 11.37/7.53
+  - seed 2: pair 5.81/3.26, agent 44.53/36.26, error 12.52/9.99
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.36/2.32, agent 43.09/36.45, error 10.39/6.32
+  - seed 1: pair 5.68/2.82, agent 47.52/34.73, error 12.16/9.30
+  - seed 2: pair 5.35/2.62, agent 47.94/36.39, error 10.07/7.33
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.22/2.71, agent 42.94/36.47, error 11.09/6.75
+  - seed 1: pair 8.83/4.36, agent 47.11/33.82, error 16.61/11.11
+  - seed 2: pair 5.98/2.78, agent 49.24/35.59, error 11.09/10.31
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.35/2.32, agent 42.94/36.45, error 10.37/6.32
+  - seed 1: pair 5.66/2.81, agent 47.34/35.33, error 12.16/9.28
+  - seed 2: pair 5.33/2.62, agent 48.14/37.00, error 10.07/7.33
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_bgesmall | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.35/2.32, agent 43.30/36.47, error 10.37/6.32
+  - seed 1: pair 5.99/2.85, agent 46.34/34.64, error 12.16/9.32
+  - seed 2: pair 5.70/2.65, agent 49.11/35.79, error 10.10/7.37
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.05/1.21, agent 37.76/32.73, error 7.42/6.39
+  - seed 1: pair 1.67/0.75, agent 36.36/30.80, error 8.58/6.59
+  - seed 2: pair 2.71/1.65, agent 39.78/32.66, error 9.34/8.81
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.86/1.85, agent 40.79/36.21, error 8.46/7.66
+  - seed 1: pair 1.67/1.11, agent 38.49/33.99, error 8.55/7.59
+  - seed 2: pair 2.56/1.54, agent 39.51/32.53, error 8.36/6.89
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.05/1.21, agent 37.76/32.73, error 7.42/6.39
+  - seed 1: pair 1.66/0.75, agent 36.02/30.80, error 8.53/6.61
+  - seed 2: pair 2.71/1.65, agent 39.78/32.66, error 9.34/8.81
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.05/1.21, agent 37.84/32.73, error 7.44/6.32
+  - seed 1: pair 1.66/0.74, agent 36.40/31.39, error 8.53/6.59
+  - seed 2: pair 2.71/1.64, agent 39.86/33.21, error 9.69/9.03
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.38/2.05, agent 40.37/32.75, error 8.80/7.26
+  - seed 1: pair 3.95/2.31, agent 39.92/32.06, error 10.07/8.67
+  - seed 2: pair 4.09/2.49, agent 39.41/32.10, error 12.22/9.30
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.50/2.08, agent 41.35/32.99, error 8.67/7.06
+  - seed 1: pair 4.64/2.55, agent 42.55/33.68, error 9.87/8.64
+  - seed 2: pair 3.95/2.47, agent 38.78/31.61, error 12.36/9.10
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.32/2.05, agent 39.78/33.15, error 8.95/7.38
+  - seed 1: pair 3.92/2.31, agent 39.92/32.34, error 10.00/8.67
+  - seed 2: pair 4.08/2.48, agent 39.63/32.11, error 12.17/9.28
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.37/2.05, agent 40.88/33.17, error 8.76/7.26
+  - seed 1: pair 4.25/2.34, agent 40.30/32.16, error 10.37/8.30
+  - seed 2: pair 4.08/2.48, agent 40.00/32.14, error 12.17/9.28
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.55/2.75, agent 45.23/36.33, error 8.81/7.06
+  - seed 1: pair 3.68/2.09, agent 41.90/33.14, error 11.31/7.97
+  - seed 2: pair 3.03/1.37, agent 40.56/32.45, error 10.62/8.17
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.46/2.72, agent 45.74/37.77, error 9.02/6.08
+  - seed 1: pair 3.65/2.32, agent 42.19/33.65, error 9.49/6.92
+  - seed 2: pair 2.70/1.54, agent 40.32/30.21, error 9.63/6.77
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.51/2.75, agent 43.99/36.28, error 9.41/7.40
+  - seed 1: pair 3.65/2.08, agent 42.34/33.55, error 11.25/7.98
+  - seed 2: pair 2.98/1.35, agent 40.24/32.62, error 10.53/8.13
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_chunk | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.52/2.73, agent 44.81/36.30, error 8.42/6.81
+  - seed 1: pair 3.68/2.10, agent 42.67/33.38, error 10.95/7.77
+  - seed 2: pair 3.01/1.36, agent 41.12/32.26, error 10.58/8.09
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.92/2.37, agent 39.02/33.14, error 13.29/10.69
+  - seed 1: pair 5.35/3.25, agent 41.22/35.14, error 14.05/9.36
+  - seed 2: pair 3.28/1.91, agent 40.30/33.02, error 12.22/8.87
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.02/2.24, agent 39.43/33.60, error 13.02/10.45
+  - seed 1: pair 6.09/3.81, agent 41.15/35.50, error 15.68/9.14
+  - seed 2: pair 4.27/2.39, agent 41.84/35.02, error 13.02/10.24
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.92/2.37, agent 38.95/33.14, error 13.27/10.68
+  - seed 1: pair 5.34/3.25, agent 41.07/35.14, error 14.04/9.34
+  - seed 2: pair 3.28/1.91, agent 40.30/33.02, error 12.22/8.87
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.94/2.36, agent 39.62/33.36, error 13.31/10.65
+  - seed 1: pair 5.39/3.26, agent 41.45/35.52, error 14.07/9.34
+  - seed 2: pair 6.10/3.39, agent 41.93/37.49, error 14.64/10.86
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.17/2.90, agent 43.21/37.07, error 14.01/10.29
+  - seed 1: pair 6.22/3.20, agent 46.05/38.93, error 14.79/10.60
+  - seed 2: pair 6.59/3.67, agent 47.55/37.52, error 15.28/10.88
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.09/2.44, agent 44.29/36.63, error 11.14/9.24
+  - seed 1: pair 5.02/2.37, agent 49.64/38.38, error 12.28/7.58
+  - seed 2: pair 5.63/2.92, agent 48.26/36.61, error 14.00/9.45
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.17/2.90, agent 43.14/37.07, error 13.99/10.28
+  - seed 1: pair 6.21/3.20, agent 45.83/38.93, error 14.79/10.60
+  - seed 2: pair 6.59/3.67, agent 47.55/37.52, error 15.28/10.88
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.21/2.91, agent 44.19/37.25, error 14.02/10.32
+  - seed 1: pair 6.31/3.12, agent 49.29/39.52, error 14.32/10.30
+  - seed 2: pair 6.60/3.66, agent 47.64/37.53, error 15.28/10.88
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.15/2.90, agent 36.77/32.74, error 13.11/9.51
+  - seed 1: pair 5.05/3.45, agent 38.65/31.34, error 14.92/10.27
+  - seed 2: pair 5.04/3.59, agent 37.62/33.66, error 15.43/11.58
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.93/2.65, agent 35.97/30.85, error 11.53/7.78
+  - seed 1: pair 4.88/3.23, agent 40.00/32.97, error 13.06/10.12
+  - seed 2: pair 5.41/3.39, agent 37.52/33.82, error 15.23/10.08
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.14/2.89, agent 36.64/32.53, error 13.09/9.49
+  - seed 1: pair 5.03/3.43, agent 39.29/31.99, error 14.86/10.25
+  - seed 2: pair 5.03/3.59, agent 37.55/33.66, error 15.41/11.57
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.14/2.88, agent 36.70/32.73, error 13.09/9.54
+  - seed 1: pair 5.06/3.47, agent 38.32/31.71, error 14.94/10.31
+  - seed 2: pair 5.05/3.58, agent 37.76/32.90, error 14.49/10.97
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.93/3.07, agent 40.53/34.38, error 13.21/9.02
+  - seed 1: pair 4.92/3.28, agent 42.29/36.02, error 12.44/8.17
+  - seed 2: pair 4.95/2.99, agent 38.61/31.74, error 14.93/10.30
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.06/3.63, agent 41.54/35.50, error 15.07/8.90
+  - seed 1: pair 5.00/3.22, agent 42.08/34.81, error 13.12/9.07
+  - seed 2: pair 4.65/2.80, agent 40.15/33.11, error 14.76/10.75
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.93/3.08, agent 40.45/34.38, error 13.21/9.00
+  - seed 1: pair 4.90/3.27, agent 42.44/35.81, error 12.38/8.15
+  - seed 2: pair 4.91/2.99, agent 38.17/31.74, error 14.90/10.29
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s0 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.93/3.07, agent 40.82/34.41, error 13.21/9.03
+  - seed 1: pair 4.92/3.28, agent 42.69/36.04, error 12.44/8.20
+  - seed 2: pair 4.92/2.99, agent 39.77/31.86, error 15.23/10.49
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.67/3.55, agent 40.00/35.33, error 16.89/12.30
+  - seed 1: pair 6.15/3.44, agent 41.00/39.16, error 16.00/11.70
+  - seed 2: pair 5.42/2.82, agent 41.11/33.71, error 16.97/12.82
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.00/3.05, agent 39.86/34.63, error 17.26/11.65
+  - seed 1: pair 3.96/2.20, agent 39.47/34.62, error 9.75/8.07
+  - seed 2: pair 7.88/4.52, agent 41.64/35.91, error 20.66/13.36
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.67/3.55, agent 40.00/35.33, error 16.89/12.30
+  - seed 1: pair 6.14/3.44, agent 40.94/39.16, error 16.00/11.70
+  - seed 2: pair 5.41/2.81, agent 41.04/33.52, error 16.97/12.82
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.67/3.55, agent 40.00/35.33, error 16.89/12.30
+  - seed 1: pair 6.08/3.32, agent 42.76/39.39, error 15.86/11.33
+  - seed 2: pair 5.41/2.80, agent 41.04/34.25, error 16.97/12.92
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/2.99, agent 40.49/34.68, error 15.01/9.93
+  - seed 1: pair 4.43/2.39, agent 44.62/35.44, error 14.10/12.12
+  - seed 2: pair 7.28/4.18, agent 46.39/38.79, error 17.61/12.50
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.54/3.11, agent 40.75/37.09, error 15.54/9.64
+  - seed 1: pair 4.58/2.05, agent 49.34/39.56, error 11.94/10.08
+  - seed 2: pair 7.68/4.07, agent 46.10/37.84, error 17.26/10.81
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/2.99, agent 40.40/34.68, error 15.01/9.93
+  - seed 1: pair 4.43/2.39, agent 44.62/35.44, error 14.10/12.12
+  - seed 2: pair 7.27/4.17, agent 46.23/38.79, error 17.59/12.48
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/2.98, agent 40.49/34.29, error 15.01/9.93
+  - seed 1: pair 7.69/3.76, agent 49.29/39.85, error 15.87/11.85
+  - seed 2: pair 7.15/4.09, agent 46.62/39.33, error 17.23/12.31
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.66/2.62, agent 39.77/32.35, error 12.82/9.09
+  - seed 1: pair 6.33/3.57, agent 38.76/33.13, error 16.64/10.28
+  - seed 2: pair 4.93/3.06, agent 40.54/36.23, error 17.32/11.96
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.37/2.95, agent 39.30/33.94, error 14.94/9.48
+  - seed 1: pair 6.23/3.64, agent 40.68/34.35, error 16.95/11.18
+  - seed 2: pair 4.46/2.81, agent 37.25/33.02, error 16.67/11.43
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.66/2.62, agent 39.69/32.15, error 12.80/9.06
+  - seed 1: pair 6.28/3.55, agent 39.16/32.81, error 16.83/10.42
+  - seed 2: pair 4.93/3.05, agent 40.46/35.80, error 17.92/12.28
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.66/2.61, agent 39.69/32.10, error 12.80/9.08
+  - seed 1: pair 6.35/3.54, agent 39.38/33.93, error 16.69/10.35
+  - seed 2: pair 4.93/3.06, agent 40.08/35.40, error 17.61/12.16
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.36/2.53, agent 43.41/36.74, error 12.36/8.80
+  - seed 1: pair 5.92/3.32, agent 44.62/37.11, error 16.55/11.84
+  - seed 2: pair 3.57/1.76, agent 39.92/36.21, error 15.13/10.18
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.78/2.76, agent 40.22/35.60, error 11.98/7.96
+  - seed 1: pair 8.45/4.62, agent 46.06/37.90, error 18.39/9.43
+  - seed 2: pair 6.22/3.50, agent 42.59/37.94, error 19.21/12.68
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.35/2.53, agent 43.33/36.74, error 12.34/8.80
+  - seed 1: pair 5.91/3.32, agent 44.53/37.10, error 16.55/11.84
+  - seed 2: pair 3.56/1.76, agent 39.77/36.21, error 15.13/10.18
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.35/2.52, agent 44.10/36.54, error 12.34/8.78
+  - seed 1: pair 5.97/3.33, agent 45.07/37.11, error 16.70/11.97
+  - seed 2: pair 3.61/1.76, agent 41.33/36.32, error 14.90/10.10
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.42/1.91, agent 35.79/30.33, error 10.90/8.45
+  - seed 1: pair 4.80/2.82, agent 39.87/34.12, error 13.66/9.50
+  - seed 2: pair 5.33/2.82, agent 37.74/28.43, error 14.83/8.28
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.17/2.27, agent 39.31/32.60, error 11.74/9.47
+  - seed 1: pair 2.32/1.11, agent 38.70/30.76, error 9.65/6.26
+  - seed 2: pair 6.82/3.86, agent 39.02/31.64, error 18.28/10.12
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.41/1.91, agent 35.71/30.33, error 10.88/8.42
+  - seed 1: pair 4.80/2.82, agent 39.87/34.12, error 13.66/9.50
+  - seed 2: pair 5.33/2.82, agent 37.74/28.43, error 14.83/8.28
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.42/1.91, agent 37.77/31.42, error 10.53/8.22
+  - seed 1: pair 4.81/2.82, agent 40.07/34.11, error 13.47/9.36
+  - seed 2: pair 5.11/2.58, agent 37.48/28.17, error 14.66/8.23
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.55/2.74, agent 36.25/28.41, error 11.21/6.63
+  - seed 1: pair 5.26/3.63, agent 36.02/28.65, error 15.36/9.99
+  - seed 2: pair 3.81/2.10, agent 38.13/31.24, error 13.63/9.28
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.99/4.11, agent 36.43/30.22, error 14.20/8.59
+  - seed 1: pair 4.89/3.35, agent 36.05/28.99, error 13.59/8.82
+  - seed 2: pair 4.23/2.29, agent 36.33/30.70, error 14.22/9.79
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.55/2.73, agent 36.58/29.04, error 11.21/6.63
+  - seed 1: pair 5.26/3.63, agent 36.02/28.65, error 15.36/9.99
+  - seed 2: pair 3.81/2.10, agent 38.13/31.24, error 13.63/9.28
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.55/2.78, agent 36.65/28.64, error 10.86/6.54
+  - seed 1: pair 5.27/3.65, agent 36.15/28.99, error 14.74/9.61
+  - seed 2: pair 4.13/2.14, agent 38.95/32.09, error 13.63/9.24
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.01/2.38, agent 41.84/35.30, error 11.17/7.43
+  - seed 1: pair 4.03/2.01, agent 41.75/33.17, error 10.28/6.37
+  - seed 2: pair 4.30/2.37, agent 38.83/29.19, error 11.72/7.01
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.24/3.45, agent 42.35/35.33, error 14.49/10.21
+  - seed 1: pair 3.65/1.87, agent 40.08/31.68, error 10.63/6.21
+  - seed 2: pair 6.22/3.46, agent 40.82/32.29, error 15.55/9.21
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.01/2.39, agent 41.76/35.30, error 11.17/7.43
+  - seed 1: pair 4.03/2.01, agent 41.67/32.96, error 10.64/6.56
+  - seed 2: pair 4.28/2.37, agent 38.59/29.00, error 11.68/6.99
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.31/2.46, agent 42.91/35.38, error 10.84/7.63
+  - seed 1: pair 4.03/1.99, agent 42.54/34.07, error 10.28/6.35
+  - seed 2: pair 4.28/2.24, agent 37.76/27.51, error 11.30/6.80
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.81/3.37, agent 39.94/36.46, error 14.65/10.25
+  - seed 1: pair 6.16/4.05, agent 41.54/35.92, error 16.37/11.21
+  - seed 2: pair 6.91/4.51, agent 35.97/28.50, error 17.15/10.08
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.32/3.53, agent 38.61/32.57, error 16.24/10.52
+  - seed 1: pair 7.24/4.53, agent 40.79/35.89, error 17.74/11.38
+  - seed 2: pair 5.99/4.04, agent 38.95/32.08, error 16.84/11.48
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.80/3.37, agent 39.87/36.46, error 14.65/10.25
+  - seed 1: pair 6.16/4.05, agent 41.54/35.92, error 16.37/11.21
+  - seed 2: pair 6.91/4.51, agent 35.97/28.50, error 17.15/10.08
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.83/3.37, agent 40.26/36.45, error 14.87/10.34
+  - seed 1: pair 6.17/4.06, agent 41.01/35.70, error 16.60/11.34
+  - seed 2: pair 6.93/4.54, agent 35.71/28.49, error 16.87/9.93
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.86/2.75, agent 38.45/32.97, error 13.52/7.91
+  - seed 1: pair 7.59/4.10, agent 41.04/31.83, error 16.29/10.82
+  - seed 2: pair 5.81/3.20, agent 38.27/33.47, error 15.77/11.39
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.05/2.84, agent 40.00/32.85, error 12.26/8.95
+  - seed 1: pair 7.61/3.81, agent 42.24/33.22, error 16.83/10.45
+  - seed 2: pair 7.50/4.62, agent 38.27/33.25, error 19.73/14.23
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.85/2.74, agent 38.66/33.56, error 13.48/7.88
+  - seed 1: pair 7.58/4.09, agent 41.34/32.44, error 16.29/10.82
+  - seed 2: pair 5.76/3.18, agent 37.92/33.27, error 15.96/11.49
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.88/2.77, agent 38.58/32.99, error 13.25/7.79
+  - seed 1: pair 7.59/4.09, agent 41.04/31.82, error 16.29/10.84
+  - seed 2: pair 5.97/3.27, agent 38.06/33.06, error 15.16/10.96
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.07/3.13, agent 41.65/33.83, error 10.87/7.14
+  - seed 1: pair 7.04/3.77, agent 45.23/36.57, error 14.93/9.84
+  - seed 2: pair 6.56/3.61, agent 43.51/36.25, error 14.38/9.45
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.86/3.45, agent 46.10/34.98, error 12.52/7.54
+  - seed 1: pair 8.64/4.14, agent 44.88/34.23, error 17.30/10.68
+  - seed 2: pair 6.73/3.55, agent 43.10/33.91, error 15.34/10.81
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.05/3.13, agent 41.42/33.83, error 10.86/7.14
+  - seed 1: pair 7.03/3.77, agent 44.78/36.54, error 14.90/9.83
+  - seed 2: pair 6.24/3.59, agent 42.59/36.22, error 14.06/9.26
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.70/3.18, agent 43.02/34.10, error 10.91/7.36
+  - seed 1: pair 7.34/3.78, agent 45.52/36.57, error 15.23/9.99
+  - seed 2: pair 6.66/3.61, agent 44.36/36.49, error 14.26/9.43
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.96/3.15, agent 39.32/33.02, error 17.01/12.08
+  - seed 1: pair 6.29/3.47, agent 41.68/34.82, error 16.72/11.52
+  - seed 2: pair 6.34/2.79, agent 41.30/31.48, error 17.50/9.70
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.03/3.96, agent 38.53/31.58, error 16.54/10.99
+  - seed 1: pair 7.12/3.71, agent 39.77/31.91, error 15.69/8.15
+  - seed 2: pair 6.26/2.76, agent 41.97/35.27, error 16.67/10.55
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.95/3.15, agent 39.18/33.02, error 16.97/12.03
+  - seed 1: pair 6.28/3.47, agent 41.61/34.82, error 16.72/11.52
+  - seed 2: pair 6.33/2.79, agent 41.23/31.30, error 17.50/9.68
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.82/3.15, agent 38.82/32.42, error 17.03/12.10
+  - seed 1: pair 6.37/3.47, agent 41.72/34.75, error 17.00/11.72
+  - seed 2: pair 6.34/2.79, agent 41.30/31.66, error 18.15/9.92
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.59/2.27, agent 37.99/29.78, error 13.05/8.72
+  - seed 1: pair 5.67/3.45, agent 36.50/30.02, error 17.05/11.28
+  - seed 2: pair 5.11/2.97, agent 36.96/31.62, error 15.46/9.86
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.55/2.58, agent 39.48/31.43, error 14.67/9.93
+  - seed 1: pair 4.58/2.58, agent 39.11/31.72, error 13.77/10.89
+  - seed 2: pair 5.45/3.45, agent 35.99/33.23, error 17.22/11.14
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.58/2.27, agent 37.92/29.78, error 13.05/8.72
+  - seed 1: pair 5.65/3.44, agent 37.12/29.93, error 16.99/11.24
+  - seed 2: pair 5.10/2.97, agent 36.89/31.62, error 15.44/9.84
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.59/2.25, agent 38.36/29.74, error 12.72/8.55
+  - seed 1: pair 5.65/3.44, agent 37.50/30.33, error 16.99/11.25
+  - seed 2: pair 5.10/2.98, agent 36.89/31.80, error 15.11/9.70
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.61/2.93, agent 40.62/33.28, error 11.37/7.85
+  - seed 1: pair 6.73/3.50, agent 46.28/34.07, error 12.59/8.55
+  - seed 2: pair 6.06/2.84, agent 41.87/32.01, error 14.53/13.09
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.30/3.52, agent 43.43/33.85, error 15.78/8.57
+  - seed 1: pair 8.27/4.04, agent 48.22/36.10, error 16.25/10.10
+  - seed 2: pair 5.60/2.53, agent 43.96/34.07, error 14.09/12.91
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.59/2.93, agent 40.85/33.30, error 11.35/7.84
+  - seed 1: pair 6.71/3.50, agent 46.91/34.18, error 12.54/8.52
+  - seed 2: pair 6.03/2.85, agent 41.21/32.00, error 14.53/13.09
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.62/2.90, agent 41.17/32.29, error 12.04/7.80
+  - seed 1: pair 6.79/3.51, agent 47.18/34.36, error 12.64/8.58
+  - seed 2: pair 6.06/2.85, agent 42.68/31.65, error 14.53/13.14
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.22/2.67, agent 39.77/31.93, error 11.34/8.21
+  - seed 1: pair 6.20/3.59, agent 44.88/37.82, error 15.42/10.88
+  - seed 2: pair 4.85/3.02, agent 42.62/34.38, error 14.26/9.01
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.70/3.82, agent 44.72/34.56, error 19.58/12.04
+  - seed 1: pair 6.31/3.18, agent 43.86/35.20, error 13.45/7.10
+  - seed 2: pair 5.19/3.05, agent 42.64/35.59, error 14.29/9.62
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.22/2.67, agent 39.77/31.93, error 11.34/8.21
+  - seed 1: pair 6.20/3.59, agent 44.88/37.82, error 15.42/10.88
+  - seed 2: pair 4.85/3.02, agent 42.62/34.38, error 14.26/9.01
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.82/2.70, agent 40.90/31.99, error 12.03/8.88
+  - seed 1: pair 6.13/3.60, agent 45.24/38.20, error 15.29/10.83
+  - seed 2: pair 4.85/3.01, agent 41.97/34.34, error 14.29/8.97
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.95/2.05, agent 38.32/30.94, error 11.60/6.87
+  - seed 1: pair 6.45/3.67, agent 43.24/37.49, error 16.07/11.68
+  - seed 2: pair 5.18/2.94, agent 37.15/30.63, error 15.80/11.50
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.14/2.31, agent 40.50/30.52, error 11.52/7.19
+  - seed 1: pair 8.30/4.67, agent 41.14/33.91, error 19.85/12.14
+  - seed 2: pair 5.29/3.07, agent 39.20/33.00, error 15.53/10.80
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.95/2.05, agent 38.32/30.94, error 11.60/6.87
+  - seed 1: pair 6.45/3.67, agent 43.18/37.49, error 16.05/11.68
+  - seed 2: pair 5.17/2.94, agent 37.08/30.63, error 15.77/11.50
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.95/2.05, agent 38.32/31.12, error 11.60/6.91
+  - seed 1: pair 6.45/3.67, agent 43.24/37.49, error 16.07/11.68
+  - seed 2: pair 5.18/2.97, agent 36.84/30.54, error 15.80/11.47
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.68/2.65, agent 41.59/36.44, error 11.71/7.35
+  - seed 1: pair 8.02/4.29, agent 47.65/39.06, error 14.90/10.39
+  - seed 2: pair 6.01/2.57, agent 43.18/36.33, error 12.89/9.29
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.02/3.36, agent 42.88/36.81, error 16.30/10.72
+  - seed 1: pair 7.75/4.40, agent 48.60/40.29, error 14.52/9.31
+  - seed 2: pair 5.93/3.01, agent 44.81/36.57, error 15.01/10.08
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.68/2.65, agent 41.59/36.44, error 11.71/7.35
+  - seed 1: pair 7.99/4.29, agent 47.39/39.06, error 14.83/10.36
+  - seed 2: pair 5.66/2.55, agent 42.40/36.31, error 12.50/9.02
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.68/2.64, agent 41.59/36.20, error 11.39/7.24
+  - seed 1: pair 8.01/4.30, agent 48.31/39.06, error 14.88/10.35
+  - seed 2: pair 6.01/2.56, agent 43.56/36.31, error 12.89/9.29
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.57/3.13, agent 42.16/37.38, error 14.80/10.47
+  - seed 1: pair 5.80/3.62, agent 40.14/34.19, error 15.47/11.19
+  - seed 2: pair 4.29/2.44, agent 39.31/30.33, error 12.32/7.52
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.66/3.00, agent 41.03/36.45, error 13.55/10.33
+  - seed 1: pair 5.35/3.33, agent 39.03/33.60, error 13.62/8.97
+  - seed 2: pair 5.70/3.24, agent 41.29/32.97, error 14.26/8.88
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.56/3.13, agent 42.09/37.38, error 14.80/10.47
+  - seed 1: pair 5.80/3.62, agent 40.14/34.19, error 15.47/11.19
+  - seed 2: pair 4.29/2.44, agent 39.31/30.33, error 12.32/7.52
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.40/3.12, agent 41.96/37.36, error 14.80/10.47
+  - seed 1: pair 5.80/3.61, agent 39.79/34.15, error 15.47/11.21
+  - seed 2: pair 4.04/2.44, agent 39.61/32.07, error 11.72/7.20
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/2.85, agent 40.73/31.58, error 11.54/8.10
+  - seed 1: pair 5.92/3.72, agent 39.61/30.72, error 16.55/9.56
+  - seed 2: pair 4.21/2.53, agent 38.54/34.06, error 15.20/10.32
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/2.74, agent 41.04/31.85, error 10.58/7.76
+  - seed 1: pair 7.46/4.42, agent 39.69/31.78, error 17.52/9.26
+  - seed 2: pair 4.11/2.62, agent 37.38/33.40, error 13.78/9.34
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.88/2.85, agent 40.57/31.58, error 11.52/8.08
+  - seed 1: pair 5.91/3.71, agent 39.92/31.34, error 16.53/9.54
+  - seed 2: pair 4.21/2.53, agent 38.54/34.06, error 15.20/10.32
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.88/2.84, agent 40.57/32.21, error 11.52/8.14
+  - seed 1: pair 5.91/3.71, agent 39.53/31.34, error 16.53/9.51
+  - seed 2: pair 4.01/2.61, agent 37.55/32.78, error 14.54/9.87
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.80, agent 40.08/34.43, error 10.92/7.84
+  - seed 1: pair 6.18/3.71, agent 43.29/33.20, error 14.58/9.52
+  - seed 2: pair 5.30/3.17, agent 38.59/31.88, error 13.61/10.42
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.53/2.85, agent 38.72/34.98, error 10.85/7.06
+  - seed 1: pair 6.91/4.20, agent 41.85/32.47, error 15.82/9.09
+  - seed 2: pair 5.01/3.09, agent 39.60/32.59, error 11.76/8.93
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.80, agent 40.08/34.43, error 10.92/7.82
+  - seed 1: pair 6.16/3.71, agent 43.11/33.20, error 14.56/9.50
+  - seed 2: pair 5.24/3.17, agent 38.04/31.89, error 13.51/10.31
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_es_s6 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.79, agent 39.30/33.55, error 10.92/7.33
+  - seed 1: pair 6.16/3.69, agent 43.11/33.19, error 14.56/9.49
+  - seed 2: pair 5.24/3.16, agent 38.45/31.91, error 13.51/10.31
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.20/1.47, agent 39.52/37.29, error 9.39/6.83
+  - seed 1: pair 1.42/0.57, agent 41.32/36.99, error 8.09/6.26
+  - seed 2: pair 5.10/2.76, agent 41.52/35.64, error 12.91/8.56
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.09/2.35, agent 41.02/36.93, error 11.88/8.95
+  - seed 1: pair 2.11/0.75, agent 42.81/38.03, error 8.74/6.94
+  - seed 2: pair 4.16/2.23, agent 42.84/37.47, error 12.92/10.03
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.20/1.47, agent 39.46/37.29, error 9.39/6.83
+  - seed 1: pair 1.42/0.57, agent 41.18/36.99, error 8.09/6.26
+  - seed 2: pair 5.10/2.76, agent 41.52/35.64, error 12.91/8.56
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.96/1.45, agent 39.59/37.23, error 9.09/6.66
+  - seed 1: pair 1.43/0.57, agent 41.54/36.99, error 8.09/6.26
+  - seed 2: pair 5.10/2.76, agent 41.52/35.64, error 12.91/8.58
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.80/1.67, agent 35.97/34.77, error 10.98/7.79
+  - seed 1: pair 4.38/2.73, agent 36.33/30.67, error 12.89/8.47
+  - seed 2: pair 3.50/1.55, agent 38.41/35.77, error 14.96/11.12
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.29/1.79, agent 39.20/34.10, error 11.99/8.32
+  - seed 1: pair 5.39/2.86, agent 40.06/35.11, error 15.88/9.48
+  - seed 2: pair 3.40/1.47, agent 39.45/35.61, error 15.46/10.24
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.78/1.66, agent 35.94/35.16, error 10.95/7.78
+  - seed 1: pair 4.37/2.73, agent 36.27/30.67, error 12.88/8.47
+  - seed 2: pair 3.48/1.55, agent 38.11/35.57, error 14.94/11.12
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.78/1.67, agent 35.67/34.57, error 10.95/7.79
+  - seed 1: pair 4.38/2.74, agent 36.33/30.84, error 13.18/8.63
+  - seed 2: pair 3.48/1.55, agent 38.11/35.57, error 14.94/11.12
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.67, agent 39.51/35.60, error 10.84/6.74
+  - seed 1: pair 5.52/2.20, agent 45.21/36.09, error 15.20/11.21
+  - seed 2: pair 4.43/2.26, agent 40.77/34.93, error 15.08/10.50
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.29/1.88, agent 43.10/38.73, error 11.32/7.46
+  - seed 1: pair 5.39/2.40, agent 44.81/36.16, error 15.14/11.04
+  - seed 2: pair 4.60/2.14, agent 41.44/34.40, error 14.91/10.76
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.35/1.66, agent 39.44/35.60, error 10.82/6.74
+  - seed 1: pair 5.51/2.20, agent 45.05/36.09, error 15.20/11.21
+  - seed 2: pair 4.39/2.26, agent 40.62/34.93, error 14.97/10.43
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_l12 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.67, agent 39.51/35.59, error 10.84/6.74
+  - seed 1: pair 5.51/2.20, agent 45.05/36.09, error 15.20/11.21
+  - seed 2: pair 4.43/2.25, agent 41.11/34.94, error 15.08/10.47
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.04/2.42, agent 40.47/36.71, error 10.97/7.45
+  - seed 1: pair 3.34/1.95, agent 40.94/37.50, error 11.69/8.27
+  - seed 2: pair 3.47/2.06, agent 40.75/37.55, error 10.99/8.25
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.79/2.33, agent 42.09/39.71, error 12.21/9.22
+  - seed 1: pair 3.58/2.14, agent 39.24/36.25, error 11.50/8.19
+  - seed 2: pair 3.20/2.00, agent 40.95/37.90, error 10.59/8.70
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.03/2.42, agent 40.27/36.71, error 10.97/7.45
+  - seed 1: pair 3.33/1.95, agent 40.80/37.50, error 11.69/8.27
+  - seed 2: pair 3.46/2.06, agent 40.68/37.55, error 10.99/8.25
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.07/2.42, agent 40.47/36.70, error 11.29/7.73
+  - seed 1: pair 3.35/1.95, agent 41.08/37.70, error 11.69/8.27
+  - seed 2: pair 3.47/2.07, agent 40.41/37.00, error 10.99/8.25
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.64/2.18, agent 40.26/37.42, error 10.70/7.33
+  - seed 1: pair 3.94/2.17, agent 39.66/34.41, error 12.04/8.41
+  - seed 2: pair 3.68/2.29, agent 38.95/35.81, error 13.39/9.96
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.69/2.22, agent 39.53/37.15, error 10.89/7.55
+  - seed 1: pair 5.39/3.08, agent 40.42/34.54, error 13.19/9.47
+  - seed 2: pair 4.59/2.78, agent 40.20/35.65, error 12.84/9.12
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.62/2.18, agent 39.93/37.42, error 10.67/7.32
+  - seed 1: pair 3.92/2.17, agent 39.46/34.22, error 12.01/8.43
+  - seed 2: pair 3.66/2.29, agent 38.76/35.81, error 13.35/9.93
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.63/2.18, agent 40.07/37.42, error 10.68/7.33
+  - seed 1: pair 3.96/2.18, agent 39.25/33.84, error 12.09/8.46
+  - seed 2: pair 3.72/2.31, agent 39.20/35.66, error 13.18/9.83
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.80/2.04, agent 41.01/36.59, error 12.20/7.54
+  - seed 1: pair 3.88/1.98, agent 39.93/35.65, error 10.86/6.95
+  - seed 2: pair 4.92/2.83, agent 43.07/37.48, error 12.71/8.81
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.97/2.21, agent 41.28/37.95, error 12.29/7.94
+  - seed 1: pair 5.43/3.02, agent 38.28/33.52, error 12.64/9.08
+  - seed 2: pair 4.76/2.69, agent 46.81/38.08, error 10.59/8.08
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.77/2.03, agent 40.64/36.58, error 12.14/7.51
+  - seed 1: pair 3.85/1.98, agent 39.56/35.63, error 10.82/6.91
+  - seed 2: pair 4.78/2.76, agent 41.95/36.83, error 13.05/8.88
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_l12len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.78/2.04, agent 40.79/36.58, error 12.14/7.53
+  - seed 1: pair 3.86/1.98, agent 39.70/35.63, error 10.82/6.91
+  - seed 2: pair 5.14/2.84, agent 45.06/38.47, error 12.80/9.07
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.57/1.91, agent 38.43/37.27, error 12.84/9.00
+  - seed 1: pair 2.42/1.37, agent 39.74/37.31, error 11.90/9.31
+  - seed 2: pair 4.55/2.34, agent 41.03/39.25, error 15.75/10.98
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.18/2.23, agent 40.41/39.42, error 13.97/10.42
+  - seed 1: pair 2.96/1.58, agent 40.45/38.13, error 12.02/9.72
+  - seed 2: pair 4.83/2.53, agent 40.42/39.02, error 16.53/11.13
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.57/1.91, agent 38.43/37.27, error 12.84/9.00
+  - seed 1: pair 2.42/1.37, agent 39.74/37.31, error 11.90/9.31
+  - seed 2: pair 4.54/2.34, agent 40.91/39.25, error 15.72/10.97
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.58/1.91, agent 38.49/37.27, error 12.84/9.03
+  - seed 1: pair 2.44/1.37, agent 40.20/37.32, error 11.95/9.36
+  - seed 2: pair 4.54/2.34, agent 40.91/39.25, error 15.72/10.97
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.47/1.66, agent 42.93/38.93, error 10.08/6.27
+  - seed 1: pair 5.16/2.74, agent 43.89/38.15, error 12.42/8.14
+  - seed 2: pair 5.16/2.95, agent 44.05/40.13, error 13.35/9.39
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.71/2.32, agent 44.76/38.53, error 11.46/7.17
+  - seed 1: pair 4.92/2.65, agent 41.04/37.05, error 10.69/6.20
+  - seed 2: pair 5.40/3.06, agent 42.55/38.62, error 13.44/8.50
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.45/1.66, agent 42.56/38.93, error 10.05/6.25
+  - seed 1: pair 5.14/2.73, agent 43.66/37.93, error 12.40/8.14
+  - seed 2: pair 5.11/2.95, agent 43.51/40.13, error 13.65/9.60
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_l12len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.64/1.71, agent 43.17/38.06, error 9.67/6.22
+  - seed 1: pair 5.41/2.88, agent 42.78/36.64, error 12.50/7.70
+  - seed 2: pair 5.15/2.95, agent 43.97/40.13, error 13.35/9.39
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 1.89/0.92, agent 40.39/35.41, error 8.98/6.49
+  - seed 1: pair 2.51/1.27, agent 40.22/35.79, error 8.00/5.54
+  - seed 2: pair 2.85/1.71, agent 40.44/36.47, error 9.85/7.93
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.36/1.88, agent 42.16/38.57, error 10.30/7.60
+  - seed 1: pair 2.87/1.44, agent 39.60/37.04, error 8.08/6.53
+  - seed 2: pair 3.53/2.05, agent 40.75/37.68, error 10.93/9.11
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 1.89/0.92, agent 40.31/35.41, error 8.96/6.46
+  - seed 1: pair 2.51/1.27, agent 40.22/35.79, error 8.00/5.54
+  - seed 2: pair 2.85/1.71, agent 40.36/36.47, error 9.85/7.93
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 1.89/0.92, agent 40.31/35.38, error 8.96/6.55
+  - seed 1: pair 2.51/1.26, agent 40.22/35.57, error 8.00/5.58
+  - seed 2: pair 2.85/1.71, agent 40.73/36.49, error 9.85/7.93
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.28/2.18, agent 42.99/38.00, error 9.32/6.11
+  - seed 1: pair 3.86/1.81, agent 44.57/38.72, error 11.02/7.64
+  - seed 2: pair 4.47/2.26, agent 47.25/38.32, error 11.47/7.18
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.75/2.31, agent 45.19/40.09, error 11.67/7.46
+  - seed 1: pair 4.44/2.27, agent 44.36/39.52, error 10.71/7.31
+  - seed 2: pair 4.60/2.21, agent 46.81/38.53, error 10.86/6.85
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.26/2.17, agent 42.67/37.56, error 9.62/6.25
+  - seed 1: pair 3.84/1.81, agent 44.32/38.51, error 11.00/7.63
+  - seed 2: pair 4.39/2.23, agent 45.80/37.81, error 11.37/7.08
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_l12len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.31/2.18, agent 44.07/38.08, error 9.68/6.38
+  - seed 1: pair 3.84/1.81, agent 43.95/38.49, error 11.00/7.62
+  - seed 2: pair 4.71/2.29, agent 46.74/38.28, error 11.42/7.14
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.43/2.99, agent 38.72/34.91, error 15.96/10.30
+  - seed 1: pair 5.06/2.74, agent 38.61/35.36, error 15.71/9.04
+  - seed 2: pair 5.43/3.33, agent 38.00/30.97, error 19.34/11.69
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.17/2.82, agent 40.14/37.16, error 17.31/10.83
+  - seed 1: pair 5.58/3.19, agent 38.83/35.29, error 17.34/10.55
+  - seed 2: pair 6.39/3.65, agent 41.91/35.23, error 20.02/11.55
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.43/2.99, agent 38.72/34.91, error 15.96/10.30
+  - seed 1: pair 5.05/2.73, agent 38.47/34.97, error 15.66/9.02
+  - seed 2: pair 5.43/3.33, agent 38.00/30.97, error 19.34/11.69
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.43/2.99, agent 38.72/34.91, error 15.96/10.30
+  - seed 1: pair 5.05/2.73, agent 38.47/34.97, error 15.66/9.02
+  - seed 2: pair 5.43/3.32, agent 38.00/30.93, error 19.03/11.47
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.85/3.24, agent 38.02/35.30, error 14.36/9.10
+  - seed 1: pair 4.77/3.05, agent 40.22/36.85, error 15.34/9.29
+  - seed 2: pair 3.81/2.62, agent 37.67/34.54, error 14.60/8.55
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.46/4.99, agent 38.65/36.22, error 20.03/12.25
+  - seed 1: pair 3.75/2.33, agent 40.67/36.53, error 11.57/7.74
+  - seed 2: pair 4.50/2.80, agent 36.59/32.75, error 13.96/8.40
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.85/3.24, agent 38.02/35.30, error 14.36/9.10
+  - seed 1: pair 4.76/3.04, agent 40.07/36.42, error 15.29/9.27
+  - seed 2: pair 3.81/2.62, agent 37.67/34.54, error 14.60/8.55
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.85/3.24, agent 38.02/35.52, error 14.36/9.09
+  - seed 1: pair 4.82/3.08, agent 38.88/35.59, error 15.15/9.18
+  - seed 2: pair 4.08/2.79, agent 36.33/32.20, error 14.05/8.30
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.66/2.56, agent 39.85/35.64, error 13.86/8.73
+  - seed 1: pair 5.00/2.49, agent 37.31/34.21, error 14.20/8.45
+  - seed 2: pair 4.91/2.30, agent 37.38/34.78, error 12.06/6.54
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.25/3.04, agent 40.08/34.94, error 14.90/8.80
+  - seed 1: pair 4.98/2.47, agent 36.07/32.74, error 14.79/9.82
+  - seed 2: pair 5.01/2.34, agent 37.86/35.40, error 12.28/7.49
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.61/2.52, agent 39.92/35.45, error 13.67/8.58
+  - seed 1: pair 4.99/2.49, agent 37.62/34.24, error 14.18/8.44
+  - seed 2: pair 4.88/2.29, agent 37.11/34.17, error 12.30/6.63
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_l12sup512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.61/2.53, agent 40.00/35.66, error 13.69/8.60
+  - seed 1: pair 5.03/2.51, agent 37.28/34.57, error 14.29/8.53
+  - seed 2: pair 4.99/2.36, agent 37.09/34.18, error 12.20/6.62
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/3.17, agent 41.08/36.02, error 13.53/11.41
+  - seed 1: pair 3.38/1.74, agent 36.82/28.92, error 10.04/9.23
+  - seed 2: pair 4.67/2.57, agent 41.42/35.49, error 10.88/8.79
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.39/3.11, agent 41.68/36.25, error 12.80/10.35
+  - seed 1: pair 4.85/2.50, agent 39.48/32.96, error 12.44/8.54
+  - seed 2: pair 4.45/2.69, agent 42.33/37.20, error 11.37/9.51
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/3.17, agent 40.93/36.01, error 13.18/11.14
+  - seed 1: pair 3.38/1.73, agent 36.43/28.89, error 10.04/9.19
+  - seed 2: pair 4.67/2.57, agent 41.42/35.49, error 10.88/8.79
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/3.17, agent 41.29/36.04, error 13.50/11.42
+  - seed 1: pair 3.38/1.73, agent 37.21/28.95, error 9.65/9.00
+  - seed 2: pair 4.70/2.57, agent 41.71/35.52, error 11.22/9.06
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.71/1.35, agent 37.68/31.43, error 9.10/6.90
+  - seed 1: pair 4.92/3.20, agent 37.01/32.44, error 9.22/6.96
+  - seed 2: pair 2.77/1.48, agent 37.88/33.48, error 8.45/6.35
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.24/1.27, agent 37.01/32.45, error 7.34/6.40
+  - seed 1: pair 3.89/2.27, agent 36.33/30.13, error 7.79/5.38
+  - seed 2: pair 2.78/1.43, agent 37.16/33.46, error 8.04/5.91
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.71/1.35, agent 37.61/31.43, error 9.09/6.90
+  - seed 1: pair 4.86/3.26, agent 37.27/33.57, error 9.15/6.92
+  - seed 2: pair 2.76/1.47, agent 38.11/33.50, error 8.42/6.36
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.71/1.35, agent 37.61/31.43, error 9.09/6.91
+  - seed 1: pair 4.89/3.20, agent 37.17/33.01, error 9.18/6.95
+  - seed 2: pair 3.08/1.52, agent 38.26/33.50, error 9.12/7.29
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.86/2.66, agent 42.11/34.72, error 8.28/7.35
+  - seed 1: pair 7.90/3.58, agent 47.53/37.71, error 12.95/8.74
+  - seed 2: pair 5.33/2.07, agent 48.68/35.15, error 10.14/6.99
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.13/4.07, agent 42.58/35.03, error 16.97/10.61
+  - seed 1: pair 6.31/2.81, agent 45.01/34.92, error 9.25/6.23
+  - seed 2: pair 5.47/2.52, agent 44.89/34.46, error 10.68/8.54
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.85/2.66, agent 42.03/34.72, error 8.26/7.35
+  - seed 1: pair 7.90/3.58, agent 47.53/37.71, error 12.95/8.74
+  - seed 2: pair 5.19/2.06, agent 47.17/35.11, error 10.54/7.31
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_len512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.15/2.70, agent 42.03/34.46, error 8.60/7.65
+  - seed 1: pair 7.58/3.44, agent 46.39/37.40, error 12.61/8.60
+  - seed 2: pair 5.23/2.06, agent 46.86/34.87, error 10.61/7.35
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.82/3.66, agent 41.56/36.77, error 13.95/11.67
+  - seed 1: pair 3.34/2.07, agent 38.28/31.35, error 11.13/8.50
+  - seed 2: pair 3.44/2.21, agent 38.42/33.98, error 11.96/8.95
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.28/3.42, agent 40.27/37.61, error 14.27/10.67
+  - seed 1: pair 2.64/1.58, agent 39.64/34.44, error 9.67/9.15
+  - seed 2: pair 4.66/2.76, agent 42.20/35.24, error 13.64/10.74
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.81/3.66, agent 41.50/36.77, error 13.95/11.67
+  - seed 1: pair 3.34/2.07, agent 38.28/31.35, error 11.13/8.50
+  - seed 2: pair 3.44/2.21, agent 38.42/33.98, error 11.96/8.95
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.69/3.64, agent 41.44/36.75, error 13.77/11.49
+  - seed 1: pair 3.34/2.07, agent 37.89/31.31, error 11.13/8.51
+  - seed 2: pair 3.44/2.21, agent 38.42/33.97, error 11.96/8.96
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.77/3.51, agent 39.31/34.18, error 13.75/10.54
+  - seed 1: pair 5.11/2.78, agent 40.21/34.65, error 12.98/10.30
+  - seed 2: pair 5.29/3.44, agent 36.87/33.88, error 13.35/9.74
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.79/3.66, agent 39.72/32.79, error 13.27/11.00
+  - seed 1: pair 7.35/4.27, agent 40.24/35.41, error 17.62/12.66
+  - seed 2: pair 5.48/3.57, agent 37.46/34.31, error 13.67/9.85
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.71/3.50, agent 39.12/34.54, error 13.64/10.47
+  - seed 1: pair 5.10/2.77, agent 40.14/34.65, error 12.96/10.25
+  - seed 2: pair 5.29/3.44, agent 36.87/33.88, error 13.35/9.74
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.63/3.53, agent 38.72/32.47, error 13.97/10.75
+  - seed 1: pair 5.11/2.78, agent 40.21/34.87, error 12.98/10.33
+  - seed 2: pair 5.29/3.45, agent 36.87/33.88, error 13.35/9.73
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.27/3.88, agent 42.49/38.84, error 13.19/9.56
+  - seed 1: pair 7.93/3.95, agent 47.13/39.00, error 14.95/10.26
+  - seed 2: pair 6.93/3.70, agent 44.83/37.79, error 14.11/10.24
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.63/4.24, agent 41.15/38.55, error 14.57/9.17
+  - seed 1: pair 8.36/4.49, agent 45.54/37.88, error 16.04/11.09
+  - seed 2: pair 6.50/3.62, agent 45.21/38.90, error 13.04/10.38
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.89, agent 41.88/38.84, error 13.40/9.60
+  - seed 1: pair 7.31/3.88, agent 46.27/38.97, error 14.62/10.01
+  - seed 2: pair 7.14/3.80, agent 44.74/37.89, error 14.34/10.29
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_len512_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.49/3.92, agent 42.68/38.89, error 13.42/9.91
+  - seed 1: pair 7.62/3.95, agent 46.74/39.04, error 14.95/10.36
+  - seed 2: pair 7.15/3.79, agent 44.82/37.81, error 13.99/10.22
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.27/2.76, agent 37.10/32.31, error 11.79/9.55
+  - seed 1: pair 2.58/1.65, agent 37.55/33.53, error 9.07/7.52
+  - seed 2: pair 3.57/2.30, agent 39.28/34.41, error 10.17/7.80
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.80/3.12, agent 41.32/38.57, error 12.24/12.04
+  - seed 1: pair 4.92/3.04, agent 41.91/37.29, error 12.41/9.69
+  - seed 2: pair 4.96/2.99, agent 41.46/38.47, error 14.56/10.29
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.27/2.76, agent 37.10/32.31, error 11.79/9.55
+  - seed 1: pair 2.58/1.65, agent 37.55/33.53, error 9.07/7.52
+  - seed 2: pair 3.57/2.30, agent 39.28/34.41, error 10.17/7.80
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.33/2.75, agent 37.63/32.29, error 11.81/9.55
+  - seed 1: pair 2.60/1.66, agent 37.89/33.71, error 9.09/7.58
+  - seed 2: pair 3.65/2.31, agent 38.82/34.05, error 10.33/7.92
+- flat_mlp_peer_min | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.62/2.39, agent 36.12/34.40, error 12.30/9.84
+  - seed 1: pair 3.96/2.50, agent 39.50/34.46, error 12.98/10.34
+  - seed 2: pair 2.10/1.25, agent 38.64/36.93, error 12.35/10.86
+- flat_mlp_peer_perclass | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.66/1.76, agent 37.66/33.14, error 10.67/9.74
+  - seed 1: pair 3.78/2.49, agent 38.84/35.24, error 12.25/10.52
+  - seed 2: pair 2.50/1.66, agent 40.00/35.98, error 11.32/9.79
+- flat_mlp_peer_pm | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.55/2.39, agent 35.33/34.39, error 12.46/9.92
+  - seed 1: pair 3.94/2.48, agent 39.29/34.16, error 12.94/10.29
+  - seed 2: pair 2.06/1.25, agent 38.25/36.92, error 12.18/10.74
+- flat_mlp_peer_prod | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.05/2.02, agent 36.19/32.28, error 11.90/9.78
+  - seed 1: pair 3.96/2.51, agent 39.86/34.68, error 12.65/10.19
+  - seed 2: pair 1.90/1.09, agent 40.23/37.39, error 11.47/10.34
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.16/2.60, agent 41.17/38.21, error 10.76/7.42
+  - seed 1: pair 5.17/3.37, agent 42.31/40.15, error 11.89/11.13
+  - seed 2: pair 3.65/2.18, agent 41.90/38.12, error 12.50/8.17
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.09/2.94, agent 42.03/37.36, error 12.78/8.91
+  - seed 1: pair 3.59/2.04, agent 41.84/40.37, error 10.05/6.79
+  - seed 2: pair 3.75/2.19, agent 43.43/39.70, error 11.88/8.75
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.12/2.60, agent 40.68/38.11, error 10.69/7.40
+  - seed 1: pair 5.39/3.13, agent 42.48/38.73, error 12.13/11.55
+  - seed 2: pair 3.58/2.18, agent 41.78/38.14, error 12.32/8.05
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_len512_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.18/2.57, agent 42.48/38.45, error 10.70/7.51
+  - seed 1: pair 5.17/3.37, agent 42.31/40.15, error 11.89/11.13
+  - seed 2: pair 3.72/2.20, agent 42.51/38.33, error 13.09/8.61
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.87/3.53, agent 39.22/38.10, error 14.51/10.80
+  - seed 1: pair 3.57/2.03, agent 38.65/33.68, error 10.23/7.21
+  - seed 2: pair 4.23/2.48, agent 38.86/35.21, error 12.72/10.39
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.47/2.72, agent 37.11/36.53, error 13.43/11.02
+  - seed 1: pair 2.99/1.70, agent 39.57/34.56, error 9.02/6.91
+  - seed 2: pair 3.73/2.20, agent 38.75/35.83, error 11.71/9.61
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.86/3.53, agent 39.16/38.10, error 14.51/10.80
+  - seed 1: pair 3.57/2.03, agent 38.65/33.68, error 10.23/7.21
+  - seed 2: pair 4.23/2.48, agent 38.86/35.21, error 12.72/10.39
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.09/2.27, agent 35.45/32.04, error 12.34/9.16
+  - seed 1: pair 3.61/2.04, agent 38.78/33.09, error 10.27/7.25
+  - seed 2: pair 4.26/2.50, agent 38.85/35.60, error 13.05/10.63
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.41/3.31, agent 44.32/36.65, error 15.07/10.00
+  - seed 1: pair 3.09/1.43, agent 40.08/35.18, error 9.96/7.85
+  - seed 2: pair 6.47/3.09, agent 44.61/37.02, error 14.10/8.71
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.90/3.12, agent 44.91/37.02, error 14.15/10.74
+  - seed 1: pair 6.01/3.19, agent 41.88/37.53, error 15.07/13.36
+  - seed 2: pair 7.14/3.59, agent 44.40/39.10, error 15.51/10.36
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.05/3.30, agent 42.70/36.58, error 15.02/9.79
+  - seed 1: pair 3.08/1.43, agent 39.92/35.18, error 9.96/7.85
+  - seed 2: pair 6.43/3.08, agent 44.28/36.80, error 14.03/8.68
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.46/3.24, agent 44.74/36.23, error 15.17/10.25
+  - seed 1: pair 3.08/1.43, agent 39.92/35.40, error 10.34/9.30
+  - seed 2: pair 6.60/3.20, agent 45.40/38.22, error 14.62/9.12
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.47/2.60, agent 39.09/32.38, error 9.08/6.66
+  - seed 1: pair 6.27/3.15, agent 42.39/36.44, error 14.09/10.22
+  - seed 2: pair 5.44/2.46, agent 41.46/33.89, error 13.93/8.72
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.90/3.33, agent 39.93/31.85, error 10.42/7.91
+  - seed 1: pair 6.56/3.38, agent 43.11/36.33, error 14.68/11.30
+  - seed 2: pair 5.59/2.52, agent 43.02/34.53, error 13.43/9.34
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.45/2.59, agent 38.49/32.16, error 9.06/6.67
+  - seed 1: pair 5.87/3.12, agent 42.42/37.67, error 13.65/9.92
+  - seed 2: pair 5.37/2.43, agent 42.00/34.42, error 13.74/8.62
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_len512_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.78/2.62, agent 39.32/32.40, error 9.76/7.73
+  - seed 1: pair 6.27/3.16, agent 42.77/36.91, error 14.09/10.23
+  - seed 2: pair 5.77/2.46, agent 42.74/34.56, error 14.20/9.00
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/1.83, agent 36.53/27.51, error 15.21/10.68
+  - seed 1: pair 4.48/2.35, agent 42.40/31.67, error 13.08/8.98
+  - seed 2: pair 4.75/2.61, agent 40.69/30.72, error 15.47/10.87
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.68/2.30, agent 41.45/28.94, error 16.15/11.17
+  - seed 1: pair 6.58/2.82, agent 45.76/33.29, error 16.34/9.08
+  - seed 2: pair 6.59/3.86, agent 43.60/33.07, error 18.15/11.62
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/1.83, agent 36.08/27.49, error 15.21/10.69
+  - seed 1: pair 4.48/2.35, agent 42.40/31.67, error 13.08/8.98
+  - seed 2: pair 4.75/2.61, agent 40.69/30.72, error 15.47/10.87
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/1.82, agent 38.31/27.58, error 14.07/9.72
+  - seed 1: pair 4.83/2.38, agent 43.25/32.22, error 13.46/9.21
+  - seed 2: pair 5.11/2.71, agent 41.74/31.00, error 15.53/10.87
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.64/1.32, agent 40.50/34.68, error 11.68/7.46
+  - seed 1: pair 4.36/2.50, agent 39.93/36.32, error 15.51/10.87
+  - seed 2: pair 6.38/3.85, agent 41.77/34.04, error 17.31/9.29
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.94/2.00, agent 42.17/35.14, error 12.91/8.53
+  - seed 1: pair 3.69/2.11, agent 40.40/34.26, error 15.68/11.23
+  - seed 2: pair 6.09/3.91, agent 43.58/36.47, error 16.64/10.15
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.64/1.32, agent 40.42/34.68, error 11.68/7.46
+  - seed 1: pair 4.36/2.50, agent 39.93/36.32, error 15.51/10.87
+  - seed 2: pair 6.37/3.84, agent 42.11/34.06, error 17.28/9.28
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.64/1.33, agent 40.00/34.40, error 11.68/7.47
+  - seed 1: pair 4.45/2.51, agent 41.28/35.91, error 15.23/10.73
+  - seed 2: pair 6.37/3.83, agent 42.11/34.08, error 17.65/9.63
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.77/2.23, agent 36.83/29.08, error 12.95/8.64
+  - seed 1: pair 4.83/2.14, agent 37.83/29.48, error 15.08/10.39
+  - seed 2: pair 7.19/3.03, agent 40.00/28.69, error 17.87/11.34
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.19/1.77, agent 38.36/29.90, error 10.82/7.91
+  - seed 1: pair 4.06/1.86, agent 38.32/30.68, error 14.29/9.20
+  - seed 2: pair 5.68/2.61, agent 38.38/30.32, error 16.46/10.11
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.69/2.26, agent 34.93/29.21, error 13.12/8.59
+  - seed 1: pair 4.82/2.14, agent 37.74/29.48, error 15.05/10.37
+  - seed 2: pair 6.59/2.99, agent 37.37/29.11, error 18.15/11.47
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_nometa | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.80/2.23, agent 37.58/29.72, error 13.00/8.72
+  - seed 1: pair 4.48/2.09, agent 37.74/30.34, error 14.70/9.75
+  - seed 2: pair 6.41/2.98, agent 38.60/29.96, error 17.01/10.95
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.45/2.43, agent 38.56/30.85, error 14.15/9.76
+  - seed 1: pair 4.42/2.39, agent 38.32/31.49, error 14.44/10.99
+  - seed 2: pair 4.31/2.45, agent 40.42/34.75, error 13.94/10.68
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.59/3.47, agent 39.76/30.33, error 17.16/10.69
+  - seed 1: pair 6.09/3.35, agent 41.23/36.08, error 14.57/9.08
+  - seed 2: pair 3.77/2.21, agent 42.86/35.53, error 11.78/8.25
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.45/2.43, agent 38.14/30.83, error 14.53/9.96
+  - seed 1: pair 4.42/2.39, agent 38.32/31.49, error 14.44/10.99
+  - seed 2: pair 4.31/2.45, agent 40.42/34.75, error 13.94/10.68
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.79/2.46, agent 38.98/30.68, error 14.90/10.20
+  - seed 1: pair 4.78/2.46, agent 38.90/31.87, error 14.47/11.02
+  - seed 2: pair 4.31/2.43, agent 41.25/34.56, error 13.58/10.43
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/2.37, agent 39.92/35.83, error 11.09/7.64
+  - seed 1: pair 3.25/1.90, agent 39.68/37.77, error 11.33/8.35
+  - seed 2: pair 4.85/2.74, agent 41.17/37.92, error 12.80/7.71
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.92/3.01, agent 40.00/36.06, error 13.29/8.54
+  - seed 1: pair 3.39/1.87, agent 43.19/40.17, error 10.38/8.45
+  - seed 2: pair 5.13/3.04, agent 41.77/39.36, error 13.50/8.71
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.88/2.37, agent 39.92/35.83, error 11.09/7.64
+  - seed 1: pair 3.23/1.90, agent 38.96/37.74, error 11.33/8.35
+  - seed 2: pair 4.83/2.73, agent 41.31/38.28, error 12.78/7.70
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.59/2.13, agent 38.71/34.52, error 10.47/7.22
+  - seed 1: pair 3.27/1.90, agent 40.08/37.31, error 11.38/8.40
+  - seed 2: pair 4.83/2.72, agent 41.70/38.90, error 12.78/7.69
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.71/3.27, agent 37.65/32.52, error 15.09/8.34
+  - seed 1: pair 5.63/3.25, agent 36.48/31.72, error 14.02/8.81
+  - seed 2: pair 5.89/3.43, agent 38.97/35.73, error 16.58/10.61
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.84/3.50, agent 37.50/34.16, error 15.56/9.02
+  - seed 1: pair 6.80/4.27, agent 36.15/31.76, error 17.95/10.34
+  - seed 2: pair 7.18/4.33, agent 40.54/36.47, error 18.38/10.88
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.68/3.27, agent 37.83/33.14, error 15.04/8.31
+  - seed 1: pair 5.61/3.24, agent 37.16/31.95, error 13.96/8.79
+  - seed 2: pair 5.84/3.43, agent 38.51/35.75, error 16.45/10.54
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_nonames | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.75/3.31, agent 36.81/32.47, error 15.20/8.42
+  - seed 1: pair 5.26/3.12, agent 36.74/31.73, error 13.58/8.27
+  - seed 2: pair 5.89/3.43, agent 38.57/35.70, error 16.58/10.61
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.52/2.69, agent 40.07/35.98, error 14.90/10.29
+  - seed 1: pair 3.54/1.49, agent 39.42/37.23, error 11.74/7.64
+  - seed 2: pair 3.93/2.29, agent 38.94/36.66, error 10.03/7.12
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.50/2.14, agent 41.96/36.46, error 12.68/8.92
+  - seed 1: pair 4.26/1.97, agent 39.78/37.42, error 12.07/8.96
+  - seed 2: pair 6.35/3.89, agent 39.85/36.91, error 16.25/11.05
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.52/2.69, agent 40.07/35.98, error 14.90/10.29
+  - seed 1: pair 3.53/1.49, agent 39.34/37.23, error 11.73/7.63
+  - seed 2: pair 3.93/2.29, agent 38.94/36.66, error 10.03/7.12
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.56/2.65, agent 40.00/34.38, error 14.21/9.87
+  - seed 1: pair 3.83/1.55, agent 40.07/37.36, error 11.73/7.63
+  - seed 2: pair 3.94/2.29, agent 38.71/36.25, error 10.07/7.12
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/3.10, agent 38.88/36.49, error 14.43/9.22
+  - seed 1: pair 4.41/1.90, agent 38.13/33.98, error 11.51/8.00
+  - seed 2: pair 3.74/1.99, agent 37.50/34.27, error 12.13/6.62
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.52/2.62, agent 41.06/38.95, error 12.82/9.15
+  - seed 1: pair 3.91/1.62, agent 40.65/36.13, error 9.89/8.06
+  - seed 2: pair 6.07/3.50, agent 42.27/38.48, error 16.35/10.18
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/3.10, agent 38.88/36.49, error 14.43/9.22
+  - seed 1: pair 4.41/1.90, agent 38.13/33.98, error 11.51/8.00
+  - seed 2: pair 3.74/1.99, agent 37.50/34.27, error 12.13/6.62
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/3.07, agent 39.25/36.60, error 14.43/9.22
+  - seed 1: pair 4.70/1.98, agent 38.88/34.11, error 11.51/8.00
+  - seed 2: pair 3.74/1.99, agent 37.50/34.27, error 12.13/6.62
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.48/2.64, agent 38.88/35.46, error 12.21/7.34
+  - seed 1: pair 3.19/1.41, agent 40.29/37.06, error 10.34/6.47
+  - seed 2: pair 3.47/1.96, agent 39.36/35.86, error 12.11/7.09
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.89/3.79, agent 40.00/37.10, error 15.54/9.57
+  - seed 1: pair 3.69/1.85, agent 41.35/38.15, error 11.78/7.66
+  - seed 2: pair 4.30/2.58, agent 39.64/35.58, error 13.17/8.40
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.45/2.64, agent 38.61/35.46, error 12.21/7.34
+  - seed 1: pair 3.18/1.41, agent 40.15/37.05, error 10.31/6.45
+  - seed 2: pair 3.45/1.98, agent 38.72/35.76, error 12.42/7.33
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_nonames512 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.46/2.65, agent 39.37/35.52, error 11.91/7.19
+  - seed 1: pair 3.20/1.41, agent 40.37/37.06, error 10.36/6.48
+  - seed 2: pair 3.45/1.96, agent 39.15/35.86, error 12.11/7.09
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.54/2.29, agent 38.30/31.54, error 12.20/10.37
+  - seed 1: pair 5.11/2.98, agent 43.17/36.68, error 14.56/10.17
+  - seed 2: pair 4.24/2.31, agent 39.01/29.41, error 12.70/8.68
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.64/2.95, agent 42.31/33.89, error 16.90/13.36
+  - seed 1: pair 4.99/2.83, agent 42.47/35.61, error 13.07/8.78
+  - seed 2: pair 6.41/3.76, agent 39.93/31.94, error 16.95/11.54
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.53/2.29, agent 38.22/31.54, error 12.18/10.37
+  - seed 1: pair 5.10/2.98, agent 43.01/36.68, error 14.54/10.15
+  - seed 2: pair 4.24/2.31, agent 39.01/29.41, error 12.70/8.68
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.58/2.29, agent 38.43/30.91, error 12.24/10.40
+  - seed 1: pair 5.16/3.00, agent 42.49/36.41, error 14.80/10.37
+  - seed 2: pair 4.24/2.31, agent 38.62/29.38, error 13.36/9.13
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.64/3.06, agent 42.46/36.89, error 15.27/11.06
+  - seed 1: pair 6.83/3.49, agent 45.38/38.19, error 16.07/11.27
+  - seed 2: pair 6.42/3.76, agent 48.99/39.80, error 14.95/11.35
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.22/3.30, agent 39.79/33.39, error 16.26/10.72
+  - seed 1: pair 7.66/4.07, agent 47.12/36.66, error 17.25/12.13
+  - seed 2: pair 5.91/2.93, agent 47.74/37.14, error 14.80/11.30
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.64/3.06, agent 42.46/36.89, error 15.27/11.06
+  - seed 1: pair 6.81/3.49, agent 45.08/38.19, error 16.07/11.27
+  - seed 2: pair 6.42/3.76, agent 48.99/39.80, error 14.95/11.35
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.64/3.05, agent 43.11/36.94, error 15.27/11.06
+  - seed 1: pair 7.02/3.51, agent 47.16/38.08, error 15.74/11.07
+  - seed 2: pair 6.45/3.77, agent 49.40/39.69, error 15.00/11.37
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.35/2.70, agent 40.47/33.52, error 10.76/7.88
+  - seed 1: pair 4.88/2.64, agent 43.64/33.25, error 10.71/7.95
+  - seed 2: pair 5.31/2.92, agent 38.45/29.66, error 13.40/8.91
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.59/3.36, agent 43.28/35.67, error 14.37/9.26
+  - seed 1: pair 5.75/3.39, agent 43.81/33.72, error 11.93/7.45
+  - seed 2: pair 5.52/3.07, agent 42.15/30.93, error 10.54/7.19
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.33/2.70, agent 39.85/33.49, error 10.74/7.84
+  - seed 1: pair 4.88/2.64, agent 43.64/33.25, error 10.71/7.95
+  - seed 2: pair 5.28/2.93, agent 37.80/29.64, error 13.01/8.57
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_noscal | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.33/2.68, agent 40.62/33.24, error 10.74/7.93
+  - seed 1: pair 4.89/2.63, agent 44.53/32.95, error 10.73/7.90
+  - seed 2: pair 5.98/3.01, agent 41.80/30.24, error 12.70/8.64
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.73/3.41, agent 39.87/35.77, error 15.57/12.36
+  - seed 1: pair 4.99/2.83, agent 40.49/38.86, error 15.49/12.09
+  - seed 2: pair 6.04/3.43, agent 42.69/39.40, error 15.19/11.89
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.47/2.46, agent 39.60/35.25, error 14.40/13.31
+  - seed 1: pair 4.95/2.94, agent 40.63/36.45, error 15.63/10.36
+  - seed 2: pair 7.38/4.26, agent 40.00/32.81, error 19.85/16.48
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.73/3.41, agent 39.87/35.77, error 15.57/12.36
+  - seed 1: pair 4.99/2.83, agent 40.49/38.86, error 15.49/12.09
+  - seed 2: pair 6.04/3.43, agent 42.69/39.40, error 15.19/11.89
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.75/3.41, agent 39.74/35.75, error 15.57/12.36
+  - seed 1: pair 5.30/2.99, agent 41.69/39.58, error 15.82/12.03
+  - seed 2: pair 6.03/3.47, agent 42.17/39.48, error 15.18/11.90
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.44/3.61, agent 40.60/37.84, error 16.67/11.32
+  - seed 1: pair 6.33/3.23, agent 44.44/33.50, error 13.95/10.47
+  - seed 2: pair 7.46/4.26, agent 46.33/38.90, error 17.40/12.76
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.48/3.26, agent 40.40/34.16, error 15.46/11.34
+  - seed 1: pair 5.34/2.52, agent 48.03/38.32, error 12.67/10.88
+  - seed 2: pair 6.94/3.29, agent 46.40/38.57, error 16.43/12.87
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.44/3.61, agent 40.60/37.84, error 16.67/11.32
+  - seed 1: pair 6.32/3.23, agent 44.35/33.50, error 13.95/10.47
+  - seed 2: pair 7.46/4.26, agent 46.33/38.90, error 17.40/12.76
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.14/3.44, agent 42.97/38.36, error 15.75/10.42
+  - seed 1: pair 6.65/3.26, agent 44.85/33.48, error 14.31/10.72
+  - seed 2: pair 7.46/4.26, agent 46.67/38.92, error 17.22/12.60
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.27/2.78, agent 44.05/36.98, error 12.80/9.35
+  - seed 1: pair 5.91/2.85, agent 43.93/35.21, error 14.63/10.19
+  - seed 2: pair 4.63/2.03, agent 41.26/33.86, error 14.07/10.29
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.94/2.63, agent 44.14/36.42, error 11.89/8.66
+  - seed 1: pair 7.65/3.63, agent 44.72/37.95, error 16.21/11.30
+  - seed 2: pair 6.20/2.56, agent 44.73/36.57, error 17.43/12.93
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.26/2.78, agent 43.96/36.98, error 12.78/9.35
+  - seed 1: pair 5.90/2.85, agent 43.84/35.21, error 14.63/10.19
+  - seed 2: pair 4.62/2.03, agent 41.18/33.84, error 14.05/10.25
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_noscal_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.28/2.77, agent 44.93/37.07, error 12.50/9.32
+  - seed 1: pair 5.58/2.82, agent 43.93/35.85, error 13.59/9.59
+  - seed 2: pair 4.98/2.05, agent 42.46/34.10, error 14.45/10.57
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.85/3.58, agent 50.96/37.27, error 18.61/12.80
+  - seed 1: pair 6.91/2.93, agent 47.48/36.29, error 16.90/13.01
+  - seed 2: pair 6.19/2.61, agent 50.00/40.12, error 15.99/12.16
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.56/2.44, agent 50.90/37.77, error 15.67/10.06
+  - seed 1: pair 7.29/2.82, agent 49.15/35.55, error 17.29/10.80
+  - seed 2: pair 5.51/2.11, agent 49.73/36.76, error 14.07/9.21
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.85/3.58, agent 50.87/37.27, error 18.59/12.76
+  - seed 1: pair 6.91/2.93, agent 47.48/36.29, error 16.90/13.01
+  - seed 2: pair 6.19/2.61, agent 50.00/40.12, error 15.99/12.16
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.85/3.58, agent 50.96/37.27, error 18.61/12.80
+  - seed 1: pair 6.80/2.81, agent 49.25/35.67, error 16.93/13.03
+  - seed 2: pair 6.19/2.61, agent 50.00/40.12, error 15.99/12.16
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.85/2.74, agent 52.45/37.78, error 15.19/10.49
+  - seed 1: pair 6.38/2.86, agent 53.26/39.34, error 15.73/11.27
+  - seed 2: pair 7.41/3.35, agent 52.81/37.39, error 15.28/10.48
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.29/2.16, agent 51.90/36.46, error 11.95/8.73
+  - seed 1: pair 6.68/2.76, agent 52.77/38.95, error 14.43/8.07
+  - seed 2: pair 8.22/3.56, agent 52.73/37.45, error 15.42/8.87
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.85/2.74, agent 52.45/37.78, error 15.19/10.49
+  - seed 1: pair 6.38/2.86, agent 53.26/39.34, error 15.73/11.27
+  - seed 2: pair 7.41/3.35, agent 52.81/37.39, error 15.28/10.45
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.85/2.74, agent 52.08/37.19, error 15.19/10.49
+  - seed 1: pair 6.38/2.86, agent 53.26/39.34, error 15.73/11.27
+  - seed 2: pair 7.41/3.36, agent 52.91/37.61, error 15.28/10.45
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.93/2.34, agent 46.88/37.87, error 13.81/10.46
+  - seed 1: pair 7.17/3.49, agent 45.22/35.63, error 16.50/12.37
+  - seed 2: pair 5.33/2.34, agent 45.99/37.70, error 14.99/11.67
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.51/2.10, agent 46.82/36.74, error 14.86/8.76
+  - seed 1: pair 7.40/2.83, agent 45.36/34.23, error 16.50/11.33
+  - seed 2: pair 6.63/2.27, agent 45.97/35.64, error 15.67/10.09
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.91/2.34, agent 46.66/37.87, error 13.78/10.44
+  - seed 1: pair 7.16/3.49, agent 45.01/35.63, error 16.47/12.35
+  - seed 2: pair 5.33/2.34, agent 45.85/37.70, error 14.98/11.66
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_seq | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.95/2.34, agent 47.32/37.87, error 13.87/10.48
+  - seed 1: pair 7.29/3.53, agent 45.54/34.66, error 16.50/12.25
+  - seed 2: pair 5.61/2.44, agent 46.61/37.43, error 14.85/11.59
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.26/3.77, agent 42.49/39.11, error 16.67/12.94
+  - seed 1: pair 6.53/3.08, agent 39.14/34.16, error 17.52/9.69
+  - seed 2: pair 8.84/4.60, agent 39.29/35.27, error 21.71/11.23
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.34/3.06, agent 42.47/34.05, error 15.70/9.74
+  - seed 1: pair 6.03/2.97, agent 40.86/36.62, error 18.57/11.43
+  - seed 2: pair 7.87/4.23, agent 38.64/35.01, error 21.94/12.09
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.26/3.77, agent 42.49/39.11, error 16.67/12.94
+  - seed 1: pair 6.53/3.08, agent 39.14/34.16, error 17.52/9.69
+  - seed 2: pair 8.82/4.60, agent 39.15/35.27, error 21.68/11.23
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.26/3.77, agent 43.10/39.13, error 16.53/12.84
+  - seed 1: pair 6.55/3.07, agent 39.64/34.23, error 17.22/9.38
+  - seed 2: pair 8.84/4.59, agent 39.64/35.34, error 21.71/11.23
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.11/4.48, agent 41.86/34.92, error 17.41/9.59
+  - seed 1: pair 7.38/4.02, agent 46.84/38.13, error 18.96/12.18
+  - seed 2: pair 5.85/3.16, agent 46.06/38.12, error 13.27/7.47
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.27/3.59, agent 46.73/37.41, error 15.97/10.06
+  - seed 1: pair 7.83/3.95, agent 46.68/37.62, error 21.19/11.20
+  - seed 2: pair 7.44/4.68, agent 46.59/37.44, error 18.49/10.90
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.11/4.48, agent 41.86/34.92, error 17.41/9.59
+  - seed 1: pair 7.38/4.02, agent 46.84/38.13, error 18.96/12.18
+  - seed 2: pair 5.85/3.16, agent 46.06/38.12, error 13.27/7.47
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.11/4.49, agent 42.64/34.35, error 17.76/9.73
+  - seed 1: pair 7.26/4.02, agent 47.16/38.56, error 18.86/12.09
+  - seed 2: pair 5.87/3.17, agent 47.43/37.58, error 13.61/7.66
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.99/2.05, agent 41.70/32.62, error 10.21/7.49
+  - seed 1: pair 6.15/4.12, agent 41.83/35.94, error 12.44/10.10
+  - seed 2: pair 6.28/3.37, agent 45.09/33.00, error 14.70/8.66
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.88/2.52, agent 42.29/35.44, error 11.91/8.50
+  - seed 1: pair 7.49/4.54, agent 44.13/38.16, error 16.28/11.29
+  - seed 2: pair 5.75/2.68, agent 43.97/34.05, error 14.29/8.34
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.69/2.00, agent 41.30/32.60, error 9.88/7.29
+  - seed 1: pair 6.14/4.12, agent 42.13/35.95, error 12.43/10.09
+  - seed 2: pair 6.27/3.36, agent 45.38/33.61, error 14.67/8.65
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_seqsup | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.00/2.05, agent 42.19/32.86, error 10.56/7.81
+  - seed 1: pair 6.14/4.10, agent 42.50/35.77, error 12.43/10.08
+  - seed 2: pair 6.33/3.40, agent 45.61/34.26, error 14.52/8.59
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.01/2.84, agent 42.83/36.70, error 14.36/10.86
+  - seed 1: pair 5.26/3.35, agent 46.13/39.99, error 14.25/10.91
+  - seed 2: pair 5.05/3.03, agent 43.84/38.82, error 14.59/11.33
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.49/3.62, agent 42.83/36.94, error 18.11/11.59
+  - seed 1: pair 5.99/3.67, agent 45.80/38.96, error 16.60/9.96
+  - seed 2: pair 5.20/2.94, agent 44.62/38.27, error 13.73/8.36
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.01/2.84, agent 42.83/36.70, error 14.36/10.86
+  - seed 1: pair 5.26/3.35, agent 46.13/39.99, error 14.25/10.91
+  - seed 2: pair 5.05/3.03, agent 43.84/38.82, error 14.59/11.33
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.05/2.85, agent 43.09/36.71, error 14.29/10.86
+  - seed 1: pair 5.27/3.36, agent 46.25/39.98, error 14.30/10.98
+  - seed 2: pair 5.07/3.03, agent 43.84/38.59, error 14.11/10.82
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/2.71, agent 42.42/34.13, error 14.60/10.48
+  - seed 1: pair 4.92/2.71, agent 44.34/36.73, error 15.05/11.54
+  - seed 2: pair 4.91/2.67, agent 42.83/36.74, error 14.93/10.15
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/2.94, agent 41.33/33.55, error 15.78/9.70
+  - seed 1: pair 4.91/2.75, agent 43.20/35.75, error 13.56/10.98
+  - seed 2: pair 4.59/2.50, agent 40.70/35.79, error 15.11/8.92
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/2.71, agent 42.35/34.13, error 14.75/10.58
+  - seed 1: pair 4.92/2.71, agent 44.34/36.73, error 15.05/11.54
+  - seed 2: pair 4.91/2.67, agent 42.83/36.74, error 14.93/10.15
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.90/2.72, agent 42.23/33.57, error 14.60/10.47
+  - seed 1: pair 4.96/2.72, agent 44.33/36.98, error 14.85/11.31
+  - seed 2: pair 4.72/2.68, agent 41.64/36.18, error 14.72/10.04
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.12/2.59, agent 44.92/38.44, error 9.63/8.01
+  - seed 1: pair 4.98/3.13, agent 43.06/36.70, error 12.90/9.65
+  - seed 2: pair 5.10/3.14, agent 41.41/37.49, error 12.20/9.38
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.28/2.35, agent 41.81/34.85, error 10.04/6.73
+  - seed 1: pair 5.96/3.97, agent 39.93/33.10, error 14.06/8.13
+  - seed 2: pair 5.22/3.03, agent 38.95/35.03, error 12.27/6.20
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.10/2.58, agent 45.20/38.78, error 9.63/8.01
+  - seed 1: pair 4.98/3.13, agent 43.31/36.72, error 12.89/9.65
+  - seed 2: pair 5.09/3.13, agent 41.28/37.27, error 12.20/9.38
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_seqsup5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.29/2.69, agent 43.11/35.75, error 9.63/8.03
+  - seed 1: pair 5.00/3.14, agent 42.12/36.11, error 12.91/9.66
+  - seed 2: pair 5.45/3.32, agent 41.19/36.32, error 12.19/9.37
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 8.13/3.70, agent 44.24/35.86, error 16.30/9.61
+  - seed 1: pair 4.72/2.79, agent 39.72/34.79, error 12.48/7.48
+  - seed 2: pair 6.41/3.59, agent 43.34/38.92, error 16.71/9.96
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.57/3.17, agent 44.64/37.68, error 15.91/9.82
+  - seed 1: pair 5.28/3.07, agent 45.45/39.57, error 14.25/9.74
+  - seed 2: pair 6.16/3.63, agent 43.72/40.02, error 16.97/10.43
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 8.13/3.70, agent 44.24/35.86, error 16.30/9.61
+  - seed 1: pair 4.71/2.79, agent 39.65/34.60, error 12.46/7.47
+  - seed 2: pair 6.41/3.59, agent 43.34/38.92, error 16.71/9.96
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 8.40/3.70, agent 45.34/35.90, error 16.61/9.76
+  - seed 1: pair 5.09/2.83, agent 42.65/35.93, error 12.35/7.46
+  - seed 2: pair 6.41/3.61, agent 43.34/38.85, error 16.71/9.98
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.07/3.08, agent 48.08/38.69, error 14.80/9.19
+  - seed 1: pair 5.84/2.86, agent 45.75/36.29, error 12.44/8.43
+  - seed 2: pair 6.73/2.98, agent 46.68/37.50, error 14.61/8.79
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.11/2.73, agent 47.41/38.01, error 13.25/9.15
+  - seed 1: pair 6.02/3.17, agent 48.38/37.20, error 15.30/10.34
+  - seed 2: pair 5.84/2.82, agent 45.35/37.21, error 13.81/9.45
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.07/3.08, agent 48.08/38.69, error 14.80/9.19
+  - seed 1: pair 5.84/2.86, agent 45.75/36.29, error 12.44/8.43
+  - seed 2: pair 6.73/2.98, agent 46.68/37.50, error 14.61/8.79
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.81/3.08, agent 47.44/37.69, error 14.58/8.97
+  - seed 1: pair 6.03/2.88, agent 48.72/36.84, error 12.46/8.45
+  - seed 2: pair 6.43/2.95, agent 46.30/37.48, error 14.61/8.78
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.81/1.75, agent 45.20/35.84, error 11.70/8.65
+  - seed 1: pair 4.17/2.64, agent 43.21/36.22, error 11.76/8.11
+  - seed 2: pair 4.22/2.69, agent 40.92/34.53, error 11.88/8.36
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.16/1.82, agent 48.23/37.93, error 11.85/7.77
+  - seed 1: pair 3.95/2.48, agent 42.32/35.54, error 13.60/8.28
+  - seed 2: pair 3.98/2.52, agent 40.16/34.61, error 11.84/8.38
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.81/1.75, agent 45.20/35.84, error 11.70/8.65
+  - seed 1: pair 4.17/2.64, agent 43.21/36.22, error 11.76/8.11
+  - seed 2: pair 4.22/2.69, agent 40.84/34.53, error 11.86/8.33
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.82/1.75, agent 45.78/36.29, error 11.74/8.67
+  - seed 1: pair 4.17/2.64, agent 42.39/36.18, error 11.76/8.13
+  - seed 2: pair 4.29/2.73, agent 41.33/34.98, error 12.06/8.46
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.55/3.41, agent 41.31/34.34, error 16.59/11.33
+  - seed 1: pair 3.87/2.01, agent 41.59/34.60, error 11.76/7.91
+  - seed 2: pair 5.43/3.07, agent 39.78/33.28, error 17.12/10.71
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.44/4.02, agent 43.53/36.35, error 17.96/12.29
+  - seed 1: pair 4.23/1.95, agent 43.56/34.75, error 11.43/7.87
+  - seed 2: pair 6.61/3.31, agent 42.11/35.58, error 18.44/11.41
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.55/3.41, agent 41.31/34.34, error 16.59/11.33
+  - seed 1: pair 3.87/2.01, agent 41.59/34.60, error 11.76/7.91
+  - seed 2: pair 5.43/3.07, agent 39.78/33.28, error 17.12/10.71
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.55/3.40, agent 41.31/34.33, error 16.59/11.34
+  - seed 1: pair 4.15/2.05, agent 42.18/34.46, error 12.10/8.29
+  - seed 2: pair 5.68/3.10, agent 40.15/33.30, error 17.12/10.73
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.74/2.64, agent 44.62/35.55, error 13.48/9.18
+  - seed 1: pair 4.40/1.82, agent 46.83/34.65, error 14.83/9.04
+  - seed 2: pair 4.40/2.48, agent 46.50/36.50, error 12.73/9.63
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.13/2.99, agent 47.58/37.54, error 15.55/9.35
+  - seed 1: pair 4.94/2.19, agent 48.61/36.19, error 14.65/9.48
+  - seed 2: pair 2.86/1.38, agent 46.69/35.65, error 8.33/7.46
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.74/2.64, agent 44.62/35.55, error 13.48/9.18
+  - seed 1: pair 4.40/1.82, agent 46.83/34.65, error 14.83/9.04
+  - seed 2: pair 4.40/2.48, agent 46.50/36.50, error 12.73/9.63
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.74/2.63, agent 46.18/35.61, error 13.17/9.00
+  - seed 1: pair 4.41/1.83, agent 48.55/34.90, error 14.57/9.09
+  - seed 2: pair 4.41/2.48, agent 46.67/36.69, error 12.40/9.36
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.90/1.98, agent 41.00/35.59, error 11.23/6.52
+  - seed 1: pair 3.68/1.94, agent 41.62/33.85, error 11.09/7.64
+  - seed 2: pair 2.99/1.51, agent 44.32/36.48, error 9.78/7.52
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.69/1.97, agent 43.80/37.06, error 10.11/7.16
+  - seed 1: pair 3.98/2.00, agent 41.62/33.85, error 11.46/7.86
+  - seed 2: pair 4.20/1.97, agent 47.64/37.84, error 10.60/8.10
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.90/1.98, agent 41.00/35.59, error 11.23/6.52
+  - seed 1: pair 3.68/1.94, agent 41.54/33.85, error 11.08/7.63
+  - seed 2: pair 2.99/1.50, agent 44.61/37.05, error 9.76/7.51
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon10 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.90/1.96, agent 41.38/35.53, error 10.32/5.95
+  - seed 1: pair 3.97/1.98, agent 41.62/33.85, error 11.40/7.86
+  - seed 2: pair 3.26/1.57, agent 44.97/36.88, error 10.06/7.85
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.79/1.40, agent 45.28/36.65, error 10.67/6.69
+  - seed 1: pair 4.75/2.21, agent 51.39/40.36, error 14.73/8.33
+  - seed 2: pair 4.57/2.38, agent 44.73/36.04, error 11.76/6.93
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.91/3.32, agent 45.96/36.31, error 15.50/8.49
+  - seed 1: pair 5.39/2.73, agent 50.38/37.82, error 14.57/9.60
+  - seed 2: pair 5.08/2.71, agent 44.01/36.97, error 12.96/8.11
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.79/1.40, agent 45.28/36.65, error 10.67/6.69
+  - seed 1: pair 4.75/2.21, agent 51.39/40.36, error 14.73/8.33
+  - seed 2: pair 4.57/2.38, agent 44.73/36.04, error 11.76/6.93
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.92/3.05, agent 47.49/38.87, error 14.84/10.45
+  - seed 1: pair 4.96/2.37, agent 50.58/38.12, error 13.98/8.03
+  - seed 2: pair 4.57/2.38, agent 45.10/36.07, error 12.07/7.33
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.11, agent 50.90/39.36, error 12.93/7.66
+  - seed 1: pair 5.86/2.97, agent 48.25/36.78, error 13.17/7.94
+  - seed 2: pair 5.01/2.14, agent 48.94/36.35, error 9.79/6.02
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.97/3.06, agent 52.33/38.95, error 13.54/8.23
+  - seed 1: pair 4.97/2.19, agent 51.35/39.36, error 13.13/8.09
+  - seed 2: pair 6.09/3.17, agent 49.63/36.22, error 14.74/9.14
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.11, agent 50.90/39.36, error 12.93/7.66
+  - seed 1: pair 5.86/2.97, agent 48.25/36.78, error 13.17/7.94
+  - seed 2: pair 5.01/2.14, agent 48.94/36.35, error 9.79/6.02
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.20/3.12, agent 51.70/39.40, error 13.29/8.26
+  - seed 1: pair 5.86/2.98, agent 49.03/36.81, error 13.17/7.91
+  - seed 2: pair 5.33/2.16, agent 49.81/36.40, error 10.14/6.29
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.68/1.64, agent 47.69/36.48, error 9.51/6.33
+  - seed 1: pair 4.58/1.85, agent 51.46/39.79, error 12.19/7.22
+  - seed 2: pair 4.69/1.89, agent 51.07/40.26, error 10.49/7.65
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.42/1.52, agent 48.02/37.77, error 8.67/6.14
+  - seed 1: pair 4.79/2.03, agent 53.22/42.19, error 11.03/6.47
+  - seed 2: pair 4.69/1.97, agent 50.38/38.88, error 10.66/6.98
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.67/1.64, agent 47.60/36.26, error 9.49/6.31
+  - seed 1: pair 4.57/1.85, agent 51.65/39.80, error 12.15/7.18
+  - seed 2: pair 4.69/1.89, agent 51.07/40.26, error 10.49/7.65
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon10_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.68/1.63, agent 48.08/37.28, error 9.18/6.17
+  - seed 1: pair 4.57/1.85, agent 52.04/39.70, error 12.15/7.18
+  - seed 2: pair 4.69/1.90, agent 51.17/40.47, error 10.51/7.63
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/2.91, agent 46.59/36.42, error 14.67/9.64
+  - seed 1: pair 6.61/2.94, agent 51.82/39.91, error 15.24/9.54
+  - seed 2: pair 5.26/2.26, agent 45.81/37.30, error 11.84/7.53
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.99/2.83, agent 46.79/38.58, error 15.95/11.48
+  - seed 1: pair 6.35/2.99, agent 50.73/39.38, error 15.77/10.97
+  - seed 2: pair 5.32/2.33, agent 46.91/37.02, error 12.11/8.06
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/2.91, agent 46.59/36.42, error 14.67/9.64
+  - seed 1: pair 6.61/2.94, agent 51.82/39.91, error 15.24/9.54
+  - seed 2: pair 5.26/2.26, agent 45.81/37.30, error 11.84/7.53
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/2.90, agent 46.97/36.37, error 14.35/9.45
+  - seed 1: pair 6.61/2.94, agent 51.46/39.90, error 15.24/9.54
+  - seed 2: pair 5.27/2.26, agent 46.64/37.35, error 11.54/7.39
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.82/3.04, agent 48.55/37.18, error 15.16/10.84
+  - seed 1: pair 7.14/3.10, agent 48.33/38.36, error 14.58/7.77
+  - seed 2: pair 6.82/3.09, agent 51.92/40.29, error 14.78/9.62
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.73/3.00, agent 49.62/37.47, error 15.24/12.53
+  - seed 1: pair 7.16/3.00, agent 48.53/37.15, error 14.31/8.31
+  - seed 2: pair 8.08/3.51, agent 50.09/39.00, error 17.91/11.67
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.82/3.04, agent 48.55/37.18, error 15.16/10.84
+  - seed 1: pair 7.13/3.10, agent 48.24/38.27, error 14.58/7.77
+  - seed 2: pair 6.82/3.09, agent 51.92/40.29, error 14.78/9.62
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.82/3.04, agent 48.94/37.20, error 15.16/10.78
+  - seed 1: pair 7.44/3.13, agent 48.63/37.71, error 14.93/8.01
+  - seed 2: pair 6.82/3.08, agent 51.54/40.28, error 15.41/10.26
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.58/3.66, agent 46.38/36.62, error 13.65/8.11
+  - seed 1: pair 5.80/3.15, agent 42.29/37.16, error 13.36/8.08
+  - seed 2: pair 5.34/2.49, agent 47.30/37.20, error 12.19/7.23
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.91/3.92, agent 45.86/37.73, error 14.62/8.71
+  - seed 1: pair 5.88/3.17, agent 43.06/36.93, error 13.13/8.05
+  - seed 2: pair 6.01/2.86, agent 48.92/38.58, error 14.43/8.71
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.54/3.65, agent 45.67/36.40, error 13.61/8.08
+  - seed 1: pair 5.43/3.12, agent 41.49/37.14, error 12.95/7.64
+  - seed 2: pair 5.33/2.49, agent 47.20/37.20, error 12.19/7.23
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.55/3.65, agent 45.39/36.80, error 13.91/8.49
+  - seed 1: pair 5.88/3.17, agent 43.06/36.93, error 13.13/8.05
+  - seed 2: pair 5.70/2.53, agent 48.75/38.07, error 12.95/8.06
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.42/2.62, agent 41.30/34.65, error 11.05/7.45
+  - seed 1: pair 4.26/2.61, agent 43.33/36.37, error 12.63/8.12
+  - seed 2: pair 4.83/2.68, agent 43.78/37.35, error 14.02/8.26
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.74/3.36, agent 44.31/36.96, error 14.75/8.90
+  - seed 1: pair 4.68/2.61, agent 45.19/36.37, error 13.74/9.27
+  - seed 2: pair 4.74/2.86, agent 44.93/37.02, error 14.81/9.35
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.42/2.62, agent 41.30/34.65, error 11.05/7.45
+  - seed 1: pair 4.26/2.61, agent 43.33/36.37, error 12.63/8.12
+  - seed 2: pair 4.83/2.68, agent 43.78/37.35, error 14.02/8.26
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.42/2.62, agent 42.91/34.14, error 10.71/7.17
+  - seed 1: pair 4.54/2.61, agent 44.32/36.13, error 12.97/8.29
+  - seed 2: pair 4.84/2.68, agent 45.44/37.69, error 13.77/8.13
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.50/2.77, agent 48.45/37.97, error 11.13/11.52
+  - seed 1: pair 4.48/2.49, agent 44.57/38.14, error 10.76/6.88
+  - seed 2: pair 4.75/2.28, agent 46.56/35.52, error 12.58/8.67
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.21/2.60, agent 50.28/39.55, error 12.38/12.13
+  - seed 1: pair 5.67/3.07, agent 47.55/39.18, error 12.30/7.53
+  - seed 2: pair 5.24/2.60, agent 49.00/37.65, error 14.03/9.72
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.50/2.77, agent 48.45/37.97, error 11.13/11.52
+  - seed 1: pair 4.48/2.49, agent 44.57/38.14, error 10.76/6.88
+  - seed 2: pair 4.75/2.28, agent 46.56/35.52, error 12.58/8.67
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.51/2.77, agent 48.16/37.37, error 11.15/11.51
+  - seed 1: pair 4.50/2.49, agent 47.89/39.79, error 10.12/6.61
+  - seed 2: pair 4.75/2.29, agent 46.95/35.53, error 12.58/8.67
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.98/1.62, agent 43.64/36.65, error 8.54/5.95
+  - seed 1: pair 5.13/2.80, agent 41.67/35.59, error 12.88/8.47
+  - seed 2: pair 3.90/2.10, agent 44.44/37.07, error 10.66/7.28
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.98/1.60, agent 43.05/36.05, error 9.48/8.44
+  - seed 1: pair 6.08/3.47, agent 43.18/36.73, error 13.88/8.85
+  - seed 2: pair 2.74/1.39, agent 46.21/38.82, error 8.77/6.17
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.98/1.62, agent 43.64/36.65, error 8.54/5.95
+  - seed 1: pair 5.12/2.80, agent 41.58/35.59, error 12.86/8.46
+  - seed 2: pair 3.88/2.09, agent 44.49/37.23, error 10.59/7.28
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.98/1.62, agent 43.26/36.62, error 8.87/6.39
+  - seed 1: pair 5.12/2.79, agent 42.38/35.64, error 12.86/8.46
+  - seed 2: pair 3.88/2.09, agent 45.26/37.27, error 10.27/7.02
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.76, agent 40.93/35.68, error 9.02/5.33
+  - seed 1: pair 4.55/2.26, agent 42.96/37.35, error 11.56/7.54
+  - seed 2: pair 5.22/2.94, agent 41.38/35.97, error 15.94/10.47
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.04/1.73, agent 40.90/35.95, error 9.65/6.33
+  - seed 1: pair 4.24/1.96, agent 43.08/37.15, error 13.15/8.03
+  - seed 2: pair 5.41/3.19, agent 43.05/38.82, error 16.04/9.74
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.76, agent 40.93/35.68, error 9.02/5.33
+  - seed 1: pair 4.55/2.26, agent 42.96/37.35, error 11.56/7.54
+  - seed 2: pair 5.22/2.94, agent 41.38/35.97, error 15.94/10.47
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.75, agent 41.29/35.70, error 9.35/5.57
+  - seed 1: pair 4.55/2.19, agent 42.96/37.32, error 11.85/7.70
+  - seed 2: pair 5.22/2.94, agent 41.72/35.99, error 15.65/10.23
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/2.34, agent 45.25/34.33, error 10.30/5.58
+  - seed 1: pair 4.62/2.24, agent 45.09/37.44, error 11.47/6.50
+  - seed 2: pair 4.78/2.50, agent 46.93/38.39, error 14.70/9.99
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.40/2.00, agent 46.86/35.50, error 9.54/5.83
+  - seed 1: pair 4.54/2.44, agent 46.94/37.94, error 10.59/7.48
+  - seed 2: pair 3.64/1.73, agent 49.13/37.94, error 11.34/8.59
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/2.34, agent 45.25/34.33, error 10.30/5.58
+  - seed 1: pair 4.62/2.24, agent 45.09/37.44, error 11.47/6.50
+  - seed 2: pair 4.78/2.50, agent 46.93/38.39, error 14.70/9.99
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.18/2.34, agent 46.77/34.54, error 10.30/5.59
+  - seed 1: pair 4.37/2.03, agent 44.32/35.95, error 11.18/6.21
+  - seed 2: pair 4.80/2.51, agent 47.23/38.99, error 14.73/10.03
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.45, agent 42.62/36.05, error 10.73/6.77
+  - seed 1: pair 4.14/2.52, agent 38.85/34.89, error 9.49/7.22
+  - seed 2: pair 4.44/2.43, agent 43.60/35.57, error 12.23/7.33
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.03/2.58, agent 46.30/35.96, error 12.46/7.10
+  - seed 1: pair 3.95/2.51, agent 41.04/35.82, error 9.92/7.70
+  - seed 2: pair 5.34/2.91, agent 46.82/37.43, error 14.30/8.75
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.45, agent 42.62/36.05, error 10.73/6.77
+  - seed 1: pair 4.14/2.52, agent 38.85/34.89, error 9.49/7.22
+  - seed 2: pair 4.44/2.43, agent 43.60/35.57, error 12.23/7.33
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5_s2 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.11/2.46, agent 42.62/36.26, error 10.73/6.77
+  - seed 1: pair 4.14/2.52, agent 38.85/34.88, error 9.18/7.06
+  - seed 2: pair 4.44/2.42, agent 43.24/35.56, error 12.23/7.36
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.81, agent 39.85/33.65, error 8.22/5.45
+  - seed 1: pair 4.33/2.52, agent 42.07/35.92, error 11.66/7.22
+  - seed 2: pair 3.75/2.21, agent 40.95/36.15, error 11.65/7.43
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.27/2.05, agent 40.21/35.83, error 9.14/6.91
+  - seed 1: pair 4.08/2.33, agent 42.38/37.32, error 12.82/7.43
+  - seed 2: pair 4.08/2.34, agent 42.11/38.31, error 14.12/9.71
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.81, agent 39.85/33.65, error 8.22/5.45
+  - seed 1: pair 4.33/2.52, agent 42.07/35.92, error 11.66/7.22
+  - seed 2: pair 3.75/2.21, agent 40.95/36.15, error 11.65/7.43
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.21/1.81, agent 39.85/33.65, error 8.22/5.45
+  - seed 1: pair 4.33/2.52, agent 42.07/35.88, error 11.96/7.36
+  - seed 2: pair 3.75/2.21, agent 40.95/36.15, error 11.65/7.43
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.59/2.88, agent 41.23/35.55, error 11.27/7.17
+  - seed 1: pair 4.54/2.60, agent 41.31/37.85, error 13.00/6.14
+  - seed 2: pair 4.61/2.55, agent 44.32/37.77, error 12.04/7.43
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.53/3.04, agent 43.67/36.73, error 13.62/8.53
+  - seed 1: pair 4.34/2.41, agent 43.01/38.56, error 11.91/7.39
+  - seed 2: pair 3.90/2.22, agent 43.49/38.14, error 10.88/7.63
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.59/2.88, agent 41.23/35.55, error 11.27/7.17
+  - seed 1: pair 4.54/2.60, agent 41.31/37.85, error 13.00/6.14
+  - seed 2: pair 4.61/2.55, agent 44.32/37.77, error 12.04/7.43
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.59/2.89, agent 41.23/35.78, error 11.27/7.19
+  - seed 1: pair 4.54/2.60, agent 41.31/37.85, error 12.67/5.99
+  - seed 2: pair 4.61/2.55, agent 43.16/37.67, error 11.71/7.32
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.75/2.32, agent 40.51/35.23, error 11.35/7.60
+  - seed 1: pair 4.91/2.60, agent 42.44/36.12, error 12.39/7.84
+  - seed 2: pair 6.20/2.96, agent 47.16/37.73, error 12.75/7.85
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.66/2.24, agent 40.87/36.28, error 11.78/7.69
+  - seed 1: pair 5.84/3.36, agent 41.59/34.95, error 13.74/7.66
+  - seed 2: pair 5.81/2.27, agent 46.97/35.04, error 12.27/6.90
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.75/2.32, agent 40.51/35.23, error 11.35/7.60
+  - seed 1: pair 4.90/2.60, agent 42.36/36.12, error 12.67/8.16
+  - seed 2: pair 6.19/2.95, agent 47.08/37.51, error 12.74/7.85
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5_s3 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.76/2.33, agent 40.73/35.64, error 11.40/7.63
+  - seed 1: pair 4.90/2.60, agent 41.99/36.09, error 12.67/8.17
+  - seed 2: pair 6.20/2.95, agent 47.16/37.73, error 12.75/7.85
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.51/2.20, agent 42.08/32.66, error 12.21/6.32
+  - seed 1: pair 4.44/2.63, agent 42.64/35.59, error 12.02/6.42
+  - seed 2: pair 4.46/2.64, agent 41.45/34.57, error 12.28/6.77
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.35/3.86, agent 44.15/34.81, error 15.69/8.32
+  - seed 1: pair 6.92/3.35, agent 45.04/37.15, error 16.25/8.33
+  - seed 2: pair 5.76/3.34, agent 42.55/35.36, error 14.72/8.17
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.51/2.20, agent 42.08/32.66, error 12.21/6.32
+  - seed 1: pair 4.44/2.63, agent 42.64/35.59, error 12.02/6.42
+  - seed 2: pair 4.46/2.64, agent 41.45/34.57, error 12.28/6.77
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.51/2.21, agent 43.29/32.15, error 11.88/6.11
+  - seed 1: pair 5.27/2.71, agent 44.57/35.56, error 13.25/7.49
+  - seed 2: pair 4.75/2.65, agent 41.85/34.39, error 12.92/7.18
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.69/2.21, agent 50.10/35.08, error 12.85/8.42
+  - seed 1: pair 5.86/2.50, agent 44.04/32.73, error 13.29/9.14
+  - seed 2: pair 5.59/2.63, agent 49.17/37.59, error 11.05/5.92
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 6.13/2.77, agent 51.94/37.89, error 13.29/9.00
+  - seed 1: pair 6.55/3.18, agent 50.68/37.30, error 13.50/8.76
+  - seed 2: pair 6.42/3.20, agent 50.10/36.64, error 13.42/6.40
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.69/2.21, agent 50.10/35.08, error 12.85/8.42
+  - seed 1: pair 5.86/2.50, agent 44.04/32.73, error 13.29/9.14
+  - seed 2: pair 5.59/2.63, agent 49.17/37.59, error 11.05/5.92
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.70/2.22, agent 50.20/35.34, error 13.19/8.93
+  - seed 1: pair 5.86/2.49, agent 48.08/33.11, error 13.29/9.10
+  - seed 2: pair 5.60/2.63, agent 49.69/37.39, error 11.07/5.94
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.58/2.35, agent 48.54/36.74, error 11.09/6.54
+  - seed 1: pair 6.08/3.01, agent 48.73/35.83, error 11.88/7.15
+  - seed 2: pair 5.37/2.29, agent 46.60/35.83, error 12.67/7.25
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 7.04/3.28, agent 50.94/38.46, error 14.81/7.67
+  - seed 1: pair 6.08/2.93, agent 48.91/35.09, error 11.81/6.08
+  - seed 2: pair 6.22/3.02, agent 47.10/36.56, error 13.29/7.31
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.58/2.35, agent 48.54/36.74, error 11.09/6.54
+  - seed 1: pair 6.07/3.00, agent 48.64/35.62, error 11.86/7.14
+  - seed 2: pair 5.37/2.29, agent 46.60/35.83, error 12.67/7.25
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5_s4 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.89/2.36, agent 48.16/36.95, error 12.10/7.60
+  - seed 1: pair 6.07/3.00, agent 48.64/35.62, error 11.86/7.15
+  - seed 2: pair 5.37/2.29, agent 46.21/35.80, error 12.67/7.24
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.24/2.23, agent 40.67/36.10, error 11.24/8.23
+  - seed 1: pair 6.37/3.22, agent 41.65/36.01, error 13.69/9.33
+  - seed 2: pair 4.94/2.20, agent 41.68/36.63, error 14.58/8.83
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.97/2.22, agent 41.14/37.05, error 12.36/9.32
+  - seed 1: pair 5.94/3.14, agent 42.75/38.41, error 13.05/9.81
+  - seed 2: pair 5.58/2.98, agent 42.12/38.17, error 14.91/9.01
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.24/2.23, agent 40.67/36.10, error 11.24/8.23
+  - seed 1: pair 6.37/3.22, agent 41.65/36.01, error 13.69/9.33
+  - seed 2: pair 4.94/2.20, agent 41.68/36.63, error 14.58/8.83
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.26/2.26, agent 41.19/36.81, error 10.98/8.09
+  - seed 1: pair 6.40/3.24, agent 43.02/36.61, error 13.71/9.38
+  - seed 2: pair 5.20/2.36, agent 42.12/36.90, error 14.87/9.12
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.43/3.20, agent 40.95/35.97, error 11.05/6.50
+  - seed 1: pair 3.74/1.73, agent 43.23/37.13, error 9.35/6.84
+  - seed 2: pair 5.21/2.50, agent 41.30/36.05, error 12.35/7.66
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.39/3.16, agent 41.70/36.77, error 13.82/8.49
+  - seed 1: pair 4.63/2.89, agent 42.48/36.99, error 11.65/7.80
+  - seed 2: pair 5.98/2.88, agent 44.12/37.11, error 13.65/9.34
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.43/3.20, agent 40.95/35.97, error 11.05/6.50
+  - seed 1: pair 3.74/1.73, agent 43.23/37.13, error 9.35/6.84
+  - seed 2: pair 5.21/2.50, agent 41.30/36.05, error 12.35/7.66
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.43/3.19, agent 40.95/35.85, error 11.05/6.49
+  - seed 1: pair 3.74/1.72, agent 44.36/37.25, error 9.03/6.63
+  - seed 2: pair 5.51/2.54, agent 42.45/36.13, error 12.69/7.97
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.75/1.47, agent 42.16/36.49, error 10.22/8.87
+  - seed 1: pair 4.22/2.31, agent 38.69/34.63, error 11.54/8.92
+  - seed 2: pair 3.88/1.95, agent 40.30/36.25, error 12.36/8.89
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.06/1.51, agent 43.61/37.34, error 6.96/6.44
+  - seed 1: pair 4.47/2.41, agent 38.52/32.77, error 11.80/8.05
+  - seed 2: pair 3.86/2.28, agent 39.37/37.06, error 12.91/10.29
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.75/1.47, agent 42.16/36.49, error 10.22/8.87
+  - seed 1: pair 4.22/2.31, agent 38.69/34.63, error 11.54/8.92
+  - seed 2: pair 3.88/1.95, agent 40.30/36.25, error 12.36/8.89
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon5_s5 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.77/1.48, agent 42.03/36.69, error 9.96/8.06
+  - seed 1: pair 4.22/2.31, agent 39.05/34.78, error 11.54/8.89
+  - seed 2: pair 3.88/1.95, agent 40.67/37.04, error 12.36/8.89
+- flat_mlp_base_min | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.89/1.74, agent 42.15/34.78, error 10.33/9.08
+  - seed 1: pair 4.90/2.88, agent 41.56/34.61, error 13.65/10.31
+  - seed 2: pair 4.81/2.19, agent 42.83/35.49, error 13.51/10.22
+- flat_mlp_base_perclass | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 3.53/2.22, agent 43.77/36.65, error 10.53/9.35
+  - seed 1: pair 4.56/2.61, agent 43.30/35.58, error 13.14/10.58
+  - seed 2: pair 4.92/2.27, agent 42.68/36.46, error 14.01/11.42
+- flat_mlp_base_pm | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.89/1.74, agent 42.15/34.78, error 10.33/9.08
+  - seed 1: pair 4.90/2.88, agent 41.56/34.61, error 13.65/10.31
+  - seed 2: pair 4.81/2.19, agent 42.83/35.49, error 13.51/10.22
+- flat_mlp_base_prod | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 2.89/1.74, agent 42.91/34.82, error 10.33/9.08
+  - seed 1: pair 4.95/2.90, agent 42.48/34.42, error 13.74/10.41
+  - seed 2: pair 4.81/2.20, agent 42.83/35.41, error 13.51/10.23
+- flat_mlp_namedrop_min | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/3.21, agent 40.99/36.51, error 15.28/10.48
+  - seed 1: pair 3.27/1.98, agent 41.45/35.46, error 10.92/9.67
+  - seed 2: pair 5.50/3.04, agent 42.12/37.15, error 13.63/7.93
+- flat_mlp_namedrop_perclass | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.76/3.14, agent 42.35/35.11, error 13.44/9.81
+  - seed 1: pair 2.75/1.47, agent 41.64/35.67, error 9.55/8.17
+  - seed 2: pair 4.25/2.21, agent 42.28/35.47, error 10.73/7.70
+- flat_mlp_namedrop_pm | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.30/3.22, agent 40.99/36.51, error 14.94/10.08
+  - seed 1: pair 3.27/1.98, agent 41.45/35.46, error 10.92/9.67
+  - seed 2: pair 5.50/3.04, agent 42.12/37.15, error 13.63/7.93
+- flat_mlp_namedrop_prod | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 5.39/3.21, agent 41.47/35.96, error 15.12/10.76
+  - seed 1: pair 3.37/1.96, agent 41.73/35.31, error 10.83/9.60
+  - seed 2: pair 5.50/3.04, agent 42.12/37.15, error 13.31/7.82
+- flat_mlp_peernd_min | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.37/2.78, agent 39.62/36.05, error 12.80/8.97
+  - seed 1: pair 3.27/2.13, agent 40.47/37.55, error 12.30/9.86
+  - seed 2: pair 3.97/2.34, agent 40.00/35.66, error 13.73/10.07
+- flat_mlp_peernd_perclass | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.75/2.78, agent 39.86/36.23, error 14.99/8.81
+  - seed 1: pair 3.06/1.79, agent 39.92/35.76, error 11.35/10.17
+  - seed 2: pair 4.47/2.59, agent 39.22/33.73, error 15.01/9.93
+- flat_mlp_peernd_pm | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.37/2.78, agent 39.62/36.05, error 12.80/8.97
+  - seed 1: pair 3.26/2.12, agent 40.39/37.32, error 12.28/9.84
+  - seed 2: pair 3.96/2.34, agent 39.85/35.65, error 13.69/10.07
+- flat_mlp_peernd_prod | scored on who_when | split tag who_when_grouped_supcon_s1 | 3 run(s); each value is micro/macro F1
+  - seed 0: pair 4.37/2.78, agent 39.25/35.27, error 12.80/8.97
+  - seed 1: pair 3.26/2.12, agent 40.39/37.32, error 12.28/9.87
+  - seed 2: pair 3.96/2.34, agent 39.85/35.65, error 13.69/10.07
+
+<!-- FULL_VALUES_END -->
+
+## 2026-11-13 early: advfw and supcon encoders finished (GPU)
+- advfw (account C, --adv-fw 0.5) and supcon (account D, --supcon 0.2) ran without errors (new flags work on GPU), saved in aegis/results/kaggle_logs/advfw and supcon.
+- Their val losses include the extra loss terms, so they are not comparable with es_s0 (0.1414): advfw best 0.1740 (still falling at epoch 6), supcon best 0.1509 (epoch 5).
+- CPU scoring queued as chain13 (improve_cpu base,namedrop,peernd, 3 seeds) after chain12.
+- Next GPU jobs launched: aegis-advsup (D, --adv-fw 0.5 --supcon 0.2) and aegis-advfw1 (C, --adv-fw 1.0).
+
+## 2026-11-13: seq encoder finished (A)
+- aegis-seq saved in kaggle_logs/seq, ran clean, best val loss 0.1736 (extra-loss head, not comparable). CPU scoring queued as chain14 (after chain13). Launched aegis-noscal (A, --no-scalars).
+
+## 2026-11-13: BLOCK-DROPOUT RESULT (chain10, ww_block, ensemble of 7 MiniLM-256 encoders, 3 seeds; micro pair/agent/error, macro after slash)
+- names+peer (all blocks on, one model): AEGIS test 32.93+-0.59 / 79.14 / 41.00; Who&W 6.10 / 44.57 / 12.65; with label-shift Who&W 8.79 / 48.54 / 17.86 (macro pair 5.51, macro error 4.67).
+- names only (peer block off at test): AEGIS test 27.91; Who&W 7.17 / 44.61 / 16.44; +shift 8.47 / 45.00 / 18.24.
+- peer only: Who&W 3.85 / 40.84 / 8.09 (worse). neither: Who&W 3.35 / 42.10 / 10.58 (floor-level).
+- Verdict: ONE model gives AEGIS test pair 32.9 (same as peernd 32.3-33.9) AND, with label-shift, Who&W 8.79 / 48.54 / 17.86, which beats the old best (8.46 / 46.42 / 17.08, nd ensemble + shift) on all three and beats paper o3 7.41 / 53.10 / 14.88 on pair and error. No Who&W-based mask choice needed (all blocks on). Caveat: label-shift variant was picked after seeing Who&W; seed spread pair +-1.19.
+## 2026-11-13: advfw1 (C, --adv-fw 1.0) and advsup (D, adv 0.5 + supcon 0.2) finished clean, saved. Scoring queued as chain15. Launched aegis-supcon5 (C, --supcon 0.5) and aegis-seqsup (D, --seq --supcon 0.2).
+
+## 2026-11-13: noscal (A) and nonames512 (B) finished clean, saved; scoring queued as chain16 (after chain15). Launched aegis-attnsup (A, --attn --supcon 0.2) and aegis-l12sup512 (B, L12 512 --supcon 0.2).
+
+## 2026-11-13: nonames encoder (single seed set, no name info in fine-tune head) scored, prod decoder, 3 seeds
+- peernd: AEGIS test 32.00 / 79.24 / 40.77; Who&W 5.64 / 37.37 / 15.12 (error up vs es_s0 peernd 13.63, agent down). Single-encoder level, not a break-through. Chain11 continues with nometa, len512_s3.
+
+## 2026-11-13: nometa encoder scored (prod, 3 seeds)
+- base: AEGIS test 31.49, Who&W 4.61 / 41.10 / 14.35; namedrop: 29.23, WW 4.48 / 41.13 / 14.85; peernd: 32.07, WW 4.89 / 37.97 / 14.90. No gain over es_s0 recipe (verdict: dropping metadata in the encoder does not help).
+## supcon5 (C) and seqsup (D) finished clean, saved; scoring queued as chain17. Launched aegis-advfw-s1 (C, adv 0.5 seed 1) and aegis-supcon-s1 (D, supcon 0.2 seed 1).
+
+## 2026-11-13 00:45: attnsup (A) finished clean, saved; scoring queued as chain18. Launched aegis-attnadvsup (A, --attn --adv-fw 0.5 --supcon 0.2).
+
+## 2026-11-13: len512_s3 scored (prod, 3 seeds); chain11 complete. chain12 (hier heads + kNN) now running.
+- len512_s3: base test 34.16, WW 3.99 / 37.69 / 11.89; namedrop test 33.21, WW 5.38 / 43.36 / 13.38; peernd test 34.71, WW 5.60 / 41.61 / 12.68. A 512-token encoder where namedrop keeps AEGIS 33.2 (vs 256-token 26) and Who&W 5.4; consistent with 512 encoders being strong on AEGIS, mid on Who&W.
+
+## 2026-11-13: chain12 result (ww_complex on es_s0..es_s3 ensemble, 3 seeds, prod decoder; micro pair/agent/error, macro after slash)
+- flat (control, name-dropout): AEGIS test 26.51 / 82.27 / 38.99; Who&W 6.51 / 45.97 / 16.03.
+- hier (hierarchical mode heads): test 31.95 / 75.64 / 37.77; Who&W 4.37 / 42.24 / 10.65 -> AEGIS pair up (+5.4) but agent down, Who&W worse. Verdict: no Who&W gain; DEAD for Who&W.
+- knn: test 28.67 / 78.81 / 41.04; Who&W 2.69 / 37.88 / 11.34 (floor level). DEAD.
+- knnmix (50/50 kNN + MLP): test 31.07 / 82.87 / 41.77; Who&W 5.09 / 42.01 / 12.67 -> better AEGIS than flat without peer features, but Who&W below flat. Not better than block-dropout (AEGIS 32.93, WW 6.10 / 44.57 / 12.65; +shift 8.79 / 48.54 / 17.86).
+## advfw_s1 (C) and supcon_s1 (D) finished clean, saved; scoring queued as chain19. Launched aegis-advsup-s1 (C) and aegis-noscal-s1 (D).
+
+## 2026-11-13 01:05: attnadvsup (A) finished clean, saved (scoring to queue as chain20). GPU-side complex encoder ideas (attn, advfw, supcon, seq, combos, no-names/no-scalars) are all launched or done; remaining complex ideas are CPU-only. Started the LoRA reader (aryanmahajan665/aegis-lora, Qwen2.5-1.5B-Instruct, untested on GPU, 170-min train cap, outputs preds_who_when/test/val.json; score with score_lora.py).
+
+## 2026-11-13 ~06:00: big batch of CPU scoring landed (prod decoder, 3 seeds; test = AEGIS test pair/agent/error, WW = Who&W micro)
+- supcon (L6 256, --supcon 0.2): base test 30.69, WW 6.63 / 43.78 / 15.23; namedrop test 30.01, WW 6.09 / 47.49 / 13.88; peernd test 32.34 / 81.63 / 41.83, WW 4.09 / 43.17 / 11.86. Better Who&W than es_s0 base/peernd, AEGIS ok.
+- supcon5 (--supcon 0.5): base test 30.91, WW 6.15 / 48.36 / 13.71; namedrop test 30.12, WW 7.03 / 49.70 / 15.17 (single-encoder best agent F1 so far); peernd test 31.72, WW 6.04 / 45.73 / 13.33 (peernd Who&W much better than es_s0 peernd 4.92). Contrastive loss helps Who&W; keep going this way.
+- seq (--seq): AEGIS test pair only 19-22 (hurts AEGIS a lot) but Who&W base 6.95 / 50.07 / 17.17, namedrop 6.88 / 52.75 / 15.40 -> best single-encoder Who&W agent F1; AEGIS test agent 79.7. seqsup (seq+supcon 0.2): test 26.85, WW 7.22 / 40.79 / 18.49 base. Trade-off AEGIS vs Who&W; dead as a replacement, but a candidate ensemble member.
+- advfw (0.5), advfw1 (1.0), advsup: AEGIS test pair collapses to 19-20, Who&W 3.7-5.6. Verdict: framework-adversarial training hurts both. DEAD.
+- noscal (--no-scalars): base test 29.85, WW 4.32 / 39.85 / 13.47; namedrop test 25.90, WW 6.37 / 46.56 / 15.33; peernd test 31.95, WW 5.06 / 42.32 / 11.39. No gain over es_s0.
+- nonames512 (L12 512, no names): base test 36.08, WW 4.44 / 39.59 / 12.00; peernd test 36.14, WW 3.70 / 39.63 / 11.46. AEGIS strong, Who&W floor-level (as other 512 encoders).
+- attnsup (--attn --supcon 0.2): base test 31.31, WW 5.27 / 41.69 / 14.39; namedrop test 28.69, WW 5.00 / 47.65 / 13.02; peernd test 32.70, WW 4.98 / 43.26 / 11.34. Modest.
+- Failures fixed: improve_cpu for advfw_s1, supcon_s1 failed because vector dirs are hyphenated (ft_shards_advfw-s1); rerun as chain21 with name mapping (supcon_s1, advfw_s1, attnadvsup, advsup_s1, noscal_s1, l12sup512). LoRA kernel (A) errored: peft refused Kaggle's torchao 0.10; script now uninstalls torchao first; relaunched (version 2).
+- New GPU jobs: aegis-supcon5-s1 (B), aegis-supcon10 (C, --supcon 1.0), aegis-attnsup5 (D, --attn --supcon 0.5).
+
+## 2026-11-13 06:16: supcon5_s1 (B) and supcon10 (C, --supcon 1.0) finished clean, saved; scoring queued as chain23 (after chain22). Launched aegis-supcon5-s2 (B, --supcon 0.5 seed 2) and aegis-seqsup5 (C, --seq --supcon 0.5).
+
+## 2026-11-13 06:20: supcon_s1 scored (supcon 0.2, seed 1; prod, 3 seeds) -- DOES NOT REPLICATE seed 0
+- base: AEGIS test 32.17, WW 4.22 / 42.74 / 12.53; namedrop test 30.60, WW 4.75 / 41.78 / 13.09; peernd test 32.94 / 81.16 / 41.90, WW 3.86 / 39.83 / 12.92.
+- Seed 0 supcon had WW 6.63 / 43.78 / 15.23 (base). So the supcon Who&W gain is seed-noise-sized (encoder seed spread ~2 pair points on Who&W); only an ensemble over seeds can show a real effect (supcon5_s1 and supcon5-s2 and block-dropout ensemble chain22 will tell).
+## attnsup5 (D, attn + supcon 0.5) finished clean, saved; scoring queued as chain24. Launched aegis-supcon10-s1 (D).
+- 2026-11-13 06:35: supcon5_s2 (B) saved clean; scoring queued chain25; launched supcon5-s3 (B, seed 3) to build a multi-seed supcon5 ensemble for block-dropout.
+- 2026-11-13 06:37: seqsup5 (C) saved clean; scoring queued chain26; launched supcon5-s4 (C). Fixed chain25 dir-name bug (supcon5_s2 -> supcon5-s2).
+- 2026-11-13 06:40: supcon10_s1 (D) saved clean; scoring queued chain27; launched supcon5-s5 (D, seed 5).
+- 2026-11-13 06:55: supcon5_s3 (B), supcon5_s4 (C) saved clean; scoring queued chain28; launched aegis-l12sup256 (B, L12 256 supcon 0.5) and aegis-attnsup5-s1 (C).
+- 2026-11-13 07:00: supcon5_s5 (D) saved clean; scoring queued chain29; launched supcon3-s6 (D).
+- 2026-11-13 07:05: CPU scoring is the bottleneck; started chain22 (ww_block on supcon,supcon5,attnsup) NOW in parallel with chain21 (2 CPU jobs at once, deliberate; user said take any permission and keep going) because it is the decisive experiment.
+- 2026-11-13 07:13: attnsup5_s1 (C) saved clean (scoring to queue); launched supcon5-s7 (C). advsup_s1 scored (adv+supcon seed 1: see improve_cpu_advsup_s1.log).
+- 2026-11-13 07:18: supcon3_s6 (D) saved clean (scoring to queue); launched supcon5-s8 (D). Block-dropout on contrastive encoders (chain22): supcon, supcon5 trained, attnsup next.
+- 2026-11-13 07:23: l12sup256 (B) saved clean (scoring to queue); launched l12sup512-s1 (B, L12 512 supcon 0.5 seed 1).
+
+## 2026-11-13 07:30: block-dropout on 3 contrastive encoders (chain22, wbsup: supcon 0.2, supcon5, attnsup; ensemble, 3 seeds; micro pair/agent/error, macro after slash)
+- names+peer (all blocks on): AEGIS test 34.87+-0.95 / 80.33 / 42.79 (higher than the es ensemble's 32.93); Who&W 5.35 / 47.03 / 10.04; +shift 4.76 / 47.60 / 9.40 (shift does not help here).
+- names only: test 31.51; Who&W 6.57 / 48.05 / 14.25; +shift 6.99 / 45.23 / 14.90. peer only: WW 3.05 / 42.93 / 7.66. neither: test 25.28, WW 5.03 / 41.08 / 12.96.
+- Verdict vs best Who&W row (es ensemble block-dropout: AEGIS 32.93, WW 6.10 / 44.57 / 12.65; +shift 8.79 / 48.54 / 17.86): contrastive encoders give +2 AEGIS pair (34.9) and +2.5 Who&W agent (47.0), but lower Who&W pair (5.35) and error (10.0); label-shift does not stack. Not a new Who&W best; a better AEGIS-keeping row. Only 3 encoders in the ensemble, so more seeds/more members may change this: running wbsc5 (6 supcon5 seeds) and wbmix (7 es + supcon + supcon5 + attnsup = 10 encoders) next (CPU, parallel to chain21).
+- Code fix: ww_focus.enc_dir now maps _sN to hyphenated vector dirs (supcon5_s1 -> ft_shards_supcon5-s1).
+- 2026-11-13 07:33: supcon5_s7 (C) saved clean; launched l12sup256-s1 (C).
+- 2026-11-13 07:37: supcon5_s8 (D) saved clean; launched len512sup (D, L6 512 tokens supcon 0.5).
+
+## 2026-11-13 07:45: LoRA small-LM reader finished and scored (Qwen2.5-1.5B-Instruct, LoRA r16, 1600 grouped-train records, 1 epoch = 200 steps, 81 min training, loss 0.60 -> 0.41; generated Who&W, AEGIS test (600 records), val (200)); scored by score_lora.py, log aegis/results/runs/score_lora1.log
+- AEGIS test (600): pair 8.22 / agent 74.92 / error 19.59 (macro pair 2.86). Floor 7.35 / 68.58 / 27.14 -> barely above floor on pair, below on error; encoder pipelines are at 30-37 pair.
+- Who&W (184; 5 empty predictions): pair 3.10 / agent 44.25 / error 9.09 (macro 0.72 / 28.98 / 4.01). Floor 3.42 / 38.32 / 13.33. Paper Aegis-SFT 4.03 / 51.14 / 9.87; o3 7.41 / 53.10 / 14.88. Agent F1 above floor, pair/error at or below.
+- val (200): 10.01 / 79.75 / 21.98.
+- Verdict: at this budget (T4, 1600 records, 1 epoch) the LoRA reader is NOT competitive with the encoder pipeline (best Who&W 8.79 / 48.54 / 17.86). Kept as an honest negative result; a longer run (full 3234 records, 2 epochs, ~4 h) could be tried but the gap on AEGIS (8 vs 33) is too large to close by that. Reported as: LM reader tried, loses to encoders at equal compute.
+- A (GPU) went back to encoder jobs: launched aegis-seqsup5-s1 (--seq --supcon 0.5 --seed 1).
+
+## 2026-11-13 07:48: chain21 complete (prod decoder, 3 seeds; test = AEGIS test pair/agent/error, WW = Who&W)
+- l12sup512 (L12, 512 tokens, supcon 0.5): base test 33.77, WW 4.97 / 38.40 / 16.89; namedrop test 34.07, WW 4.58 / 37.74 / 14.52; peernd test 34.78 / 83.62 / 43.26, WW 4.88 / 38.13 / 13.39. 512-token pattern again: strong AEGIS, Who&W weak. Contrastive does not fix it.
+- noscal_s1 (no-scalars seed 1): base test 26.52, WW 5.69 / 41.20 / 15.52; namedrop test 27.32, WW 6.75 / 44.83 / 15.76; peernd test 32.21, WW 5.28 / 43.77 / 13.51. Roughly es_s0-level; no real gain from dropping scalars.
+- attnadvsup (attn + adv + supcon): test pair 17.3-17.6 (adversarial collapse again), WW 3.0-5.0. DEAD with the adversarial family.
+- advfw_s1 (adv 0.5 seed 1): test 19.5-19.9, WW 3.0-3.5 / 39-42 / 9.5-13.0. Adversarial replicated as harmful across 3 seeds/variants. DEAD.
+- Chain23 (supcon5_s1, supcon10) now scoring; chain30 (wbsc5 then wbmix block-dropout ensembles) running in parallel.
+
+## 2026-11-13 07:55: supcon5_s1 scored (supcon 0.5, seed 1; prod, 3 seeds) -- second seed also fails to repeat seed 0's Who&W pair gain
+- base: test 31.25, WW 4.60 / 44.22 / 12.48; namedrop: test 29.90, WW 4.92 / 47.66 / 11.28; peernd: test 33.05 / 80.83 / 41.43, WW 3.99 / 43.63 / 10.67.
+- Seed 0 had namedrop WW 7.03 / 49.70 / 15.17. Two seeds now: Who&W pair 4-5 in seed 1 vs 6-7 in seed 0, agent 44-48. Honest reading: the Who&W pair gain of supcon seed 0 was seed luck; a small agent-F1 gain (+1 to +3) may be real. Decision rests on the multi-seed block-dropout ensembles (wbsc5, wbmix).
+- 2026-11-13 08:02: seqsup5_s1 (A), l12sup256_s1 (C) saved clean (scoring to queue); launched plain-recipe es-s7 (A) and es-s8 (C) to enlarge the es block-dropout ensemble (current best WW row).
+- 2026-11-13 08:11: len512sup (D) saved clean (scoring to queue); launched plain es-s9 (D).
+
+## 2026-11-13 08:15: supcon10 scored (supcon 1.0, seed 0; prod, 3 seeds)
+- base: test 30.12, WW 5.46 / 41.21 / 15.27; namedrop: test 28.34, WW 4.52 / 47.14 / 13.38; peernd: test 32.01 / 81.54 / 40.28, WW 3.71 / 42.66 / 10.59. No better than supcon 0.2/0.5: contrastive weight is not a lever. Agent F1 for namedrop 47.1 (same ~47 as supcon5 s1 and es_s0).
+- l12sup512_s1 (B) saved clean; launched plain es-s10 (B). Chain23 done; chains 24-29 start scoring now.
+- 2026-11-13 08:20: es_s7 (A), es_s8 (C) saved clean; launched es-s11 (A), es-s12 (C). wbsc5 trained all 6 encoders; summary pending.
+
+## 2026-11-13 08:25: block-dropout on 6 supcon-0.5 encoder seeds (chain30 wbsc5; ensemble of 6, 3 head seeds; micro pair/agent/error, macro after slash)
+- names+peer (all blocks on): AEGIS test 36.15+-0.43 / 79.49 / 43.88 (best 256-token AEGIS so far: +3.2 pair over es block-dropout 32.93 and above the old 256 peernd range 32.3-33.9); Who&W 6.01 / 47.39 / 10.07; +shift 3.88 / 45.60 / 8.76 (shift hurts here).
+- names only: test 32.31; WW 4.49 / 46.70 / 11.85; +shift 7.66 / 45.46 / 18.74 (std pair 2.14, noisy). peer only: WW 3.69 / 43.49 / 8.27. neither: test 27.11, WW 4.14 / 41.62 / 11.82.
+- Verdict vs es block-dropout (AEGIS 32.93; WW 6.10 / 44.57 / 12.65; +shift 8.79 / 48.54 / 17.86): supcon-0.5 ensemble is the better AEGIS-keeping model (36.15) with equal Who&W pair (6.01) and +2.8 agent (47.39) but error 10.07 (<12.65) and shift does not stack, so the best Who&W row remains es block-dropout + shift 8.79 / 48.54 / 17.86. The supcon ensemble is the best joint (AEGIS+Who&W-without-shift) result. wbmix (10 mixed encoders) running next.
+- 2026-11-13 08:30: es_s9 (D) saved clean; launched es-s13 (D).
+- 2026-11-13 08:35: es_s10 (B) saved clean; B left idle per user. attnsup5 scored (see improve_cpu_attnsup5.log). Not launching new GPU jobs.
+- 2026-11-13 08:40: es_s11 (A), es_s12 (C) saved clean; A, B, C idle per user; only es-s13 (D) still running. Final block-dropout ensemble with es_s7..s13 to queue when es_s13 lands.
+- 2026-11-13 08:50: es_s13 (D) saved clean; ALL GPU jobs finished and saved, all 4 GPUs idle (per user). Queued chain31 = ww_block on es_s0..es_s13 (14 plain-recipe encoders, tag wbes14) after wbmix.
+
+## 2026-11-13 08:52: supcon5_s2 scored (supcon 0.5, seed 2; prod, 3 seeds)
+- base: test 31.15, WW 4.33 / 41.99 / 12.28; namedrop: test 28.59, WW 4.78 / 46.11 / 12.07; peernd: test 31.33 / 79.98 / 39.47, WW 4.23 / 41.57 / 10.71. Same pattern as seed 1: Who&W pair 4-5 (seed 0's 7.03 was luck); single supcon encoders are not better than es_s0 on Who&W pair. The supcon value is in the 6-seed ensemble (wbsc5, AEGIS 36.15).
+
+## 2026-11-13 09:16: wbmix done (block-dropout, ensemble of 10 encoders: es_s0..s6 + supcon + supcon5 + attnsup; 3 head seeds; micro pair/agent/error, macro after slash)
+- names+peer (all blocks on): AEGIS test 35.45+-0.32 / 79.07 / 42.88; WW 5.53 / 46.16 / 10.85; +shift 7.32 / 47.01 / 16.76.
+- names only (post-hoc mask): AEGIS test under that mask 31.23+-3.40; WW 6.72 / 46.06 / 14.69; +shift 9.07+-1.15 / 47.79 / 18.63 (macro pair 5.80). Highest Who&W pair of any row so far, but mask chosen after seeing Who&W and AEGIS under that mask drops and is noisy.
+- peer only: WW 3.07 / 44.08 / 6.25 (worse). neither: test 26.84, WW 3.17 / 43.49 / 10.74.
+- Verdict vs best all-blocks row (es block-dropout + shift 8.79 / 48.54 / 17.86, AEGIS 32.93): mixed ensemble all-on+shift is 7.32 / 47.01 / 16.76 (lower WW) with AEGIS 35.45 (higher). names+shift 9.07 / 47.79 / 18.63 is within noise of 8.79 (std 1.15) and above on pair/error, below on agent. Best joint remains wbsc5 for AEGIS; best WW stays es-style names/all-on + shift. No clear new winner; wbes14 (14 plain es encoders) decides whether a bigger es ensemble moves it.
+
+## 2026-11-13 09:20: seqsup5 scored (order-aware sequence encoder + supcon 0.5; prod, 3 seeds)
+- base: test 21.65 / 81.05 / 34.89, WW 5.13 / 44.39 / 14.23; namedrop: test 20.78, WW 4.86 / 42.73 / 14.72; peernd: test 22.02, WW 4.91 / 42.14 / 11.58.
+- Verdict: AEGIS test pair drops about 10 points vs es_s0 peernd (32.4) while Who&W does not improve. Sequence encoder is dead for this goal.
+- 2026-11-13 09:40: user allows GPUs again; launched aegis-lora-3b (B) and aegis-lora-long (C). A, D idle.
+
+## 2026-11-13 09:40: supcon10_s1 scored (supcon weight 1.0, seed 1; prod, 3 seeds)
+- base: test 30.23 / 78.95 / 39.17, WW 5.15 / 47.72 / 13.63; namedrop: test 31.83, WW 5.80 / 50.18 / 12.20; peernd: test 32.75 / 79.15 / 40.57, WW 4.31 / 50.43 / 10.61.
+- Verdict: agent F1 is 50+ for namedrop and peernd, the highest single-encoder agent score so far (paper o3 53.10), with AEGIS pair 31.8 to 32.8 intact. Pair stays at 4 to 6 (no pair gain). Consistent with supcon helping agent F1 by a few points.
+
+## 2026-11-13 10:20: wbes7b (Kaggle-offloaded block-dropout, ensemble of es_s7..es_s13 = 7 NEW plain-recipe encoders, 3 head seeds; from metrics_history_wbes7b.jsonl)
+- names+peer (all blocks on): AEGIS test 33.23+-0.80 / 79.01 / 41.28; WW 5.24 / 43.03 / 11.52; +shift 7.76+-0.47 / 46.82 / 17.99.
+- names only: test 29.91+-3.29; WW 5.48 / 43.85 / 14.03; +shift 7.24 / 46.96 / 17.33. peer only: WW 4.08 / 40.55 / 9.18 (+shift 2.24). neither: test 25.23, WW 3.00 / 41.84 / 9.52 (+shift 1.06).
+- Verdict: independent replicate of the best es block-dropout row (es_s0..s6: 8.79 / 48.54 / 17.86, AEGIS 32.93). The fresh 7 encoders give 7.76 / 46.82 / 17.99 with AEGIS 33.23: same AEGIS, Who&W pair ~1 lower, error same. So the best row is reproducible within seed noise (about 8 +- 1 pair), a more honest estimate than 8.79 alone. Shift gives +2.5 pair here too. The offloaded job's .log file was missing from the download (only the metrics jsonl and a repo copy came down); numbers recomputed from the jsonl. Output at aegis/results/kaggle_logs/cpu_es7/ (contains a 550 MB repo copy; deletable duplicate of the staging dataset, left in place).
+
+## 2026-11-13 10:25: wbscb (Kaggle-offloaded block-dropout, 7 more contrastive/attention encoders: supcon5_s7, supcon5_s8, supcon3_s6, supcon10, supcon10_s1, attnsup5, attnsup5_s1; 3 head seeds)
+- names+peer (all on): AEGIS test 36.85+-0.31 / 79.32 / 44.33 (best 256-token AEGIS so far; replicates wbsc5 36.15 with different encoders); WW 5.51 / 46.98 / 9.99; +shift 4.95 / 48.12 / 11.42 (shift again does not help the all-on mask).
+- names only: test 32.70; WW 5.59 / 44.40 / 12.44; +shift 7.84+-1.86 / 43.10 / 19.84. peer only: WW 3.13 / 44.09 / 6.67. neither: test 28.08, WW 3.80 / 41.95 / 11.40.
+- Verdict: second independent confirmation that contrastive/attention encoders in block-dropout keep AEGIS at 36-37 (best in-domain 256-token) with Who&W 5.5-6.0 pair, agent 47-48, error ~10 without shift; no Who&W pair gain over the plain es ensemble (which needs shift to reach ~8). Output saved at aegis/results/kaggle_logs/cpu_scb/ (log + metrics jsonl; used --file-pattern to skip the repo copy).
+
+## 2026-11-13 10:32: wbes14 done (block-dropout, ensemble of ALL 14 plain-recipe encoders es_s0..es_s13, 3 head seeds)
+- names+peer (all on): AEGIS test 32.96+-0.66 / 79.37 / 40.95; WW 5.56 / 43.75 / 11.76; +shift 8.24+-1.19 / 47.72 / 17.12.
+- names only: test 27.90+-3.16; WW 6.94 / 44.69 / 16.12 (no shift; highest no-shift pair); +shift 8.26 / 45.55 / 17.71. peer only: WW 3.35 / 40.55 / 7.63 (+shift 1.72). neither: test 25.24, WW 3.17 / 41.75 / 9.91.
+- Verdict: with twice the encoders the all-on+shift row converges to 8.24 / 47.72 / 17.12 (AEGIS 32.96): between the two 7-encoder halves (8.79 and 7.76) and with smaller spread, so ~8.2 pair / ~47.7 agent / ~17 error is the honest, seed-averaged figure for this recipe. Doubling the ensemble did not lift it further: the plain-ensemble ceiling on Who&W pair is about 8.2-8.8. Still beats the paper's o3 on pair (7.41) and error (14.88), below on agent (53.10). Label-shift contributes +2.7 pair.
+- 2026-11-13 10:50: chain29 done (all scoring chains finished). New CPU idea launched (chain32, tag wbtop1): per-record fault-count prior for Who&W: one-faulty-agent-per-record decode (top1: modes >= threshold; top1m: single best mode), flag --top1 added to ww_block.py; es_s0..s6 block-dropout, reports it as a separate benchmark-structure-prior row (no Who&W labels used; Who&W 'exactly one faulty agent' is a known dataset property).
+
+## 2026-11-13 11:14: wbtop1 (one-faulty-agent-per-record decode on Who&W; block-dropout es_s0..s6, 3 head seeds; log ww_block_wbtop1.log)
+- Reproduces the earlier es block-dropout rows exactly (all-on: AEGIS 32.93, WW 6.10 / 44.57 / 12.65; +shift 8.79 / 48.54 / 17.86), so the pipeline is deterministic.
+- top1 (keep only the most-likely agent per record; modes >= threshold), all-on: WW 6.78 / 40.76 / 12.95; +shift 6.91 / 40.76 / 17.26. top1m (single best mode): 5.43 / 40.76 / 11.23; +shift 5.62.
+- names mask: top1 6.76 / 40.04 / 15.47; +shift 8.54 / 40.04 / 18.81 (vs 8.47 / 45.00 / 18.24 without top1).
+- Verdict: dead. Forcing one agent gives only +0.7 pair without shift, nothing with shift, and agent F1 drops by about 4-8 points (40.8 vs 44.6 / 48.5): the extra agents the threshold decoder keeps are often right, so the one-agent prior removes true positives. Not worth a separate row.
+
+## 2026-11-13 12:00: LoRA Qwen2.5-3B-Instruct (B; 1200 train records, 150 steps, 140 min; saved aegis/results/kaggle_logs/lora_3b; scored with score_lora, log score_lora3b.log)
+- AEGIS test (n 600): pair 7.69 / agent 77.42 / error 16.00 (micro). Val: 8.74 / 82.28 / 16.38.
+- Who&W (zero-shot, n 184, 6 empty predictions): pair 5.91 / agent 45.93 / error 10.42 (macro 1.88 / 27.88 / 1.86).
+- Verdict: clearly better than the 1.5B LoRA (Who&W 3.10 / 44.25 / 9.09; AEGIS 8.22): 3B reaches Who&W pair 5.91, on par with one encoder (5 to 6) and above the floor 3.42, but AEGIS pair is at the floor level (7.69) and macro scores are tiny: the LM reader mostly predicts frequent modes. Not competitive with the encoder ensembles (8.2 pair, 47.7 agent, 17 error with shift; AEGIS 33). A bigger / longer LM may scale; not enough budget here.
+
+## 2026-11-13 13:20: LoRA long (C; Qwen2.5-1.5B, 3500 train records, r32, 437 steps, 215 min; saved aegis/results/kaggle_logs/lora_long; score_loralong.log)
+- AEGIS test: pair 10.36 / agent 78.91 / error 18.84 (macro 5.56 / 61.39 / 14.56); val 10.90 / 84.19 / 19.64. Better than the first 1.5B LoRA (8.22) and the 3B (7.69) on AEGIS, still far below encoders (33).
+- Who&W: pair 3.23 / agent 41.94 / error 13.48 (9 empty predictions): at the floor. More data helped in-domain but did not transfer.
+- Verdict on LoRA overall: three runs (1.5B 1600: WW 3.10; 3B 1200: WW 5.91; 1.5B 3500 r32: WW 3.23). The 3B had the best Who&W (5.91 pair, 45.9 agent); more data on 1.5B did not help Who&W. No LoRA run beats the encoder ensembles (8.2 pair / 47.7 agent / 17 error, AEGIS 33). LoRA reader judged not competitive at this budget; closed.
+- 2026-11-13 13:30: CPU idea launched: test-time adaptation / self-training on unlabeled Who&W (--tta in ww_block.py; confident own predictions (top agent p>=0.5, modes >=0.4) become extra training rows, retrain; separate 'tta_*' rows, transductive, no Who&W label). Smoke test on es_s0, 1 seed (ww_block_ttasmoke.log); full run on es_s0..s6 next if it works.
+
+## 2026-11-13 13:35: TTA smoke (self-training on unlabeled Who&W; es_s0 only, 1 head seed; ww_block_ttasmoke.log) - NOT yet evidence (single encoder, single seed)
+- names+peer, no shift: WW 6.63 / 41.83 / 14.73 -> tta 8.02 / 39.90 / 13.16 (pair +1.4, agent -1.9, error -1.6); AEGIS test 31.54 -> 31.11 (unchanged). names mask: 6.42 -> 8.42 pair, agent 42.0 -> 42.2. +shift rows: 7.67 -> 8.32 and 8.60 -> 8.57.
+- Signal: self-training lifts pair without shift and does not hurt AEGIS, but agent F1 falls. Seed noise is about +-1, so a full run is needed: local es_s0..s6 (ttaA, 1 head seed) and Kaggle A es_s7..s13 (ttaB).
+
+## 2026-11-13 13:45: ttaB done (Kaggle A; test-time adaptation = self-training on unlabeled Who&W; ensemble of es_s7..es_s13; 1 head seed; saved aegis/results/kaggle_logs/cpu_tta; ww_block_ttaB.log)
+- names+peer: WW 4.73 / 43.35 / 11.27 -> tta 7.21 / 42.86 / 9.81 (pair +2.5, agent -0.5, error -1.5); AEGIS test 34.31 -> 34.41 (unchanged). names mask: 5.20 -> 7.48 pair, agent 44.6 -> 45.9.
+- With shift: names+peer 7.46 / 45.70 / 15.11 -> tta+shift 7.05 / 48.16 / 11.52 (no pair gain, agent +2.5, error -3.6). So self-training lifts pair to the same ~7.2 level that label-shift reaches, but the two do not stack (both correct the class mix).
+- Interim verdict (pending ttaA = es_s0..s6): tta is a second, independent transductive route to ~7.2-7.5 pair without label-shift, keeps AEGIS intact; no further gain beyond shift. Not a new best.
+
+## 2026-11-13 13:50: ttaA done (local; TTA on es_s0..es_s6; 1 head seed; log ww_block_ttaA.log) + combined verdict with ttaB
+- names+peer, no shift: WW 6.50 / 45.02 / 12.27 -> tta 7.98 / 42.61 / 12.47 (pair +1.5, agent -2.4, error +0.2); AEGIS test 33.68 -> 34.41. +shift: 8.19 / 47.44 / 15.92 -> tta+shift 7.97 / 47.03 / 14.20 (flat).
+- names mask: 6.63 / 41.97 / 16.03 -> tta 7.57 / 43.61 / 12.81; +shift 7.32 / 44.83 / 15.53 -> tta+shift **9.60 / 50.45 / 16.35** (highest pair AND agent of any row so far; mask chosen post hoc, single head seed, so treat as a lead not a result).
+- Combined verdict (ttaA + ttaB, 14 encoders, 1 head seed each): self-training lifts Who&W pair by +1.5 to +2.5 without label-shift and leaves AEGIS unchanged or slightly up (+0.1 / +0.7). Agent falls 0.5-2.4 on the all-on mask. With label-shift on all-on it is flat. The only standout is names mask + tta + shift (9.60 / 50.45 / 16.35 on es_s0..s6, but ttaB's same cell is 7.06 / 47.64 / 13.93), so it is not stable across the two halves: no claim. TTA is a real but modest, transductive effect equivalent to label-shift; it does not beat the best row (8.2-8.8 pair with shift).
+
+## 2026-11-13 14:10: leave-one-framework-out of block-dropout masks (ww_lofo.py; es_s0..s2, 1 seed; ww_lofo_lofo1.log; mean over 6 held-out AEGIS frameworks)
+- names+peer: pair 18.16 / agent 70.56 / error 26.75. names: 17.44 / 69.76 / 26.75. peer: 17.74 / 62.90 / 27.57. neither: 17.62 / 63.42 / 29.89.
+- Per framework the best mask flips (agentverse: neither 27.2 pair; llm_debate: peer 28.0; macnet: names+peer 22.7; magentic_one: names 15.2; dylan/smoagents ~flat). Differences in pair are within noise; agent F1 is clearly best with names (+6-7 points over peer/neither).
+- Verdict: LOFO gives NO Who&W-free justification for choosing "names only" or "peer only". All-blocks-on is the best or tied on pair and best on agent, so the principled operating point is all-on (+ optional shift/TTA). The post-hoc names-only Who&W rows (9.07 wbmix, 9.60 tta) stay labelled post hoc. Idea closed.
+
+## 2026-11-13 14:55: ttaB3 (Kaggle A; TTA on es_s7..s13, 3 head seeds; saved kaggle_logs/cpu_tta3a; ww_block_ttaB3.log)
+- names+peer no shift: WW 5.24+-0.38 / 43.03 / 11.52 -> tta 6.55+-0.91 / 42.41 / 10.34 (pair +1.3, agent -0.6, error -1.2); AEGIS test 33.23 -> 34.06 (OK). +shift: 7.76 / 46.82 / 17.99 -> tta+shift 5.54 / 46.75 / 8.90 (TTA HURTS when stacked on shift).
+- names mask: tta 7.07 (no shift) vs plain 5.48; tta+shift 5.42 vs plain+shift 7.24.
+- Verdict (3 seeds): TTA gives a stable +1.3 pair without shift (1-seed +2.5 was optimistic), costs ~0.6-2 agent, error lower; plain+shift (7.76) beats tta (6.55) and the two do not combine (stacking is harmful). TTA = weaker alternative to label-shift, not an improvement. Closed unless the D contrastive run (ttaS3) says otherwise.
+
+## 2026-11-13 15:20: ttaS3 (Kaggle D; TTA on the contrastive/attn ensemble supcon5_s7,s8,supcon3_s6,supcon10,supcon10_s1,attnsup5,attnsup5_s1; 3 head seeds; saved kaggle_logs/cpu_tta3d_v2; ww_block_ttaS3.log)
+- names+peer no shift: WW 5.51+-0.76 / 46.98 / 9.99 -> tta 6.14+-0.38 / 45.29 / 9.28 (pair +0.6, agent -1.7); AEGIS test 36.85 -> 36.86 (unchanged). +shift: 4.95 -> 6.50 pair (agent 48.1 -> 45.9).
+- Verdict: on the best-joint (AEGIS ~36.9) ensemble TTA gives +0.6 pair, within noise, agent worse. Combined with ttaA/ttaB/ttaB3 the TTA effect is a stable +1 to +1.5 pair without shift on plain ensembles and ~0 on the contrastive one; no reliable gain over label-shift. TTA closed.
+- Contrastive ensemble 3-seed AEGIS test 36.85+-0.31 (matches wbscb 36.85): joint best remains AEGIS 36.9 / WW 5.5 / 47.0 / 10.0.

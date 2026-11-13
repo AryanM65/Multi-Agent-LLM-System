@@ -1,0 +1,19 @@
+[base] seed 0 ta 0.1 tm 0.2 | WW thr pair 3.3/1.1 agen 40.9/27.3 erro 8.3/5.1 | WW top1 pair 3.8/1.1 agen 39.1/22.7 erro 7.6/4.3 | test thr pair 30.1/16.8 agen 76.0/55.2 erro 38.3/35.8
+[base] seed 1 ta 0.2 tm 0.2 | WW thr pair 4.0/1.0 agen 38.5/24.0 erro 9.1/5.5 | WW top1 pair 2.2/0.5 agen 33.7/20.1 erro 7.6/3.7 | test thr pair 31.1/18.2 agen 77.5/53.4 erro 39.6/38.0
+[base] seed 2 ta 0.2 tm 0.2 | WW thr pair 2.6/1.3 agen 36.5/25.4 erro 9.9/6.8 | WW top1 pair 2.2/1.2 agen 33.2/22.0 erro 7.1/4.1 | test thr pair 31.3/18.8 agen 77.5/60.0 erro 39.1/38.1
+[base] seed 3 ta 0.3 tm 0.1 | WW thr pair 4.3/1.4 agen 42.8/33.2 erro 11.4/8.4 | WW top1 pair 2.2/0.4 agen 36.4/24.2 erro 7.6/4.7 | test thr pair 25.8/17.2 agen 81.9/62.7 erro 38.4/39.6
+[base] seed 4 ta 0.3 tm 0.1 | WW thr pair 4.2/1.2 agen 42.2/31.5 erro 12.3/9.0 | WW top1 pair 2.2/0.1 agen 41.8/25.5 erro 7.6/4.5 | test thr pair 27.0/17.8 agen 82.5/67.2 erro 38.6/38.7
+[namefree] seed 0 ta 0.4 tm 0.1 | WW thr pair 6.3/3.1 agen 48.0/35.2 erro 13.3/8.8 | WW top1 pair 3.3/0.8 agen 41.8/25.5 erro 7.6/4.4 | test thr pair 25.8/13.8 agen 79.5/57.4 erro 38.6/39.2
+[namefree] seed 1 ta 0.4 tm 0.1 | WW thr pair 4.8/2.0 agen 46.6/33.6 erro 12.4/8.9 | WW top1 pair 3.8/1.1 agen 39.1/22.9 erro 9.2/6.3 | test thr pair 25.7/14.9 agen 79.0/55.7 erro 37.8/38.3
+[namefree] seed 2 ta 0.5 tm 0.1 | WW thr pair 6.4/3.2 agen 48.7/36.7 erro 15.1/9.9 | WW top1 pair 3.8/1.7 agen 38.6/22.6 erro 8.2/4.8 | test thr pair 26.1/14.0 agen 78.5/54.4 erro 38.7/39.4
+[namefree] seed 3 ta 0.5 tm 0.1 | WW thr pair 5.4/2.4 agen 48.8/37.8 erro 12.5/7.8 | WW top1 pair 3.3/0.6 agen 37.5/23.8 erro 6.5/4.3 | test thr pair 26.9/15.1 agen 79.0/52.3 erro 37.9/38.2
+[namefree] seed 4 ta 0.4 tm 0.1 | WW thr pair 6.1/2.9 agen 51.1/38.4 erro 13.2/9.6 | WW top1 pair 3.8/1.1 agen 42.4/24.1 erro 8.2/6.2 | test thr pair 25.1/13.1 agen 79.5/57.0 erro 37.5/37.3
+
+=== mean over seeds (micro/macro F1, percent) ===
+base      test     thr   pair 29.05+-2.24/17.76 | agen 79.08+-2.61/59.70 | erro 38.80+-0.48/38.04
+base      who_when thr   pair 3.71+-0.64/1.21 | agen 40.18+-2.35/28.28 | erro 10.20+-1.47/6.98
+base      who_when top1  pair 2.50+-0.65/0.68 | agen 36.85+-3.29/22.90 | erro 7.50+-0.22/4.24
+namefree  test     thr   pair 25.93+-0.60/14.18 | agen 79.09+-0.35/55.38 | erro 38.08+-0.46/38.47
+namefree  who_when thr   pair 5.80+-0.60/2.72 | agen 48.63+-1.45/36.34 | erro 13.28+-0.96/8.98
+namefree  who_when top1  pair 3.59+-0.27/1.06 | agen 39.89+-1.90/23.78 | erro 7.93+-0.88/5.19
+done
