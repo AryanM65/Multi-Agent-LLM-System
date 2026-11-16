@@ -1,0 +1,58 @@
+{
+ "args": {
+  "dump": "aegis/results/rr/dump_rr_base.npz",
+  "tag": "rrk12",
+  "k": 12,
+  "r": 1,
+  "min_sim": 0.0,
+  "retr_enc": "es_s0",
+  "splits": "val,who_when",
+  "mask": "names+peer",
+  "max_records": 0,
+  "subsample": 0,
+  "subsample_seed": 0
+ },
+ "stats": {
+  "val": {
+   "records": 940,
+   "candidates": 11280,
+   "rag_examples_dropped_weak_match": 0
+  },
+  "who_when": {
+   "records": 184,
+   "candidates": 2208,
+   "rag_examples_dropped_weak_match": 0
+  }
+ },
+ "dump_info": {
+  "tag": "rr_base",
+  "encoders": [
+   "es_s0",
+   "es_s1",
+   "es_s2",
+   "es_s3",
+   "es_s4",
+   "es_s5",
+   "es_s6",
+   "es_s7",
+   "es_s8",
+   "es_s9",
+   "es_s10",
+   "es_s11",
+   "es_s12",
+   "es_s13"
+  ],
+  "seeds": 3,
+  "retr": 0,
+  "retr_k": 25,
+  "retr_r": 3,
+  "masks": [
+   "names+peer",
+   "names",
+   "peer",
+   "neither"
+  ],
+  "limit": 0,
+  "note": "ensemble over encoders per head seed; raw probabilities (no label shift)"
+ }
+}

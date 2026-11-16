@@ -1,0 +1,1 @@
+{"model": "Qwen/Qwen2.5-7B-Instruct", "four_bit": true, "variants": ["plain"], "format": "ab", "cands": "cand_rrk12_who_when.jsonl", "records": 23, "minutes": 6.269470775127411, "char_budget": 20000, "max_prefix_tokens": 7000}

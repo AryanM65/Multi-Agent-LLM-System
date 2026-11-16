@@ -1,0 +1,37 @@
+[es_s0] trained (3.3 min, feature dim 1645, retr=1)
+[es_s1] trained (6.4 min, feature dim 1645, retr=1)
+[es_s2] trained (9.7 min, feature dim 1645, retr=1)
+[es_s3] trained (12.6 min, feature dim 1645, retr=1)
+[es_s4] trained (15.5 min, feature dim 1645, retr=1)
+[es_s5] trained (19.7 min, feature dim 1645, retr=1)
+[es_s6] trained (22.7 min, feature dim 1645, retr=1)
+[es_s7] trained (26.3 min, feature dim 1645, retr=1)
+[es_s8] trained (31.1 min, feature dim 1645, retr=1)
+[es_s9] trained (37.4 min, feature dim 1645, retr=1)
+[es_s10] trained (42.9 min, feature dim 1645, retr=1)
+[es_s11] trained (46.2 min, feature dim 1645, retr=1)
+[es_s12] trained (49.1 min, feature dim 1645, retr=1)
+[es_s13] trained (53.6 min, feature dim 1645, retr=1)
+saved D:\aryan\Projects\Multi agent LLM System\aegis\results\rr\dump_rr_retr.npz
+
+=== rr_retr: retr=1, ensemble of 14 encoders, mean+-std over 3 head seeds (micro F1 percent; macro after slash) ===
+names+peer         test      pair 33.39+-0.51/19.63 | agen 79.34+-0.55/62.59 | erro 42.00+-0.73/40.74
+names+peer         who_when  pair 5.78+-1.24/3.40 | agen 41.24+-2.71/31.96 | erro 12.56+-0.24/8.13
+names+peer         who_when_norm pair 6.49+-1.14/3.74 | agen 45.77+-2.39/33.33 | erro 12.56+-0.24/8.13
+names+peer  +shift who_when  pair 8.17+-1.49/5.27 | agen 45.01+-3.73/37.80 | erro 18.60+-1.00/5.85
+names+peer  +shift who_when_norm pair 9.09+-1.65/5.54 | agen 50.15+-3.46/39.37 | erro 18.60+-1.00/5.85
+names              test      pair 28.26+-3.02/17.75 | agen 81.41+-1.92/65.30 | erro 39.10+-0.54/39.45
+names              who_when  pair 6.26+-1.15/3.52 | agen 42.67+-1.55/36.35 | erro 15.00+-2.36/10.37
+names              who_when_norm pair 6.86+-1.22/3.77 | agen 47.71+-1.96/37.65 | erro 15.00+-2.36/10.37
+names       +shift who_when  pair 8.00+-1.83/5.15 | agen 44.02+-2.17/38.44 | erro 18.68+-4.38/7.18
+names       +shift who_when_norm pair 8.69+-2.09/5.34 | agen 50.26+-0.95/39.87 | erro 18.68+-4.38/7.18
+peer               test      pair 31.83+-0.55/16.18 | agen 72.41+-0.64/48.86 | erro 40.76+-0.57/39.00
+peer               who_when  pair 3.49+-1.19/1.84 | agen 38.94+-1.98/28.91 | erro 8.43+-0.78/6.04
+peer               who_when_norm pair 4.53+-0.69/2.26 | agen 44.37+-1.95/30.57 | erro 8.43+-0.78/6.04
+peer        +shift who_when  pair 2.54+-0.89/1.49 | agen 45.22+-2.93/35.68 | erro 5.75+-2.95/3.16
+peer        +shift who_when_norm pair 3.03+-1.37/1.63 | agen 51.00+-2.97/37.40 | erro 5.75+-2.95/3.16
+neither            test      pair 25.65+-0.28/13.02 | agen 76.23+-0.47/55.49 | erro 38.89+-0.11/38.13
+neither            who_when  pair 3.15+-0.75/1.78 | agen 42.58+-0.46/37.98 | erro 10.66+-1.87/8.66
+neither            who_when_norm pair 4.19+-0.90/2.08 | agen 48.58+-0.39/39.74 | erro 10.66+-1.87/8.66
+neither     +shift who_when  pair 2.60+-3.16/1.77 | agen 43.80+-0.25/39.13 | erro 6.79+-6.94/2.17
+neither     +shift who_when_norm pair 3.08+-3.46/1.87 | agen 49.97+-0.19/40.84 | erro 6.79+-6.94/2.17

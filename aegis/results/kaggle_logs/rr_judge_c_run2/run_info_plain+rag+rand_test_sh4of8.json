@@ -1,0 +1,1 @@
+{"model": "Qwen/Qwen2.5-7B-Instruct", "four_bit": true, "variants": ["plain", "rag", "rand"], "format": "ab", "cands": "cand_rrc_test.jsonl", "records": 75, "minutes": 222.743610560894, "char_budget": 20000, "max_prefix_tokens": 7000}

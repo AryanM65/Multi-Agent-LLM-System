@@ -1,0 +1,46 @@
+
+=== test: 600 records (0 dropped for missing judge scores); point estimate [95% bootstrap CI], micro F1 pair/agent/error ===
+- model_alone_prod: pair 34.02 [31.80, 36.37]; agent 78.66 [76.64, 80.63]; error 41.83 [39.65, 44.02]
+- shortlist_model (HEADLINE): pair 33.57 [31.42, 35.75]; agent 79.95 [77.91, 81.90]; error 41.53 [39.29, 43.63]
+- plain: pair 33.57 [31.42, 35.75]; agent 79.95 [77.91, 81.90]; error 41.53 [39.29, 43.63]
+- rag: pair 33.57 [31.42, 35.75]; agent 79.95 [77.91, 81.90]; error 41.53 [39.29, 43.63]
+- rand: pair 33.57 [31.42, 35.75]; agent 79.95 [77.91, 81.90]; error 41.53 [39.29, 43.63]
+- plain+rag: pair 33.57 [31.42, 35.75]; agent 79.95 [77.91, 81.90]; error 41.53 [39.29, 43.63]
+- llm_only_plain: pair 24.98 [23.01, 27.16]; agent 74.54 [72.53, 76.52]; error 33.20 [31.17, 35.33]
+- llm_only_rag: pair 27.00 [25.08, 29.15]; agent 73.60 [71.43, 75.66]; error 34.76 [32.66, 36.87]
+  - paired difference shortlist_model-minus-model_alone_prod: pair -0.45 [-1.27, +0.37]; agent +1.28 [+0.51, +1.99]; error -0.30 [-1.22, +0.62]
+  - paired difference plain-minus-model_alone_prod: pair -0.45 [-1.27, +0.37]; agent +1.28 [+0.51, +1.99]; error -0.30 [-1.22, +0.62]
+  - paired difference rag-minus-model_alone_prod: pair -0.45 [-1.27, +0.37]; agent +1.28 [+0.51, +1.99]; error -0.30 [-1.22, +0.62]
+  - paired difference rand-minus-model_alone_prod: pair -0.45 [-1.27, +0.37]; agent +1.28 [+0.51, +1.99]; error -0.30 [-1.22, +0.62]
+  - paired difference plain+rag-minus-model_alone_prod: pair -0.45 [-1.27, +0.37]; agent +1.28 [+0.51, +1.99]; error -0.30 [-1.22, +0.62]
+  - paired difference llm_only_plain-minus-model_alone_prod: pair -9.04 [-11.13, -6.93]; agent -4.13 [-6.05, -2.16]; error -8.61 [-10.82, -6.26]
+  - paired difference llm_only_rag-minus-model_alone_prod: pair -7.01 [-8.98, -5.02]; agent -5.09 [-7.17, -3.01]; error -7.05 [-9.21, -4.92]
+
+=== who_when: 184 records (0 dropped for missing judge scores); point estimate [95% bootstrap CI], micro F1 pair/agent/error ===
+- model_alone_prod: pair 9.21 [6.99, 11.60]; agent 45.00 [41.32, 48.38]; error 23.44 [19.57, 27.33]
+- shortlist_model (HEADLINE): pair 8.96 [6.31, 11.66]; agent 45.42 [40.61, 49.91]; error 20.80 [16.90, 25.09]
+- plain: pair 8.96 [6.31, 11.66]; agent 45.42 [40.61, 49.91]; error 20.80 [16.90, 25.09]
+- rag: pair 8.96 [6.31, 11.66]; agent 45.42 [40.61, 49.91]; error 20.80 [16.90, 25.09]
+- rand: pair 8.96 [6.31, 11.66]; agent 45.42 [40.61, 49.91]; error 20.80 [16.90, 25.09]
+- plain+rag: pair 8.96 [6.31, 11.66]; agent 45.42 [40.61, 49.91]; error 20.80 [16.90, 25.09]
+- llm_only_plain: pair 11.05 [8.34, 14.00]; agent 51.66 [47.51, 55.94]; error 23.61 [19.48, 27.80]
+- llm_only_rag: pair 8.57 [6.09, 11.55]; agent 48.92 [44.23, 53.49]; error 21.09 [17.16, 25.13]
+  - paired difference shortlist_model-minus-model_alone_prod: pair -0.28 [-1.94, +1.12]; agent +0.40 [-2.59, +3.16]; error -2.62 [-5.03, -0.54]
+  - paired difference plain-minus-model_alone_prod: pair -0.28 [-1.94, +1.12]; agent +0.40 [-2.59, +3.16]; error -2.62 [-5.03, -0.54]
+  - paired difference rag-minus-model_alone_prod: pair -0.28 [-1.94, +1.12]; agent +0.40 [-2.59, +3.16]; error -2.62 [-5.03, -0.54]
+  - paired difference rand-minus-model_alone_prod: pair -0.28 [-1.94, +1.12]; agent +0.40 [-2.59, +3.16]; error -2.62 [-5.03, -0.54]
+  - paired difference plain+rag-minus-model_alone_prod: pair -0.28 [-1.94, +1.12]; agent +0.40 [-2.59, +3.16]; error -2.62 [-5.03, -0.54]
+  - paired difference llm_only_plain-minus-model_alone_prod: pair +1.82 [-0.19, +3.74]; agent +6.65 [+3.54, +9.88]; error +0.25 [-3.38, +3.59]
+  - paired difference llm_only_rag-minus-model_alone_prod: pair -0.65 [-2.85, +1.42]; agent +3.87 [+0.14, +7.75]; error -2.25 [-5.49, +0.82]
+
+=== who_when, NAME-NORMALISED scoring (separate row; post-hoc data-handling choice, not comparable with the paper's raw-name numbers) ===
+- model_alone_prod: pair 9.76 [7.56, 12.31]; agent 52.31 [49.23, 55.33]; error 23.44 [19.57, 27.33]
+- shortlist_model: pair 9.54 [6.83, 12.34]; agent 50.67 [46.01, 55.17]; error 20.80 [16.90, 25.09]
+- plain: pair 9.54 [6.83, 12.34]; agent 50.67 [46.01, 55.17]; error 20.80 [16.90, 25.09]
+- rag: pair 9.54 [6.83, 12.34]; agent 50.67 [46.01, 55.17]; error 20.80 [16.90, 25.09]
+- rand: pair 9.54 [6.83, 12.34]; agent 50.67 [46.01, 55.17]; error 20.80 [16.90, 25.09]
+- plain+rag: pair 9.54 [6.83, 12.34]; agent 50.67 [46.01, 55.17]; error 20.80 [16.90, 25.09]
+- llm_only_plain: pair 11.61 [8.65, 14.62]; agent 55.40 [51.34, 59.38]; error 23.61 [19.48, 27.80]
+- llm_only_rag: pair 9.42 [6.87, 12.52]; agent 54.18 [49.90, 58.15]; error 21.09 [17.16, 25.13]
+
+wrote D:\aryan\Projects\Multi agent LLM System\aegis\results\rr\final_rrf1.json

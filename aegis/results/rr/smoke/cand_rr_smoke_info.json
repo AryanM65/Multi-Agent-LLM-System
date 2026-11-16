@@ -1,0 +1,48 @@
+{
+ "args": {
+  "dump": "aegis/results/rr/dump_rr_smoke.npz",
+  "tag": "rr_smoke",
+  "k": 5,
+  "r": 2,
+  "min_sim": 0.0,
+  "retr_enc": "es_s0",
+  "splits": "val,test,who_when",
+  "mask": "names+peer",
+  "max_records": 6
+ },
+ "stats": {
+  "val": {
+   "records": 6,
+   "candidates": 30,
+   "rag_examples_dropped_weak_match": 0
+  },
+  "test": {
+   "records": 6,
+   "candidates": 30,
+   "rag_examples_dropped_weak_match": 0
+  },
+  "who_when": {
+   "records": 6,
+   "candidates": 30,
+   "rag_examples_dropped_weak_match": 0
+  }
+ },
+ "dump_info": {
+  "tag": "rr_smoke",
+  "encoders": [
+   "es_s0"
+  ],
+  "seeds": 1,
+  "retr": 1,
+  "retr_k": 25,
+  "retr_r": 3,
+  "masks": [
+   "names+peer",
+   "names",
+   "peer",
+   "neither"
+  ],
+  "limit": 400,
+  "note": "ensemble over encoders per head seed; raw probabilities (no label shift)"
+ }
+}

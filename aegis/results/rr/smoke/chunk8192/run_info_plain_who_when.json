@@ -1,0 +1,1 @@
+{"model": "Qwen/Qwen2.5-0.5B-Instruct", "four_bit": false, "variants": ["plain"], "format": "yn", "cands": "cand_rr_smoke_who_when.jsonl", "records": 1, "minutes": 0.533385956287384, "char_budget": 20000, "max_prefix_tokens": 7000}

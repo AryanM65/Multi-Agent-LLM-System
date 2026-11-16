@@ -1,0 +1,34 @@
+[{"stream_name":"stdout","time":6.532906294,"data":"Sat Nov 14 12:16:19 2026       \n"}
+,{"stream_name":"stdout","time":6.532959013,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":6.532963687,"data":"| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |\n"}
+,{"stream_name":"stdout","time":6.532966339,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":6.53296886,"data":"| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n"}
+,{"stream_name":"stdout","time":6.532971474,"data":"| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n"}
+,{"stream_name":"stdout","time":6.532974042,"data":"|                                         |                        |               MIG M. |\n"}
+,{"stream_name":"stdout","time":6.532976527,"data":"|=========================================+========================+======================|\n"}
+,{"stream_name":"stdout","time":6.532979008,"data":"|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":6.532981515,"data":"| N/A   37C    P8             12W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":6.532984005,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":6.532986481,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":6.532989021,"data":"|   1  Tesla T4                       Off |   00000000:00:05.0 Off |                    0 |\n"}
+,{"stream_name":"stdout","time":6.532991485,"data":"| N/A   37C    P8             11W /   70W |       0MiB /  15360MiB |      0%      Default |\n"}
+,{"stream_name":"stdout","time":6.532993959,"data":"|                                         |                        |                  N/A |\n"}
+,{"stream_name":"stdout","time":6.532996426,"data":"+-----------------------------------------+------------------------+----------------------+\n"}
+,{"stream_name":"stdout","time":6.53299901,"data":"\n"}
+,{"stream_name":"stdout","time":6.533001307,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":6.533003814,"data":"| Processes:                                                                              |\n"}
+,{"stream_name":"stdout","time":6.533006289,"data":"|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n"}
+,{"stream_name":"stdout","time":6.533008979,"data":"|        ID   ID                                                               Usage      |\n"}
+,{"stream_name":"stdout","time":6.533011507,"data":"|=========================================================================================|\n"}
+,{"stream_name":"stdout","time":6.533013975,"data":"|  No running processes found                                                             |\n"}
+,{"stream_name":"stdout","time":6.533017401,"data":"+-----------------------------------------------------------------------------------------+\n"}
+,{"stream_name":"stdout","time":6.533019947,"data":"\n"}
+,{"stream_name":"stdout","time":6.761859554,"data":"cuda True 2\n"}
+,{"stream_name":"stdout","time":8.743718081,"data":"matmul x50 seconds 1.747\n"}
+,{"stream_name":"stderr","time":13.100910692,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":13.100957374,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":13.340491687,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":13.340516048,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":14.122860238,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":14.989699367,"data":"[NbConvertApp] Writing 275081 bytes to __results__.html\n"}
+]

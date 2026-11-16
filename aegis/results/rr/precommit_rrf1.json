@@ -1,0 +1,676 @@
+{
+ "timestamp": "2026-11-14T23:20:02",
+ "tag": "rrf1",
+ "dump": "D:\\aryan\\Projects\\Multi agent LLM System\\aegis\\results\\rr\\dump_rr_base.npz",
+ "dump_sha1": "2091f0c5dc1d",
+ "cand_tag": "rrc",
+ "cand_files": {
+  "val": "7a8ae855fd54",
+  "test": "ad8008e998e4",
+  "who_when": "70ce2bbbb1e0"
+ },
+ "variants": [
+  "plain",
+  "rag",
+  "rand"
+ ],
+ "mask": "names+peer",
+ "grid": [
+  0.0,
+  0.25,
+  0.5,
+  1.0,
+  2.0
+ ],
+ "rows": {
+  "shortlist_model": {
+   "wm": 1.0,
+   "weights": {},
+   "thr": -1.624891079698588,
+   "val_crossfit": 56.338286860413916,
+   "val_in_sample": 56.54063211910087
+  },
+  "plain": {
+   "wm": 1.0,
+   "weights": {
+    "plain": 0.0
+   },
+   "thr": -1.624891079698588,
+   "val_crossfit": 56.338286860413916,
+   "val_in_sample": 56.54063211910087
+  },
+  "rag": {
+   "wm": 1.0,
+   "weights": {
+    "rag": 0.0
+   },
+   "thr": -1.624891079698588,
+   "val_crossfit": 56.338286860413916,
+   "val_in_sample": 56.54063211910087
+  },
+  "rand": {
+   "wm": 1.0,
+   "weights": {
+    "rand": 0.0
+   },
+   "thr": -1.624891079698588,
+   "val_crossfit": 56.338286860413916,
+   "val_in_sample": 56.54063211910087
+  },
+  "plain+rag": {
+   "wm": 1.0,
+   "weights": {
+    "plain": 0.0,
+    "rag": 0.0
+   },
+   "thr": -1.624891079698588,
+   "val_crossfit": 56.338286860413916,
+   "val_in_sample": 56.54063211910087
+  },
+  "llm_only_plain": {
+   "wm": 0.0,
+   "weights": {
+    "plain": 1.0
+   },
+   "thr": -0.34709968505613004,
+   "val_crossfit": 46.13190042997091,
+   "val_in_sample": 46.60981302155017
+  },
+  "llm_only_rag": {
+   "wm": 0.0,
+   "weights": {
+    "rag": 1.0
+   },
+   "thr": -0.27596384538081786,
+   "val_crossfit": 48.92625423392833,
+   "val_in_sample": 49.07834202758212
+  },
+  "model_alone_prod": {
+   "t_a": 0.1,
+   "t_m": 0.2
+  }
+ },
+ "headline_row": "shortlist_model",
+ "candidate_info": {
+  "args": {
+   "dump": "aegis/results/rr/dump_rr_base.npz",
+   "tag": "rrc",
+   "k": 5,
+   "r": 2,
+   "min_sim": 0.0,
+   "retr_enc": "es_s0",
+   "splits": "val,test,who_when",
+   "mask": "names+peer",
+   "max_records": 0,
+   "subsample": 0,
+   "subsample_seed": 0
+  },
+  "stats": {
+   "val": {
+    "records": 940,
+    "candidates": 4700,
+    "rag_examples_dropped_weak_match": 0
+   },
+   "test": {
+    "records": 600,
+    "candidates": 3000,
+    "rag_examples_dropped_weak_match": 0
+   },
+   "who_when": {
+    "records": 184,
+    "candidates": 920,
+    "rag_examples_dropped_weak_match": 0
+   }
+  },
+  "dump_info": {
+   "tag": "rr_base",
+   "encoders": [
+    "es_s0",
+    "es_s1",
+    "es_s2",
+    "es_s3",
+    "es_s4",
+    "es_s5",
+    "es_s6",
+    "es_s7",
+    "es_s8",
+    "es_s9",
+    "es_s10",
+    "es_s11",
+    "es_s12",
+    "es_s13"
+   ],
+   "seeds": 3,
+   "retr": 0,
+   "retr_k": 25,
+   "retr_r": 3,
+   "masks": [
+    "names+peer",
+    "names",
+    "peer",
+    "neither"
+   ],
+   "limit": 0,
+   "note": "ensemble over encoders per head seed; raw probabilities (no label shift)"
+  }
+ },
+ "judge_run_info": [
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 200.99750317335128,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 220.83992651700973,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 240.6360612988472,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 241.1728978673617,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 222.743610560894,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 241.2479165116946,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 225.56135236422222,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_test.jsonl",
+   "records": 75,
+   "minutes": 217.8314375003179,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 118,
+   "minutes": 128.90706923007966,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 118,
+   "minutes": 141.08952054977416,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 118,
+   "minutes": 152.05057411591213,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 118,
+   "minutes": 156.0704398592313,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 117,
+   "minutes": 144.11513560612997,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 117,
+   "minutes": 155.82357953389484,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 117,
+   "minutes": 143.37652324438096,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_val.jsonl",
+   "records": 117,
+   "minutes": 138.80200160741805,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 18.7641388853391,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 19.983014035224915,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 21.833925716082256,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 23.002243479092915,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 21.275662104288738,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 23.367584343751272,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 21.816567099094392,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  },
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "four_bit": true,
+   "variants": [
+    "plain",
+    "rag",
+    "rand"
+   ],
+   "format": "ab",
+   "cands": "cand_rrc_who_when.jsonl",
+   "records": 23,
+   "minutes": 21.398985739549,
+   "char_budget": 20000,
+   "max_prefix_tokens": 7000
+  }
+ ],
+ "lofo_approx": {
+  "shortlist_model": [
+   [
+    "agentverse",
+    287,
+    56.680028987120295
+   ],
+   [
+    "dylan",
+    116,
+    55.201673066180156
+   ],
+   [
+    "llm_debate",
+    242,
+    54.02153397597683
+   ],
+   [
+    "macnet",
+    272,
+    58.8390916465473
+   ]
+  ],
+  "plain": [
+   [
+    "agentverse",
+    287,
+    56.680028987120295
+   ],
+   [
+    "dylan",
+    116,
+    55.201673066180156
+   ],
+   [
+    "llm_debate",
+    242,
+    54.02153397597683
+   ],
+   [
+    "macnet",
+    272,
+    58.8390916465473
+   ]
+  ],
+  "rag": [
+   [
+    "agentverse",
+    287,
+    56.680028987120295
+   ],
+   [
+    "dylan",
+    116,
+    55.201673066180156
+   ],
+   [
+    "llm_debate",
+    242,
+    54.02153397597683
+   ],
+   [
+    "macnet",
+    272,
+    58.8390916465473
+   ]
+  ],
+  "rand": [
+   [
+    "agentverse",
+    287,
+    56.680028987120295
+   ],
+   [
+    "dylan",
+    116,
+    55.201673066180156
+   ],
+   [
+    "llm_debate",
+    242,
+    54.02153397597683
+   ],
+   [
+    "macnet",
+    272,
+    58.8390916465473
+   ]
+  ],
+  "plain+rag": [
+   [
+    "agentverse",
+    287,
+    56.680028987120295
+   ],
+   [
+    "dylan",
+    116,
+    55.201673066180156
+   ],
+   [
+    "llm_debate",
+    242,
+    54.02153397597683
+   ],
+   [
+    "macnet",
+    272,
+    58.8390916465473
+   ]
+  ],
+  "llm_only_plain": [
+   [
+    "agentverse",
+    287,
+    44.33338611692585
+   ],
+   [
+    "dylan",
+    116,
+    45.857147988903854
+   ],
+   [
+    "llm_debate",
+    242,
+    46.926836661653304
+   ],
+   [
+    "macnet",
+    272,
+    49.91599413001759
+   ]
+  ],
+  "llm_only_rag": [
+   [
+    "agentverse",
+    287,
+    45.619621751236906
+   ],
+   [
+    "dylan",
+    116,
+    48.82188876823553
+   ],
+   [
+    "llm_debate",
+    242,
+    48.6312062776619
+   ],
+   [
+    "macnet",
+    272,
+    54.28584561515212
+   ]
+  ]
+ },
+ "rule": "chosen on AEGIS validation only; Who&When not read in this phase"
+}
