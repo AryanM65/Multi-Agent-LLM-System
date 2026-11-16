@@ -347,7 +347,9 @@ def main() -> None:
     net.load_state_dict(best_state)
 
     texts: dict = {}
-    for name in ("test.jsonl", "whowhen.jsonl", "val.jsonl", "train.jsonl"):
+    # aegis.jsonl = the authors' repo test file (S4: primary test set, decision D11); optional input, embedded if present
+    names = ["test.jsonl", "whowhen.jsonl", "val.jsonl", "train.jsonl"] + (["aegis.jsonl"] if list(root.rglob("aegis.jsonl")) else [])
+    for name in names:
         for rec in read(find(root, name)):
             for t in rec["input"]["conversation_history"]:
                 c = t.get("content") or ""
