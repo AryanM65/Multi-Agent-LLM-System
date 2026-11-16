@@ -1,7 +1,9 @@
 """Build a Kaggle kernel directory for one S4 fine-tuning run (published protocol, duplicates removed).
 
 A kernel takes ONE script, so the arguments are prepended to a copy of kaggle_finetune_minilm.py.
-Usage: python -m aegis.scripts.make_s4_kernel <out_dir> <seed> [user=shubhamy90]
+Usage: python -m aegis.scripts.make_s4_kernel <out_dir> <seed> [user=shubhamy90] [data_slug=aegis-s4-data]
+Accounts that already hold `aegis-raw-data` (train/val/test/whowhen.jsonl) pass data_slug=aegis-raw-data; every account needs its own `aegis-s4-ids`
+(grouped_ids.json = de-duplicated released ids, plus aegis.jsonl).
 Then: KAGGLE_API_TOKEN=... kaggle kernels push -p <out_dir>   (token only as an env var, never written to a file)
 """
 import json
@@ -11,7 +13,7 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parent / "kaggle_finetune_minilm.py"
 
 
-def main(out: str, seed: int, user: str = "shubhamy90") -> None:
+def main(out: str, seed: int, user: str = "shubhamy90", data_slug: str = "aegis-s4-data") -> None:
     d = Path(out)
     d.mkdir(parents=True, exist_ok=True)
     src = SRC.read_text()
@@ -24,9 +26,9 @@ def main(out: str, seed: int, user: str = "shubhamy90") -> None:
     (d / "kernel-metadata.json").write_text(json.dumps({
         "id": f"{user}/{slug}", "title": slug, "code_file": "script.py", "language": "python", "kernel_type": "script",
         "is_private": True, "enable_gpu": True, "enable_internet": True,
-        "dataset_sources": [f"{user}/aegis-s4-data", f"{user}/aegis-s4-ids"], "competition_sources": [], "kernel_sources": []}, indent=1))
+        "dataset_sources": [f"{user}/{data_slug}", f"{user}/aegis-s4-ids"], "competition_sources": [], "kernel_sources": []}, indent=1))
     print(d, slug)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], int(sys.argv[2]), *(sys.argv[3:4]))
+    main(sys.argv[1], int(sys.argv[2]), *sys.argv[3:5])
