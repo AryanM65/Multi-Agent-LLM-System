@@ -171,3 +171,126 @@ Run on the already-saved fine-tuned vectors (clean encoders es_s0, es_s1), compa
 - 2026-11-13 ~17:20: brainstorm round 11 (ideas.md sec 11): CatchBench, Who&When Pro, AgenTracer; nothing cheap/new to test. Idle: all GPUs, CPU.
 - 2026-11-13: wrote local-notes/approach.md (every approach explained with numbers, glossary, pipeline, novelty vs paper sources). Citations from memory; verify before thesis.
 - 2026-11-13: loop STOPPED by user request (cron fb04818e deleted). All kernels saved, nothing running. Deliverables: approach.md, results.md, ideas.md.
+- 2026-11-14: user asked to write ONLY the scripts for the "retriever-only" and "model shortlist + LLM judge (+ AEGIS retrieval)" ideas (effort set to high for this). Wrote aegis/src/eval/rr_common.py, rr_models.py, rr_gate0.py, rr_candidates.py, rr_fuse.py and aegis/scripts/kaggle_judge.py, rr_make_judge_kernel.py; smoke-tested on tiny inputs (CPU only; no GPU/4-bit test); no full run started. Runbook: local-notes/rr_runbook.md. Finding: 20/184 Who&When true pairs name an agent that never appears under that exact name in the turns (Orchestrator vs 'Orchestrator (thought)', Websurfer vs WebSurfer), so exact-match agent/pair scoring has a ceiling of about 89% reachable; not yet applied to any number.
+- 2026-11-14: user approved the Who&When agent-name normalisation as a SEPARATE extra row only; implemented in rr_common/rr_models/rr_gate0/rr_fuse (raw-name rows unchanged and stay the headline; normalised rows labelled post-hoc). Tested on tiny/synthetic inputs only.
+
+- 2026-11-14 17:05: rr_retr (retr=1) crashed with numpy MemoryError (3.3 GB RAM free while rr_base runs); restart after rr_base ends. Speed-test kernel v1 (account A) ERROR as expected: candidates dataset was missing (log saved aegis/results/kaggle_logs/rr_speed_v1). Dataset aryanmahajan665/aegis-rr-cands created (kaggle datasets create must run from inside the folder with -p .; -p <path> fails on Windows). v2 of the speed kernel pushed.
+- 2026-11-14 17:17: rr_base 7/14 encoders (22 min). Speed-test A cancelled (queue) and re-pushed v3; speed-test B (aryanmahajan7) RUNNING.
+- 2026-11-14 17:22: deleted queued duplicate speed-test kernel on A (user asked; no output existed). B speed test still RUNNING.
+- 2026-11-14 17:30: speed test on B ERROR (new transformers on Kaggle rejects cache.crop(L)); log saved aegis/results/kaggle_logs/rr_speed_b. Fixed locally in kaggle_judge.py (crop_to helper, both semantics unit-tested with mocks, not on a GPU). User rule: ask before starting ANY other GPU job; not re-pushed. D gputest still queued.
+- 2026-11-14 ~17:26: user approved; speed test re-pushed on B with crop_to fix (v2).
+- 2026-11-14 17:40: rr_base DONE, reproduces wbes14 exactly (AEGIS test pair 32.96; Who&When +shift 8.24/47.72/17.12; name-normalised +shift 9.14/53.86/17.12 separate row). Gate 0 PASS (val recall@5/recall@1 = 2.26; Who&When oracle ceiling is loose). Candidates rrc built (k=5, r=2, full val 940 / test 600 / who_when 184, no subsample). rr_retr restarted on CPU. Speed test B v2 COMPLETE: crop fix works; 6 recs x 3 variants x 5 cands in 5.1 min (~0.85 min/record, smoke prefixes 1.8-3.5k tokens). Waiting for user to decide GPU split/scope.
+- 2026-11-14 17:43: GPU demos: B and C COMPLETE (2x T4 each, logs in aegis/results/kaggle_logs/rr_gputest_b/_c); A and D still QUEUED. rr_retr 1/14 encoders (3.3 min each, ETA ~18:25). Waiting for user: judge scope (option 1/2/3) and which accounts.
+- 2026-11-14 17:47: GPU demo rr-gputest2 on A and D COMPLETE; old queued rr-gputest on A cancelled by Kaggle. logs rr_gputest_a/_d.
+- 2026-11-14 17:52: rr_retr progress logged; GPUs idle awaiting user's judge scope (option 1/2/3). Vectors exist for all paper-split turns (checked es_s0), so a full-paper-train extra row is compute-feasible (~70-90 min CPU).
+- 2026-11-14 17:57: kaggle_judge.py gained --gpu-index/--shard-base/--shard-total/--spawn (2 procs per account, one per T4); local CPU test: sharding + spawn work, child 2 hit a local Windows paging-file error (RAM, not code). No GPU job started; waiting for user's yes on option 2. rr_retr running.
+- 2026-11-14 18:09: OPTION 2 STARTED (user: all 4 GPUs). 4 kernels aegis-rr-judge-{a,b,c,d}, 2 procs each (one per T4), 8 strided shards, order who_when,val,test, variants plain,rag,rand, Qwen2.5-7B 4-bit, budget 520 min. Cands rrc k5 r2 full. Outputs to pull on COMPLETE into aegis/results/kaggle_logs/rr_judge_<a-d>.
+- 2026-11-14 18:09: judge kernels A and D RUNNING, B and C QUEUED; rr_retr 9/14 encoders (ETA ~18:30).
+- 2026-11-14 18:21: judge A,D RUNNING (A pushed ~18:03, D ~18:03); B,C QUEUED since ~18:12 (re-push at ~18:27 if still queued). rr_retr 11/14 encoders (ETA ~18:35).
+- 2026-11-14 18:41: judge A ERROR (CUDA OOM on long prefixes, both procs; Who&When shards got 16/23 and 17/23 recs before dying; log+partial outputs saved aegis/results/kaggle_logs/rr_judge_a). Fixed kaggle_judge.py: chunked prefix prefill (--prefill-chunk 1024, identical J on CPU test) + expandable_segments. Re-pushed A (v2), B, C at 18:41 (B,C deleted while QUEUED first). D still RUNNING with the OLD script (may OOM too; will pull when done, then re-push fixed).
+- 2026-11-14 18:42: judge D ERROR too (same OOM; W&W 20/23 and 22/23 recs done; log saved rr_judge_d), re-pushed fixed D v2 at 18:42. rr_retr finished.
+- 2026-11-14 18:44: rr_retr DONE. names+peer: AEGIS test pair 33.39+-0.51 (base 32.96), error 42.00 (base 40.95); W&W +shift 8.17/45.01/18.60 (base 8.24/47.72/17.12). Differences inside seed noise (+-0.5 to +-3.7); retrieval-block alone does not clearly help.
+- 2026-11-14 18:50: user cancelled all four judge kernels by mistake (B was RUNNING; its partial W&W output saved aegis/results/kaggle_logs/rr_judge_b_cancelled). Re-pushed A,B,C,D (fixed script) on user request.
+- 2026-11-14 18:55: attempt 2 done for all four (delete+push). A, B, D RUNNING (do not touch); C QUEUED. Counters: A 2, B 2, C 2, D 2. New loop job 2486d642.
+- 2026-11-14 19:06: A,B,D RUNNING (since ~18:55); C re-pushed (attempt 3, at 19:05). Counters: A 2, B 2, C 3, D 2.
+- 2026-11-14 19:09: all four judge kernels RUNNING (A,B,D since ~18:55; C since ~19:06). No new results.
+- 2026-11-14 19:14: all four judge kernels still RUNNING; no new results.
+- 2026-11-14 19:19: judge kernels status checked, see tick report.
+- 2026-11-14 19:24: judge kernels status checked.
+- 2026-11-14 19:28: judge kernels status checked.
+- 2026-11-14 19:33: judge kernels status checked.
+- 2026-11-14 19:38: judge kernels status checked.
+- 2026-11-14 19:43: judge kernels status checked.
+- 2026-11-14 19:47: judge kernels status checked.
+- 2026-11-14 19:52: judge kernels status checked.
+- 2026-11-14 19:57: judge kernels status checked.
+- 2026-11-14 20:02: judge kernels status checked.
+- 2026-11-14 20:06: judge kernels status checked.
+- 2026-11-14 20:11: judge kernels status checked.
+- 2026-11-14 20:16: judge kernels status checked.
+- 2026-11-14 20:21: judge kernels status checked.
+- 2026-11-14 20:25: judge kernels status checked.
+- 2026-11-14 20:30: judge kernels status checked.
+- 2026-11-14 20:35: judge kernels status checked.
+- 2026-11-14 20:40: judge kernels status checked.
+- 2026-11-14 20:45: judge kernels status checked.
+- 2026-11-14 20:49: judge kernels status checked.
+- 2026-11-14 20:54: judge kernels status checked.
+- 2026-11-14 20:59: judge kernels status checked.
+- 2026-11-14 21:04: judge kernels status checked.
+- 2026-11-14 21:08: judge kernels status checked.
+- 2026-11-14 21:13: judge kernels status checked.
+- 2026-11-14 21:18: judge kernels status checked.
+- 2026-11-14 21:23: judge kernels status checked.
+- 2026-11-14 21:27: judge kernels status checked.
+- 2026-11-14 21:32: judge kernels status checked.
+- 2026-11-14 21:37: judge kernels status checked.
+- 2026-11-14 21:42: judge kernels status checked.
+- 2026-11-14 21:46: judge kernels status checked.
+- 2026-11-14 21:51: judge kernels status checked.
+- 2026-11-14 21:56: judge kernels status checked.
+- 2026-11-14 22:01: judge kernels status checked.
+- 2026-11-14 22:05: judge kernels status checked.
+- 2026-11-14 22:10: judge kernels status checked.
+- 2026-11-14 22:15: judge kernels status checked.
+- 2026-11-14 22:20: judge kernels status checked.
+- 2026-11-14 22:24: judge kernels status checked.
+- 2026-11-14 22:29: judge kernels status checked.
+- 2026-11-14 22:34: judge kernels status checked.
+- 2026-11-14 22:39: judge kernels status checked.
+- 2026-11-14 22:43: judge kernels status checked.
+- 2026-11-14 22:44: judge A COMPLETE (shards 0,1; who_when 23, val 118, test 75 per shard, 3 variants; 201/221 min). Pulled to kaggle_logs/rr_judge_a_run2, copied to aegis/results/rr (18 shard files + run_info). B, C, D RUNNING.
+- 2026-11-14 22:49: judge D COMPLETE (shards 6,7; who_when 23, val 117, test 75; 218-226 min), no NaN, pulled to kaggle_logs/rr_judge_d_run2, copied to aegis/results/rr. A and D done; B, C RUNNING.
+- 2026-11-14 22:53: A, D done and merged into aegis/results/rr; B, C RUNNING.
+- 2026-11-14 22:58: B, C still RUNNING; A, D done.
+- 2026-11-14 23:03: judge B COMPLETE (shards 2,3; who_when 23, val 118, test 75; 241 min), no NaN, pulled to kaggle_logs/rr_judge_b_run2, copied to aegis/results/rr. 6 of 8 shards in; C RUNNING.
+- 2026-11-14 23:07: C still RUNNING (shards 4,5); A, B, D done and copied.
+- 2026-11-14 23:14: judge C COMPLETE (shards 4,5; 223-241 min), pulled to kaggle_logs/rr_judge_c_run2. All 8 shards in aegis/results/rr (72 files). Merge check run (see next line).
+- 2026-11-14 23:20: rr_fuse TUNE done (AEGIS val only, precommit_rrf1.json written). Judge fused weights all 0.0 for plain/rag/rand: shortlist_model 56.34 cross-fit (pair/agent/error 39.32/83.05/47.25). LLM-only (no model): plain 46.13 (pair 28.22), rag 48.93 (pair 31.26). Gate 1 FAIL, Gate 2 FAIL (all fused variants equal 56.19 in leave-one-framework-out). Runbook says stop here; final NOT run; Who&When not scored with the judge. Awaiting user decision (report as negative result / full-data extra row).
+- 2026-11-14 23:30: rr_fuse FINAL run once (final_rrf1.json, log aegis/results/rr/log_final_rrf1.txt). Headline (pre-committed rule) = shortlist_model: Who&When pair/agent/error 8.96/45.42/20.80 vs model_alone_prod 9.21/45.00/23.44 (paired diff pair -0.28 [-1.94,+1.12], error -2.62 [-5.03,-0.54]); AEGIS test 33.57/79.95/41.53 vs 34.02/78.66/41.83 (pair -0.45 [-1.27,+0.37]). Judge fused = no change (weights 0). LLM-only (not headline, exploratory): W&W plain 11.05/51.66/23.61 (vs model: pair +1.82 [-0.19,+3.74], agent +6.65 [+3.54,+9.88]); rag 8.57/48.92/21.09; AEGIS test llm_only much worse (plain pair 24.98). Name-normalised rows stored separately. Bar 'improved over wbes14 8.24 beyond CI' NOT met by headline.
+- 2026-11-14 23:25: tick: all 4 judge kernels COMPLETE, final done; nothing running; awaiting user decisions.
+- 2026-11-14 23:29: tick: idle, awaiting user decisions (full-data row / judge follow-up / thesis outline / stop loop).
+- 2026-11-14 23:34: tick: idle, nothing running.
+- 2026-11-14 23:39: tick: idle, nothing running.
+- 2026-11-14 23:43: tick: idle, nothing running. User asked about field-level gaps (answered: evidence for 5 candidate gaps, no literature search yet; offered one).
+- 2026-11-14 23:48: tick: idle, nothing running. User asked for more field-level gaps (listed 8 candidates with evidence; none literature-verified; offered web search).
+- 2026-11-14 23:53: tick: idle, nothing running.
+- 2026-11-15 00:0x: literature search done (6 queries, abstracts only); wrote local-notes/gaps_and_outline.md (6 field-level gaps with evidence + related work + contribution list + outline). Citations unverified. Next: full-data extra row (CPU).
+- 2026-11-15 23:57: full-data extra row STARTED: rr_models --protocol paper --tag rr_paper (train=released 7,146, val=released 1,787, test=released 600; 14 enc x 3 seeds, CPU, ~1-1.5h). Labelled extra row; AEGIS numbers leaked/inflated; headline stays grouped. Log aegis/results/rr/log_rr_paper.txt
+- 2026-11-15 23:58: tick: rr_paper running (no encoder finished yet); no GPU jobs; no kernels running.
+- 2026-11-15 00:02: tick: rr_paper running.
+- 2026-11-15 00:07: tick: rr_paper running.
+- 2026-11-15 00:12: tick: rr_paper running.
+- 2026-11-15 00:17: tick: rr_paper running.
+- 2026-11-15 00:22: tick: rr_paper running.
+- 2026-11-15 00:26: tick: rr_paper running.
+- 2026-11-15 00:31: tick: rr_paper running.
+- 2026-11-15 05:58: tick: rr_paper running.
+- 2026-11-15 05:59: tick: PC clock jumped 00:31 -> 05:58 (machine asleep ~5h, rr_paper paused, resumed; 5/14 encoders at that point). rr_paper running.
+- 2026-11-15 06:04: tick: rr_paper running.
+- 2026-11-15 06:09: tick: rr_paper running.
+- 2026-11-15 06:13: tick: rr_paper running.
+- 2026-11-15 06:18: tick: rr_paper running.
+- 2026-11-15 06:23: tick: rr_paper running.
+- 2026-11-15 06:28: tick: rr_paper running.
+- 2026-11-15 06:32: tick: rr_paper running.
+- 2026-11-15 06:37: tick: rr_paper running.
+- 2026-11-15 06:42: tick: rr_paper running.
+- 2026-11-15 06:47: tick: rr_paper running.
+- 2026-11-15 06:51: tick: rr_paper running.
+- 2026-11-15 06:56: tick: rr_paper running.
+- 2026-11-15 07:01: tick: rr_paper running (13/14).
+- 2026-11-15 07:06: rr_paper DONE (full released train 7,146 / val 1,787 / test 600; 14 enc x 3 seeds; ledger model names rr_rr_paper_*). names+peer: AEGIS test pair 48.14+-0.63 / agent 85.94 / error 53.59 (INFLATED: query leakage + 1.85x data, cannot be separated; grouped rr_base 32.96/79.37/40.95). Who&When names+peer no shift 6.14/49.67/9.83 (rr_base 5.56/43.75/11.76); +shift 7.78+-1.34/47.63/16.53 (wbes14 8.24/47.72/17.12); names +shift 8.86+-1.95/48.74/17.12 (rr_base 8.26/45.55/17.71). Verdict: more data does NOT improve Who&When beyond seed noise (+-1.3 to +-2); agent without shift +5.9 (std 1.7), gone after shift. Extra row only; headline stays grouped.
+- 2026-11-15 07:14: user chose 'plain judge, top-12 shortlist' follow-up. Pre-commit note local-notes/followup_k12_precommit.md written BEFORE running. Candidates rrk12 (k=12, val+who_when, no test), 8 shards, kernels aegis-rr-judge-k12-{a,b,c,d} pushed (attempt 1 each), plain only, budget 400 min. rr_fuse got --final-splits. Plan: copy judge files to aegis/results/rr_k12/ with dump+cands, tune tag rrf2 variants plain, then final --final-splits who_when ONCE. Counters: k12 A1 B1 C1 D1.
+- 2026-11-15 07:16: tick: k12 kernels A-D RUNNING.
+- 2026-11-15 07:18: user pausing (laptop leaving); k12 kernels keep running on Kaggle; restart procedure in loop_restart.md section 12.
+- 2026-11-15 07:19: loop cron 26d7fd13 CANCELLED by user request. Restart it when user returns (section 12).
+- 2026-11-15 17:13: k12 follow-up DONE. 4 kernels COMPLETE, pulled to kaggle_logs/rr_judge_k12_{a,b,c,d} first; merge check ok (184 who_when, 940 val, no dups/NaN). Tune rrf2 (AEGIS val only): plain weight 0.0, Gate 1 FAIL 56.02 vs 56.02; llm_only_plain val pair 22.27 (model 38.59). Final ONCE (who_when): model_alone 9.21/45.00/23.44; headline shortlist_model 8.94/44.78/21.79; llm_only_plain 9.67/46.08/20.58; all paired diffs CI include 0. Success bar NOT met. Earlier agent +6.65 for judge-alone did NOT replicate on top-12 (+1.09 [-1.64,+3.72]) -> it was post-hoc noise/selection. Files aegis/results/rr_k12/. All GPU work finished. Loop cancelled.
+- 2026-11-15 17:16: user approved: deleted D:/aryan/cpujob_stage (2.7G), cpujob_tmp, aegis/results/kaggle_logs/cpu_es7/repo (519M duplicate). Kept cpu_es7/metrics_history_wbes7b.jsonl and all logs. D:/aryan/rr_* build dirs NOT deleted (not named by user).
+- 2026-11-15 17:18: user: skip the old self-generated-data project (HotpotQA DAG pipelines, topology GNN) in the thesis. Thesis GNN story = AEGIS turn graph only. Saved to memory.
+- 2026-11-15 17:27: added H1-H6 addendum (method-motivated gaps) to local-notes/gaps_and_outline.md. User still to decide scope of combined-ensemble experiment (asked clarification; nothing started).
+- 2026-11-15 17:29: literature check of gaps done; see bottom of gaps_and_outline.md. Key: AFANet (2608.18575) already does GNN for attribution + test-time adaptation; judges covered by AgentLocate/DuoTrace; shortcuts/leakage not found.
+- 2026-11-15 17:31: read AFANet full text summary; saved comparison at bottom of gaps_and_outline.md.
+- 2026-11-15 17:35: whole-field MAS gaps F1-F8 saved (gaps_and_outline.md).
+- 2026-11-15 17:43: user: thesis only attention + GNN, gaps as motivation; framing saved in gaps_and_outline.md.
+- 2026-11-16 12:14: pushed code+results+logs to origin/main and 13-november (commit b33e1f4); user then asked to push local-notes too (added incl. new notes gaps_and_outline, followup_k12_precommit, rerank_rag_context, rr_runbook; excluded kaggle.txt, ft_shards .npz).

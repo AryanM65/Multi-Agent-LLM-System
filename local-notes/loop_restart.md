@@ -42,3 +42,57 @@ IMPROVEMENT-PUSH loop tick. USER TARGET: ENTIRE FOCUS ON WHO&WHEN (improve pair/
 ## 8. UPDATE 2026-11-13 ~09:40 (user): "you can utilise the gpu also"
 - GPU use allowed again (overrides section 7). Launched LoRA variants (the encoder-seed route is saturated; CPU scoring is the bottleneck): aryanmahajan7/aegis-lora-3b (B; Qwen2.5-3B-Instruct, train-n 1200) and amahaj55/aegis-lora-long (C; Qwen2.5-1.5B, train-n 3500, r32, 200 min cap). Save as lora_3b / lora_long the moment COMPLETE; score with: python -m aegis.src.eval.score_lora --dir aegis/results/kaggle_logs/<short> --tag <tag>. First LoRA (1.5B, 1600 recs) scored AEGIS 8.22, WW 3.10/44.25/9.09.
 - A and D still idle; next ideas for them: more seeds of the block-dropout winner only if wbes14 shows an es-ensemble gain.
+
+## 9. UPDATE 2026-11-14 (user): new Track A idea (retriever-only, then model shortlist + LLM judge + AEGIS retrieval)
+- Scripts are written and smoke-tested; the loop should now RUN them in the order of local-notes/rr_runbook.md section 5 (step 1 = rr_models --retr 0 tag rr_base on the 14 es_s* encoders, check it reproduces wbes14; step 2 = rr_gate0; step 3 = rr_models --retr 1 tag rr_retr; then candidates, a 20-record judge speed test on one Kaggle account, judge runs, rr_fuse tune, rr_fuse final once). Hand-off with the full design and rules: local-notes/rerank_rag_context.md.
+- Track A rules: Who&When is never used to tune, to pick k, weights, thresholds, min-sim, the headline row, the retrieval index or prompt examples; score it once after the pre-commit file exists. Report every row (including negatives). No commits or pushes unless the user says. Old loop rules (bullets only, no tables, pull COMPLETE kernel output first, token only per command from kaggle.txt line number) still apply.
+- Open question for the user: Who&When agent-name mismatch (rr_runbook.md section 4). Do not apply name normalisation to any headline number without asking.
+- Name normalisation approved by the user as a separate labelled row only (see rr_runbook.md section 4); raw-name rows remain the headline.
+- 2026-11-14 user: every loop tick must also report ALL new results and status updates, and append them to timeline.md/context.md. Cron replaced (old 0c078eba deleted).
+- 2026-11-14 user: do not start any further GPU job without asking first (will decide how to divide GPUs if queued).
+- 2026-11-14 user: stay on grouped split for now; if rr results do not improve, move to the full paper train set (7,146 train + 1,787 val) as a clearly labelled extra row (AEGIS test from it is leaked/inflated; headline stays grouped). Needs the user's go at that point.
+- 2026-11-14 user standing rule: if a judge kernel stays QUEUED more than 15 min, delete it (queued only) and re-push. B and C re-pushed at ~18:12.
+- 2026-11-14 user: deleting kernels manually on Kaggle; DO NOT auto re-push judge kernels (queue rule paused) until the user says 'repush'. Do not touch B (RUNNING).
+- 2026-11-14 user: delete+re-push QUEUED judge kernels every tick until they start; max 4-5 attempts per account, then ask user. Attempt counter (pushes so far incl. the initial fixed push at 18:50): A 1, B 1, C 1, D 1.
+- 2026-11-14 18:55: attempt 2 done for all four (delete+push). A, B, D RUNNING (do not touch); C QUEUED. Counters: A 2, B 2, C 2, D 2. New loop job 2486d642.
+
+## 10. FULL RR PROCEDURE AFTER THE GPU RUNS (written 2026-11-14 18:57; the loop prompt points here)
+
+State: option 2 chosen by the user (judge Who&When 184 + AEGIS val 940 + AEGIS test 600, variants plain,rag,rand, k=5, Qwen2.5-7B 4-bit). 4 kernels aegis-rr-judge-{a,b,c,d} (accounts A-D = kaggle.txt lines 1,3,5,7; dirs D:/aryan/rr_run/<x>/aegis-rr-judge-<x>), 2 procs per kernel (one per T4), 8 strided shards (record j -> shard j mod 8; A=0,1 B=2,3 C=4,5 D=6,7), order who_when, val, test. Candidates: tag rrc (aegis/results/rr/cand_rrc_*.jsonl), dump: aegis/results/rr/dump_rr_base.npz (tag rr_base). rr_retr finished: no clear gain, rr_base stays the shortlist source.
+
+Per tick (every 5 min):
+- Status of each kernel. QUEUED -> delete (-y) and re-push from its dir, counter in section 9/10 notes (max 5 attempts per account, then STOP and ask the user). RUNNING -> never touch. Never ask Kaggle to cancel; the user must not cancel RUNNING ones either (output lost).
+- COMPLETE or ERROR -> FIRST pull into aegis/results/kaggle_logs/rr_judge_<x>/ (kaggle kernels output <user>/aegis-rr-judge-<x> -p <dir>, PYTHONUTF8=1 PYTHONIOENCODING=utf-8), keep the log. ERROR -> read the log tail, report, fix, re-push (ask first if the fix changes what is measured).
+- Report in bullets, no tables; append one dated line to timeline.md and context.md.
+
+When a kernel is COMPLETE and its output is good:
+1. Check run_info_*.json (records, minutes) and line counts: each shard file must hold ALL records of its stride. Expected counts per shard (strided 8-way): who_when 184 -> 23 each; val 940 -> 117 or 118; test 600 -> 75 each. Three variants per shard.
+2. Copy ONLY complete-run files judge_<variant>_<split>_sh<i>of8.jsonl and run_info_*.json into aegis/results/rr/. NEVER copy the partial files of failed (OOM) runs: aegis/results/kaggle_logs/rr_judge_a, rr_judge_d and rr_judge_b_cancelled hold such partial who_when shards, and rr_fuse globs judge_<variant>_<split>*.jsonl and concatenates every match, so a stray partial file would duplicate records.
+3. When all 8 shards x 3 splits x 3 variants are in: merge check by id (each id exactly once per variant and split, 5 candidates each, no NaN), fix gaps by re-running only the missing shard. Missing records = stop and ask.
+
+Then (CPU, minutes), in this order, and STOP before final for the user's look:
+4. `PYTHONPATH=. PYTHONUTF8=1 USE_TF=0 TRANSFORMERS_NO_TF=1 USE_TORCH=1 /c/Python312/python -m aegis.src.eval.rr_fuse --phase tune --dump-tag rr_base --cand-tag rrc --variants plain,rag,rand --tag rrf1`. Uses AEGIS val only (2-fold cross-fitting by query hash, final threshold on all val, leave-one-framework-out approximation). Writes precommit_rrf1.json. Read Gate 1 (judge beats shortlist-only model on held-out frameworks) and Gate 2 (RAG beats the random-examples control). Gate 1 fails -> report and stop.
+5. Put the "improved" bar into the report BEFORE final: Who&When pair F1 above wbes14 8.24 (halves 8.79 / 7.76) beyond the bootstrap interval; seed noise about +-1.2. Show the user the tune output and precommit file, wait for the go.
+6. `... rr_fuse --phase final --dump-tag rr_base --cand-tag rrc --variants plain,rag,rand --tag rrf1` ONCE (refuses without precommit, refuses to overwrite final_rrf1.json). Scores Who&When once and AEGIS test, with bootstrap CIs and paired differences vs the model alone; also the NAME-NORMALISED block (separate post-hoc row). It logs ledger rows (phase 12).
+7. Report ALL rows (shortlist_model, plain, rag, plain+rag, rand control), including those that do not help, with caveats: seed noise, 184 records (one record is about 0.5 pair points), label shift and z-scoring are transductive, name normalisation post hoc, grouped split (3,865 train) so AEGIS numbers are not comparable to the paper split, 4-bit Qwen zero-shot, k=5 ceiling (Who&When recall@5 28.8 percent).
+8. If it does not improve: the agreed next lever is a labelled extra row trained on the full paper train (7,146 train + 1,787 val, vectors exist, about 70-90 min CPU); ask the user first.
+9. Update notes: timeline.md, context.md, file.md, rr_runbook.md; summary for the thesis. No commits or pushes unless the user says.
+
+Rules always: no Who&When labels in tuning/weights/thresholds/k/min-sim/headline row; never cut k, subsample or drop variants without asking; ask before any other GPU job; Kaggle tokens only as env var KAGGLE_API_TOKEN per command by line number from kaggle.txt, never written to files; bullets only.
+- 2026-11-14 19:06: A,B,D RUNNING (since ~18:55); C re-pushed (attempt 3, at 19:05). Counters: A 2, B 2, C 3, D 2.
+- 2026-11-15 07:14: user chose 'plain judge, top-12 shortlist' follow-up. Pre-commit note local-notes/followup_k12_precommit.md written BEFORE running. Candidates rrk12 (k=12, val+who_when, no test), 8 shards, kernels aegis-rr-judge-k12-{a,b,c,d} pushed (attempt 1 each), plain only, budget 400 min. rr_fuse got --final-splits. Plan: copy judge files to aegis/results/rr_k12/ with dump+cands, tune tag rrf2 variants plain, then final --final-splits who_when ONCE. Counters: k12 A1 B1 C1 D1.
+
+## 11. FOLLOW-UP "k12" PROCEDURE (2026-11-15, user chose plain judge on a top-12 shortlist; pre-commit note: local-notes/followup_k12_precommit.md)
+State: kernels aegis-rr-judge-k12-{a,b,c,d} (accounts A-D = kaggle.txt lines 1,3,5,7; dirs D:/aryan/rr_run_k12/<x>/aegis-rr-judge-k12-<x>), pushed 07:14, all RUNNING. 2 procs per kernel, 8 strided shards (A 0,1; B 2,3; C 4,5; D 6,7), who_when then val, variant plain only, 12 candidates per record. Expected per shard: who_when 23 records, val 117 or 118; expect about 1.5-2.5 h. Section 10 rules (queue re-push with counters, never touch RUNNING, pull first) apply, with kernel names aegis-rr-judge-k12-<x>. Pull to aegis/results/kaggle_logs/rr_judge_k12_<x>.
+When all four are COMPLETE and pulled:
+1. mkdir aegis/results/rr_k12; copy there: dump_rr_base.npz (from aegis/results/rr), cand_rrk12_val.jsonl, cand_rrk12_who_when.jsonl, cand_rrk12_info.json, and ONLY the complete-run judge_plain_{who_when,val}_sh*of8.jsonl + run_info files from the four pulls.
+2. Merge check: each id exactly once per split (who_when 184, val 940), 12 candidates each, no NaN, candidate set equals the cand file.
+3. Tune (AEGIS val only): RR_DIR=aegis/results/rr_k12 PYTHONPATH=. PYTHONUTF8=1 USE_TF=0 TRANSFORMERS_NO_TF=1 USE_TORCH=1 python -m aegis.src.eval.rr_fuse --phase tune --dump-tag rr_base --cand-tag rrk12 --variants plain --tag rrf2. Report Gate 1. Check the success bar in the pre-commit note.
+4. Final ONCE: same env, --phase final ... --tag rrf2 --final-splits who_when. Report all rows with caveats (same 184 records as the first study, post-hoc origin, not independent). No ledger rows are written because RR_DIR is set.
+5. Update notes, then tell the user the whole RR work is finished; the user will end the loop.
+
+## 12. PAUSE NOTE (2026-11-15 ~07:20): user leaving with the laptop, will restart the loop at home.
+- k12 kernels aegis-rr-judge-k12-{a,b,c,d} run on Kaggle by themselves (pushed 07:14, attempt 1 each, all RUNNING at 07:16). Laptop off/asleep does not affect them. Do NOT delete/cancel them.
+- On restart: recreate the 5-minute loop (old cron 26d7fd13 dies with the session) using the same RR loop tick prompt, then follow section 11 (check status -> pull to aegis/results/kaggle_logs/rr_judge_k12_<x> FIRST -> merge check -> tune rrf2 on AEGIS val only -> final ONCE with --final-splits who_when -> report).
+- If a kernel shows ERROR/CANCEL: pull its output first, then re-push from D:/aryan/rr_run_k12/<x>/aegis-rr-judge-k12-<x> (max 5 attempts per account, then ask). If the 400-min budget was hit, partial shard files must NOT go into the merge (only complete runs).
+- Still waiting on the user: commit/push, rm -rf cleanup approval (D:/aryan/cpujob_stage, cpujob_tmp, cpu_es7/repo, D:/aryan/rr_* build dirs), verify citations in gaps_and_outline.md.
