@@ -78,3 +78,20 @@ which. We use the HF test file as the primary test set (D1).
 - Reading 5 raw trajectories per framework next to their labels (do in Phase 4 together with error analysis).
 - Searching content for literal injection strings.
 - Token-length distribution in tokens (only characters measured so far); needed before the Phase 3a zero-shot run.
+
+## 2026-11-16 addendum: the two 600-record test files, and exact duplicates (S2, `aegis/scripts/compare_test_files.py`, output `aegis/results/test_file_comparison.json`)
+
+Authors' repo: https://github.com/kfq20/Aegis (commit 18fecc5, cloned to `aegis/third_party/AEGIS/`, git-ignored). HF dataset: `Fancylalala/AEGIS`, downloaded to `aegis/data/raw/` (git-ignored).
+
+| | HF `Aegis-Bench/test.jsonl` | repo `evaluation/data/aegis.jsonl` |
+|---|---|---|
+| records / unique queries | 600 / 438 | 600 / 422 |
+| frameworks (agentverse, dylan, llm_debate, macnet, magentic_one, smoagents) | 143, 85, 140, 156, 28, 48 | 117, 87, 140, 156, 40, 60 |
+| mean labels per record, mean turns | 2.30, 12.48 | 2.20, 12.09 |
+| records whose query is in HF train | 588 | 585 |
+| records whose conversation text is IDENTICAL to a train record | 123 (122 with identical labels) | 125 (110 with identical labels) |
+
+- The two files share **no ids** but **451 conversations are textually identical** between them (382 shared queries); for 357 of those 451 the label sets are equal and for 94 they differ. So the two files are different samples of overlapping material, not different data.
+- Besides query overlap, **123 HF test records (20.5%) are verbatim copies of a train record's conversation** (122 with the same labels) and 108 are verbatim copies of a validation record (all with the same labels). Exact duplicates are a stronger leakage than query overlap and affect the released (paper) split. The grouped split removes them, because it drops every train/val record that shares a query with test.
+- Conversation identity is a SHA-1 over `agent_name \t content` of all turns; duplicates are counted per unique hash.
+- Which file the paper used is still unknown; we score on both (S2 part B) and report both.

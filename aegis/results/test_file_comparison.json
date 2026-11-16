@@ -1,0 +1,96 @@
+{
+  "hf_test": {
+    "name": "HF Aegis-Bench/test.jsonl",
+    "n": 600,
+    "unique_queries": 438,
+    "frameworks": {
+      "agentverse": 143,
+      "dylan": 85,
+      "llm_debate": 140,
+      "macnet": 156,
+      "magentic_one": 28,
+      "smoagents": 48
+    },
+    "mode_counts": {
+      "FM-1.1": 143,
+      "FM-1.2": 106,
+      "FM-1.3": 61,
+      "FM-1.4": 78,
+      "FM-1.5": 92,
+      "FM-2.1": 115,
+      "FM-2.2": 91,
+      "FM-2.3": 116,
+      "FM-2.4": 87,
+      "FM-2.5": 84,
+      "FM-2.6": 100,
+      "FM-3.1": 87,
+      "FM-3.2": 139,
+      "FM-3.3": 81
+    },
+    "mean_labels_per_record": 2.3,
+    "mean_turns": 12.476666666666667
+  },
+  "repo_test": {
+    "name": "repo evaluation/data/aegis.jsonl",
+    "n": 600,
+    "unique_queries": 422,
+    "frameworks": {
+      "agentverse": 117,
+      "dylan": 87,
+      "llm_debate": 140,
+      "macnet": 156,
+      "magentic_one": 40,
+      "smoagents": 60
+    },
+    "mode_counts": {
+      "FM-1.1": 148,
+      "FM-1.2": 82,
+      "FM-1.3": 88,
+      "FM-1.4": 93,
+      "FM-1.5": 94,
+      "FM-2.1": 86,
+      "FM-2.2": 102,
+      "FM-2.3": 96,
+      "FM-2.4": 86,
+      "FM-2.5": 80,
+      "FM-2.6": 102,
+      "FM-3.1": 89,
+      "FM-3.2": 113,
+      "FM-3.3": 61
+    },
+    "mean_labels_per_record": 2.2,
+    "mean_turns": 12.086666666666666
+  },
+  "hf_vs_repo": {
+    "ids": 0,
+    "queries": 382,
+    "conversations": 451,
+    "records_of_A_with_query_in_B": 542
+  },
+  "hf_test_vs_train": {
+    "ids": 0,
+    "queries": 430,
+    "conversations": 123,
+    "records_of_A_with_query_in_B": 588
+  },
+  "hf_test_vs_val": {
+    "ids": 0,
+    "queries": 338,
+    "conversations": 108,
+    "records_of_A_with_query_in_B": 482
+  },
+  "repo_test_vs_train": {
+    "ids": 0,
+    "queries": 411,
+    "conversations": 125,
+    "records_of_A_with_query_in_B": 585
+  },
+  "repo_test_vs_val": {
+    "ids": 0,
+    "queries": 311,
+    "conversations": 23,
+    "records_of_A_with_query_in_B": 461
+  },
+  "repo_file_sha1": "a15946483b4e6f74fffd56768fb7d3a6eb66a22f",
+  "hf_file_sha1": "ccfae9e42d07d4c501ab21757461b1323046dc67"
+}

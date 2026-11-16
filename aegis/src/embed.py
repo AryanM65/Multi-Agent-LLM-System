@@ -72,7 +72,7 @@ if __name__ == "__main__":
     from .loaders import load_split
 
     texts: list = []
-    for sp in ("test", "who_when", "val", "train"):   # smaller splits first so partial progress is useful
+    for sp in ("test", "test_repo", "who_when", "val", "train"):   # smaller splits first so partial progress is useful
         texts.extend(u.text for t in load_split(sp) for u in t.turns)
     uniq = list(dict.fromkeys(texts))
     print(f"{len(texts)} turns, {len(uniq)} unique texts")
