@@ -39,11 +39,19 @@ def floor(trajs):
     return evaluate([t.labels for t in trajs], [{(a, m) for a in set(t.agents) for m in ERROR_MODES} for t in trajs])
 
 
-def main(n_seeds: int) -> None:
+def main(n_seeds: int, dedup: bool) -> None:
     PREDS.mkdir(parents=True, exist_ok=True)
     store = EmbStore()
     sp = load_paper_splits()
     sets = {k: load_split(v) for k, v in SETS.items()}
+    tag = "_dedup" if dedup else ""
+    if dedup:
+        # drop released train/val records whose conversation text is a verbatim copy of a record in either 600-record test file
+        from ...scripts.compare_test_files import convo_hash
+        banned = {convo_hash(t) for k in ("hf_test", "repo_test") for t in sets[k]}
+        before = {k: len(v) for k, v in sp.items()}
+        sp = {**sp, **{k: [t for t in sp[k] if convo_hash(t) not in banned] for k in ("train", "val")}}
+        print(f"dedup: train {before['train']} -> {len(sp['train'])}, val {before['val']} -> {len(sp['val'])}", flush=True)
     vocab = agent_vocab(sp["train"])
     Xtr, Ytr, _ = build(sp["train"], store, vocab)
     Xva, Yva, mva = build(sp["val"], store, vocab)
@@ -70,10 +78,10 @@ def main(n_seeds: int) -> None:
                 p = torch.sigmoid(model(torch.tensor((X - model.mu) / model.sd, dtype=torch.float32))).numpy()
             pred = decode(p, meta, len(ts), ta, tm)
             out[k] = evaluate([t.labels for t in ts], pred)
-            (PREDS / f"s2_flat_paper_seed{s}_{k}.json").write_text(json.dumps(
+            (PREDS / f"s2_flat_paper{tag}_seed{s}_{k}.json").write_text(json.dumps(
                 {"ids": [t.id for t in ts], "pred": [sorted(map(list, q)) for q in pred]}))
-            log_run(phase="S2", model="flat_mlp", seed=s, split=f"paper_{k}", n_params=n_params,
-                    config={"protocol": "paper", "t_a": ta, "t_m": tm, "epochs_run": epochs, "file": k},
+            log_run(phase="S2", model="flat_mlp", seed=s, split=f"paper{tag}_{k}", n_params=n_params,
+                    config={"protocol": "paper" + tag, "t_a": ta, "t_m": tm, "epochs_run": epochs, "file": k},
                     metrics={k: {l: out[k][l] for l in LV}}, train_seconds=time.time() - t0,
                     notes="S2: same model scored on both 600-record test files; embeddings recomputed locally 2026-11-16 (MPS)")
         runs.append(out)
@@ -96,4 +104,6 @@ def main(n_seeds: int) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=5)
-    main(ap.parse_args().seeds)
+    ap.add_argument("--dedup", action="store_true", help="remove train/val records whose conversation also occurs in a test file")
+    a = ap.parse_args()
+    main(a.seeds, a.dedup)
