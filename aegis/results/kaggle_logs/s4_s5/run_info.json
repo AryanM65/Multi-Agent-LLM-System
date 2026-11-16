@@ -1,0 +1,30 @@
+{
+ "best_val_loss": 0.13306270480325036,
+ "epochs_run": 4,
+ "n_texts": 101009,
+ "train": 5844,
+ "val": 1657,
+ "es": 1068,
+ "args": {
+  "input_dir": "/kaggle/input",
+  "output_dir": "/kaggle/working",
+  "epochs": 4,
+  "patience": 2,
+  "bs": 8,
+  "limit": 0,
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "grad_ckpt": false,
+  "export_dir": "ft_shards",
+  "seed": 5,
+  "es_holdout": 0.15,
+  "chunk_chars": 0,
+  "max_chunks": 3,
+  "no_names": false,
+  "no_scalars": false,
+  "seq": false,
+  "adv_fw": 0.0,
+  "supcon": 0.0,
+  "attn": false,
+  "max_len": 256
+ }
+}
