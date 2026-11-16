@@ -51,3 +51,6 @@ model/checkpoints/
 # Aegis track: raw data, embedding caches, cloned third-party repo
 aegis/data/
 aegis/third_party/
+
+# S4 fine-tuned vectors (163 MB per encoder, kept on local disk and on Kaggle; logs are committed)
+aegis/results/kaggle_logs/s4_s*/ft_shards/

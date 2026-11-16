@@ -1,0 +1,51 @@
+[{"stream_name":"stdout","time":14.469151372,"data":"early-stopping slice: 1068 train trajectories (204 queries) held out of training\n"}
+,{"stream_name":"stdout","time":14.469205044,"data":"grouped train 5844 early-stop 1068 val(untouched if es-holdout) 1657\n"}
+,{"stream_name":"stderr","time":38.178730132,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":43.136356622,"data":"\rLoading weights:   0%|          | 0/103 [00:00\u003c?, ?it/s]\rLoading weights: 100%|██████████| 103/103 [00:00\u003c00:00, 2773.19it/s]\n"}
+,{"stream_name":"stdout","time":73.161571145,"data":"  ep 0 batch 100 train loss 0.2395 (29s)\n"}
+,{"stream_name":"stdout","time":100.895803758,"data":"  ep 0 batch 200 train loss 0.2078 (57s)\n"}
+,{"stream_name":"stdout","time":130.989675869,"data":"  ep 0 batch 300 train loss 0.1958 (87s)\n"}
+,{"stream_name":"stdout","time":161.924344949,"data":"  ep 0 batch 400 train loss 0.1884 (118s)\n"}
+,{"stream_name":"stdout","time":192.109882775,"data":"  ep 0 batch 500 train loss 0.1830 (148s)\n"}
+,{"stream_name":"stdout","time":221.117978743,"data":"  ep 0 batch 600 train loss 0.1787 (177s)\n"}
+,{"stream_name":"stdout","time":250.370621719,"data":"  ep 0 batch 700 train loss 0.1758 (207s)\n"}
+,{"stream_name":"stdout","time":276.368883489,"data":"epoch 1: train 0.1748 val 0.1472 (233s)\n"}
+,{"stream_name":"stdout","time":306.840156021,"data":"  ep 1 batch 100 train loss 0.1465 (30s)\n"}
+,{"stream_name":"stdout","time":337.980011739,"data":"  ep 1 batch 200 train loss 0.1458 (62s)\n"}
+,{"stream_name":"stdout","time":367.732841061,"data":"  ep 1 batch 300 train loss 0.1463 (91s)\n"}
+,{"stream_name":"stdout","time":397.787290778,"data":"  ep 1 batch 400 train loss 0.1461 (121s)\n"}
+,{"stream_name":"stdout","time":427.490220084,"data":"  ep 1 batch 500 train loss 0.1449 (151s)\n"}
+,{"stream_name":"stdout","time":457.92572119,"data":"  ep 1 batch 600 train loss 0.1445 (181s)\n"}
+,{"stream_name":"stdout","time":487.278574712,"data":"  ep 1 batch 700 train loss 0.1439 (211s)\n"}
+,{"stream_name":"stdout","time":514.034599821,"data":"epoch 2: train 0.1436 val 0.1378 (238s)\n"}
+,{"stream_name":"stdout","time":545.096804799,"data":"  ep 2 batch 100 train loss 0.1318 (31s)\n"}
+,{"stream_name":"stdout","time":574.583130602,"data":"  ep 2 batch 200 train loss 0.1327 (60s)\n"}
+,{"stream_name":"stdout","time":605.469957765,"data":"  ep 2 batch 300 train loss 0.1312 (91s)\n"}
+,{"stream_name":"stdout","time":635.543604796,"data":"  ep 2 batch 400 train loss 0.1309 (121s)\n"}
+,{"stream_name":"stdout","time":665.051880859,"data":"  ep 2 batch 500 train loss 0.1312 (151s)\n"}
+,{"stream_name":"stdout","time":694.71696273,"data":"  ep 2 batch 600 train loss 0.1313 (181s)\n"}
+,{"stream_name":"stdout","time":724.224017478,"data":"  ep 2 batch 700 train loss 0.1309 (210s)\n"}
+,{"stream_name":"stdout","time":750.540494555,"data":"epoch 3: train 0.1307 val 0.1339 (236s)\n"}
+,{"stream_name":"stdout","time":780.34654876,"data":"  ep 3 batch 100 train loss 0.1220 (30s)\n"}
+,{"stream_name":"stdout","time":811.403092823,"data":"  ep 3 batch 200 train loss 0.1215 (61s)\n"}
+,{"stream_name":"stdout","time":841.768444113,"data":"  ep 3 batch 300 train loss 0.1215 (91s)\n"}
+,{"stream_name":"stdout","time":871.075354777,"data":"  ep 3 batch 400 train loss 0.1212 (120s)\n"}
+,{"stream_name":"stdout","time":900.789153693,"data":"  ep 3 batch 500 train loss 0.1215 (150s)\n"}
+,{"stream_name":"stdout","time":930.274194107,"data":"  ep 3 batch 600 train loss 0.1210 (180s)\n"}
+,{"stream_name":"stdout","time":959.857200943,"data":"  ep 3 batch 700 train loss 0.1212 (209s)\n"}
+,{"stream_name":"stdout","time":986.127567108,"data":"epoch 4: train 0.1214 val 0.1312 (236s)\n"}
+,{"stream_name":"stdout","time":990.550267081,"data":"embedding 101009 unique texts with the fine-tuned encoder\n"}
+,{"stream_name":"stdout","time":1005.749862565,"data":"exported 20000/101009\n"}
+,{"stream_name":"stdout","time":1030.455452415,"data":"exported 40000/101009\n"}
+,{"stream_name":"stdout","time":1057.111110685,"data":"exported 60000/101009\n"}
+,{"stream_name":"stdout","time":1086.692948719,"data":"exported 80000/101009\n"}
+,{"stream_name":"stdout","time":1124.387513846,"data":"exported 100000/101009\n"}
+,{"stream_name":"stdout","time":1130.747349819,"data":"exported 101009/101009\n"}
+,{"stream_name":"stdout","time":1130.749362603,"data":"done\n"}
+,{"stream_name":"stderr","time":1137.608556037,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1137.608587124,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1137.876898447,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1137.876945876,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1138.710335989,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1139.89854363,"data":"[NbConvertApp] Writing 386395 bytes to __results__.html\n"}
+]
