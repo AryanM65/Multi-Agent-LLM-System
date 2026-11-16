@@ -97,19 +97,3 @@ Full, frozen encoder (1 model) & ours & 1.96 {\scriptsize[1.0, 3.1]} & 33.88 {\s
 \bottomrule
 \end{tabular}
 \end{table*}
-
-\begin{table}[t]
-\caption{Block masks at test time (14-encoder ensemble, 3 head seeds), pair / agent / error micro-F1 (\%). AEGIS: authors' file. Intervals for every cell are in \texttt{aegis/results/s4\_ensemble.json}.}
-\label{tab:grid}
-\centering\footnotesize\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Mask (name, peer) & AEGIS & Who\&When & + label shift \\
-\midrule
-on, on (all blocks) & 35.8 / 73.2 / 45.8 & 5.0 / 49.9 / 8.0 & 5.1 / 51.7 / 10.3 \\
-on, off & 32.8 / 70.6 / 42.1 & 6.2 / 51.0 / 12.6 & 10.7 / 51.3 / 23.1 \\
-off, on & 34.9 / 73.0 / 44.7 & 4.7 / 45.2 / 7.9 & 3.8 / 48.4 / 7.6 \\
-off, off & 31.8 / 70.3 / 40.8 & 4.8 / 46.2 / 9.8 & 6.7 / 47.8 / 15.9 \\
-\bottomrule
-\end{tabular}
-\end{table}

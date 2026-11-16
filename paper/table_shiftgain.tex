@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\caption{Effect of label shift on Who\&When pair micro-F1 (shift minus no shift, percentage points) by protocol and block mask, with paired 95\% record-level bootstrap intervals (10,000 resamples of the 184 records, 3 head seeds pooled). Bold: interval excludes zero. ``Earlier'': 14 encoders and heads trained on the 3,865 query-disjoint records. ``Full released'': the same old encoders with heads trained on the full released split (7,146 records, duplicates included). ``Dedup.'': the 14 newly fine-tuned encoders of the deduplicated protocol. All shift rows are transductive.}
+\label{tab:shiftgain}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Protocol & on / on & on / off & off / on & off / off \\
+\midrule
+Earlier (query-disjoint) & \textbf{+2.68 {\scriptsize[+0.19, +5.04]}} & +1.32 {\scriptsize[-0.34, +2.93]} & \textbf{-1.63 {\scriptsize[-3.36, -0.12]}} & -1.09 {\scriptsize[-2.51, +0.26]} \\
+Full released (duplicates) & +1.64 {\scriptsize[-1.44, +4.63]} & +2.40 {\scriptsize[-0.42, +5.24]} & +0.95 {\scriptsize[-1.12, +2.95]} & \textbf{+2.46 {\scriptsize[+0.39, +4.58]}} \\
+Dedup. (this paper) & +0.19 {\scriptsize[-1.56, +1.88]} & \textbf{+4.51 {\scriptsize[+1.78, +7.22]}} & -0.93 {\scriptsize[-3.05, +1.16]} & +1.91 {\scriptsize[-0.16, +3.92]} \\
+\midrule
+Dedup. minus earlier & -2.49 {\scriptsize[-4.65, -0.22]} & +3.20 {\scriptsize[+0.59, +5.92]} & -- & -- \\
+Dedup. minus full released & -1.45 {\scriptsize[-4.70, +1.77]} & +2.12 {\scriptsize[-0.71, +5.01]} & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}

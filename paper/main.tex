@@ -22,7 +22,7 @@
 \maketitle
 
 \begin{abstract}
-Failure attribution asks which agent in an LLM multi-agent system caused a failure and with which failure mode. AEGIS-Bench~\cite{aegis} supplies 9,533 injected failures and Who\&When~\cite{whowhen} supplies 184 natural ones. We audit this setting against the published results of the benchmark's authors, which we quote as reported and do not reproduce. We make four findings. (i)~In the released files, \dupTrain{} of the 600 Hugging Face test conversations (\dupTrainPct\%) are verbatim copies of training records; removing such duplicates from training lowers the pair micro-F1 of one fixed model by \dropAE{} points on the authors' test file and \dropHF{} on the Hugging Face file. (ii)~A model that never reads the conversation, using only agent name, framework and turn counts, reaches \shortAEpair{} pair micro-F1 (95\% interval \shortAEpairLo--\shortAEpairHi) on the authors' test file, above the published DCL row (\pubDCL) and every published zero-shot LLM row (at most \pubOthree), against a trivial floor of \floorAE. (iii)~A 14-encoder fine-tuned ensemble trained on duplicate-free released data reaches \ensAEpair{} pair micro-F1 (\ensAEpairLo--\ensAEpairHi) and \ensAEerror{} error micro-F1, above the published Aegis-SFT row (\pubSFT{} pair, \pubSFTerror{} error), but \ensAEagent{} agent micro-F1, below its \pubSFTagent. (iv)~On Who\&When the same ensemble scores \wwAllNo{} pair micro-F1 with all feature blocks, no better than a shortcut-only model. Label-shift correction helps only when the peer block is hidden (\wwNameNo{} to \wwNameShift), a configuration we chose after seeing Who\&When. An earlier study on a query-disjoint split, reported as logged, finds that framework-adversarial training and a frozen 7B judge add nothing. Our scorer matches the authors' on 200 random inputs to $10^{-12}$.
+Failure attribution asks which agent in an LLM multi-agent system caused a failure and with which failure mode. AEGIS-Bench~\cite{aegis} supplies 9,533 injected failures and Who\&When~\cite{whowhen} supplies 184 natural ones. We audit this setting against the published results of the benchmark's authors, which we quote as reported and do not reproduce. We make four findings. (i)~In the released files, \dupTrain{} of the 600 Hugging Face test conversations (\dupTrainPct\%) are verbatim copies of training records; removing such duplicates from training lowers the pair micro-F1 of one fixed model by \dropAE{} points on the authors' test file and \dropHF{} on the Hugging Face file. (ii)~A model that never reads the conversation, using only agent name, framework and turn counts, reaches \shortAEpair{} pair micro-F1 (95\% interval \shortAEpairLo--\shortAEpairHi) on the authors' test file, above the published DCL row (\pubDCL) and every published zero-shot LLM row (at most \pubOthree), against a trivial floor of \floorAE. (iii)~A 14-encoder fine-tuned ensemble trained on duplicate-free released data reaches \ensAEpair{} pair micro-F1 (\ensAEpairLo--\ensAEpairHi) and \ensAEerror{} error micro-F1, above the published Aegis-SFT row (\pubSFT{} pair, \pubSFTerror{} error), but \ensAEagent{} agent micro-F1, below its \pubSFTagent. (iv)~On Who\&When the same ensemble scores \wwAllNo{} pair micro-F1 with all feature blocks, no better than a shortcut-only model. Label-shift correction raised pair micro-F1 clearly only with the name block on and the peer block hidden (\wwNameNo{} to \wwNameShift; paired gain \sgDdOF{}, 95\% interval \sgDdOFLo{} to \sgDdOFHi{}), a mask we chose after seeing Who\&When. With all blocks on the gain is \sgDdOO{} (\sgDdOOLo{} to \sgDdOOHi{}), smaller than in an earlier configuration (\sgOldOO{}), so the effect depends on the training configuration. An earlier study on a query-disjoint split, reported as logged, finds that framework-adversarial training and a frozen 7B judge add nothing. Our scorer matches the authors' on 200 random inputs to $10^{-12}$.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -37,7 +37,7 @@ Natural failures are scarce because every log must be read and labelled by an ex
 This paper audits one such benchmark, AEGIS-Bench, and studies how a lightweight trained attributor transfers from it to natural failures. The guiding rule is to compare only against the published results of the benchmark's authors, quoted as reported under their protocol, and to support every claim of our own with controls that a reader can check. We ask five research questions.
 \begin{itemize}
 \item \textbf{RQ1.} How much of an AEGIS-Bench score survives duplicate removal, and what do a trivial floor and a no-text baseline say about published rows?
-\item \textbf{RQ2.} Under the published training protocol, how does a stronger fine-tuned ensemble compare with the published rows?
+\item \textbf{RQ2.} Under the deduplicated protocol (published training data minus test duplicates), how does a stronger fine-tuned ensemble compare with the published rows?
 \item \textbf{RQ3.} How large is the gap between in-domain and natural (Who\&When) attribution, and does hiding feature blocks (block-dropout) narrow it?
 \item \textbf{RQ4.} Does correcting for a shifted failure-mode mix (label shift) help, and when does it fail?
 \item \textbf{RQ5.} Do framework-adversarial training and a cheap frozen LLM judge help (earlier study, as logged)?
@@ -47,7 +47,7 @@ Our contributions are as follows.
 \item \textbf{Duplicate leakage} in the released AEGIS files, with its effect on one fixed model (Section~\ref{sec:leak}).
 \item \textbf{A shortcut-only baseline, trivial floors and record-level intervals} that place the published rows in context (Section~\ref{sec:shortcut}).
 \item \textbf{A like-for-like comparison} with published rows: the published training data minus test duplicates, and a scorer shown to match the authors' (Section~\ref{sec:main}).
-\item \textbf{A negative and a conditional transfer result} on Who\&When: all-blocks transfer is at the shortcut-only level, and label shift helps only under one post hoc mask (Section~\ref{sec:ww}).
+\item \textbf{A negative and a conditional transfer result} on Who\&When: all-blocks transfer is at the shortcut-only level, and label shift helps clearly under one post hoc mask only, with an effect that differs across training configurations (Section~\ref{sec:ww}).
 \item \textbf{Controlled negative results} for adversarial framework removal and a frozen judge, reported as logged with their limits (Section~\ref{sec:legacy}).
 \end{enumerate}
 To our knowledge we did not find prior duplicate or shortcut audits of AEGIS-Bench, nor EM label-shift correction applied to failure attribution, but our literature search was limited (Section~\ref{sec:limits}).
@@ -87,7 +87,7 @@ CORRECT~\cite{correct} & Training-free error schemata retrieved at inference & I
 AFANet~\cite{afanet} (preprint) & Lightweight GNN; test-time adaptation & AEGIS-Bench; Who\&When & Single remedy; no duplicate or shortcut controls \\
 Who\&When Pro~\cite{whenpro} & Larger injected benchmark & Injected failures & More injected data; no transfer study \\
 Audits~\cite{audit1,audit2,catch} & Validity and shortcut checks & Other benchmarks and judges & Not AEGIS-Bench; no like-for-like comparison \\
-\textbf{This work} & Duplicate audit, floors, no-text baseline, published-protocol ensemble, block masks, label shift & AEGIS-Bench (two test files); Who\&When & --- \\
+\textbf{This work} & Duplicate audit, floors, no-text baseline, deduplicated-protocol ensemble, block masks, label shift & AEGIS-Bench (two test files); Who\&When & --- \\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -120,7 +120,7 @@ Who\&When & 184 & Out-of-domain test only \\
 \end{table}
 
 \subsection{Dataset statistics}
-In the query-disjoint training data of the earlier study the most frequent mode (FM-1.1) has 1,632 labelled instances and the least frequent (FM-3.3) 1,057, so the injected mode mix is close to balanced. Who\&When averages about 3.7 agents per record, and about 27\% of agents are faulty. Two modes, FM-2.6 and FM-3.3, account for about 47\% of its labels. This difference between a near-uniform injected mix and a skewed natural mix is the motivation for the label-shift correction. In the Who\&When logs, because each record has exactly one faulty agent, a record contributes only a few gold pairs, so a single wrong record changes pair micro-F1 by about half a point; this is why the intervals in Table~\ref{tab:ww} are wide.
+In the released training split (7,146 records) the most frequent mode (FM-1.1) has 1,632 labelled instances and the least frequent (FM-3.1) 1,004, so the injected mode mix is close to balanced. In the 3,865-record query-disjoint subset used by the earlier study the counts are 954 for FM-1.1 and 529 for FM-2.6, the least frequent mode there. Who\&When averages about 3.7 agents per record, and about 27\% of agents are faulty. Two modes, FM-2.6 and FM-3.3, account for about 47\% of its labels, and FM-2.6, the least frequent mode in the query-disjoint training data, is the most frequent in Who\&When (about 26\%). This difference between a near-uniform injected mix and a skewed natural mix is the motivation for the label-shift correction. In the Who\&When logs, because each record has exactly one faulty agent, a record contributes only a few gold pairs, so a single wrong record changes pair micro-F1 by about half a point; this is why the intervals in Table~\ref{tab:ww} are wide.
 
 \subsection{Two test files}
 The authors' repository contains \texttt{aegis.jsonl} with 100 records per benchmark (GSM8K, HumanEval, MATH, MMLU, SciBench and GAIA split 40 + 60), which matches the description in~\cite{aegis}. The Hugging Face \texttt{test.jsonl} has 600 records but a different benchmark mix (105, 105, 105, 105 and 104 records for five benchmarks, 76 for GAIA). The two files share no record ids but \sharedConv{} identical conversations. The published paper does not name its test file, so we report both, with the authors' file primary because it matches the description.
@@ -128,8 +128,8 @@ The authors' repository contains \texttt{aegis.jsonl} with 100 records per bench
 \subsection{Scorer parity}
 We re-implemented the metric and tested it against the authors' \texttt{evaluate.py}. On 200 random datasets, and on an end-to-end JSONL run through the authors' \texttt{evaluate\_results}, the micro and macro F1 agree to $10^{-12}$. A third test pins the only behavioural difference: the authors skip non-list predictions while our harness counts them as empty. The test passes and fails correctly when the scorer is deliberately broken.
 
-\subsection{Published protocol with duplicates removed}
-We train on the released training split and tune on the released validation split, but drop every record whose conversation also occurs in either test file. Conversation identity is the SHA-1 of agent name and content over all turns. This leaves 6,912 training and 1,657 validation records, from 7,146 and 1,787. The choice is conservative: the published models were presumably trained with the duplicates, so our numbers may understate what the published protocol yields. We call this the \emph{deduplicated protocol}, and the unmodified released data the \emph{released protocol}.
+\subsection{Deduplicated protocol: released training data minus test duplicates}
+We train on the released training split and tune on the released validation split, but drop every record whose conversation also occurs in either test file. Conversation identity is the SHA-1 of agent name and content over all turns. This leaves 6,912 training and 1,657 validation records, from 7,146 and 1,787. The choice is conservative: the published models were presumably trained with the duplicates, so our numbers may understate what training on the released data yields. We call this the \emph{deduplicated protocol}, and the unmodified released data the \emph{released protocol}.
 
 \subsection{Out-of-domain protocol}
 Who\&When labels are never used for training, tuning, thresholds or retrieval. Thresholds and early stopping use only AEGIS validation. The data loader never reads annotation fields such as the number of injected agents, ground-truth fields or per-turn injection flags. Because Who\&When has 184 records, one record is worth about 0.5 pair points, and we report record-level bootstrap intervals (2,000 resamples, 95\%) throughout and treat differences inside the intervals as noise.
@@ -155,7 +155,7 @@ Let $\pi_s$ be the training mode prior. For a record $r$ define a raw mode distr
 \begin{equation}
 q'_r(m)=\frac{\hat\pi_m/\pi_{s,m}\,q_r(m)}{\sum_{m'}\hat\pi_{m'}/\pi_{s,m'}\,q_r(m')},\quad \hat\pi_m\leftarrow\frac1{|R|}\sum_r q'_r(m)
 \end{equation}
-until $\hat\pi$ stops changing. The final weights $\hat\pi_m/\pi_{s,m}$, clipped so probabilities stay at most 1, multiply each mode probability before decoding with the unchanged AEGIS-tuned thresholds. The method assumes calibrated predictions~\cite{alexandari,guo} and an unchanged $P(\text{text}\mid\text{mode})$. It is \emph{transductive}: it reads the unlabelled Who\&When inputs, though never their labels.
+until $\hat\pi$ stops changing. The final weights $\hat\pi_m/\pi_{s,m}$ are normalised to mean one, clipped so that probabilities stay at most 1, and multiply each mode probability before decoding with the unchanged AEGIS-tuned thresholds. The method assumes calibrated predictions~\cite{alexandari,guo} and an unchanged $P(\text{text}\mid\text{mode})$. It is \emph{transductive}: it reads the unlabelled Who\&When inputs, though never their labels.
 
 \subsection{Earlier-study components}
 The earlier study (Section~\ref{sec:legacy}) additionally used framework-adversarial training and a frozen LLM judge. For the adversary, a classifier predicts the six frameworks from the pooled agent vector through a gradient-reversal layer~\cite{ganin}, with weights $\lambda=0.5$ and $1.0$, with and without name-dropout. For the judge, the trained ensemble proposes the top-$k$ pairs per record ($k=5$ in study 1, $k=12$ in study 2). A frozen Qwen2.5-7B-Instruct~\cite{qwen} in 4-bit precision answers ``did agent A commit mode M?'' for each candidate; the score is the log-odds of the two answer tokens, averaged over swapped option order to reduce position bias~\cite{zheng}. The fused score is the model logit plus $w$ times the judge score, with $w\in\{0,0.25,0.5,1,2\}$ chosen by 2-fold cross-fitting on AEGIS validation. Gates, success criteria and the scoring script were committed to a pre-commit file before any test or Who\&When score was computed.
@@ -191,6 +191,8 @@ Table~\ref{tab:shortcut} separates inputs. A model that sees only agent name, fr
 \section{Comparison with Published Rows}\label{sec:main}
 Tables~\ref{tab:aegis} and~\ref{tab:aegishf} and Fig.~\ref{fig:aegis} compare the 14-encoder ensemble with published rows copied from Table~1 of~\cite{aegis}. On the authors' file the ensemble reaches \ensAEpair{} pair micro-F1 (\ensAEpairLo--\ensAEpairHi) and \ensAEerror{} error micro-F1, against \pubSFT{} and \pubSFTerror{} for Aegis-SFT, a 14B model. It does \emph{not} win at the agent level (\ensAEagent{} against \pubSFTagent). A frozen single model scores \fullAEdedup{} (\fullAEdedupLo--\fullAEdedupHi) on the same file, so most of the gain over it comes from fine-tuning and ensembling. The comparison is like-for-like in training data under the deduplicated protocol but not in test-file knowledge, since the published paper does not name its file, and the published models are larger and generative while ours are small encoders with agent-name features. The comparison supports that a small model with these features is competitive in-domain; it does not show an architectural advantage.
 
+\input{table_pubfull.tex}
+
 \input{fig_aegis.tex}
 
 \subsection{Where the ensemble does well}
@@ -207,15 +209,17 @@ Table~\ref{tab:permode} gives the pair-level scores per failure mode. They range
 Table~\ref{tab:ww} gives the results on 184 natural failures. The frozen model with all blocks scores \wwFullPair{} pair micro-F1, at or below the floor (\floorWW), while the shortcut-only model scores \wwShortPair. The fine-tuned ensemble with all blocks reaches \wwAllNo{} (\wwAllNoLo--\wwAllNoHi), whose interval overlaps the shortcut-only model's. The published o3 row is \pubOthreeWW{} pair and \pubOthreeWWagent{} agent micro-F1.
 
 \subsection{Block masks and label shift}
-Table~\ref{tab:gridci}, Table~\ref{tab:grid} and Fig.~\ref{fig:ww} vary which blocks are visible. Label shift with all blocks on changes pair micro-F1 from \wwAllNo{} to \wwAllShift, inside the intervals. With the name block on and the peer block off, shift raises it from \wwNameNo{} to \wwNameShift{} (\wwNameShiftLo--\wwNameShiftHi) and error micro-F1 to \wwNameShiftErr. With names hidden and the peer block on, shift lowers it. This mask was chosen after seeing Who\&When, so we report it as an exploratory lead, not a headline. An earlier leave-one-framework-out check (Table~\ref{tab:lofo}) favoured all blocks on. Agent micro-F1 with all blocks is \wwAllAgent, below the published o3 row (\pubOthreeWWagent).
+Table~\ref{tab:gridci}, Fig.~\ref{fig:ww} and Table~\ref{tab:shiftgain} vary which blocks are visible. Label shift with all blocks on changes pair micro-F1 from \wwAllNo{} to \wwAllShift{} (paired gain \sgDdOO{}, interval \sgDdOOLo{} to \sgDdOOHi{}), which is not distinguishable from zero. With the name block on and the peer block off, shift raises it from \wwNameNo{} to \wwNameShift{} (paired gain \sgDdOF{}, interval \sgDdOFLo{} to \sgDdOFHi{}, the only mask whose interval excludes zero) and error micro-F1 to \wwNameShiftErr. With both blocks off the gain is \sgDdFF{} (\sgDdFFLo{} to \sgDdFFHi{}) and depends on the head seed; with names hidden and the peer block on it is \sgDdFO{} (\sgDdFOLo{} to \sgDdFOHi{}). The name-on/peer-off mask was chosen after seeing Who\&When, so we report it as an exploratory lead, not a headline. An earlier leave-one-framework-out check (Table~\ref{tab:lofo}; three encoders, one head seed) did not separate the masks beyond noise (all blocks on 18.16 against 17.44 to 17.74 pair), and it was run after all four masks had already been scored on Who\&When, so it does not justify the choice. Agent micro-F1 with all blocks is \wwAllAgent, below the published o3 row (\pubOthreeWWagent).
 
 \input{fig_ww.tex}
 
 \subsection{Relation to the earlier study}
-The earlier query-disjoint study (Table~\ref{tab:legacygrid}) found that shift raised the all-blocks ensemble from 5.56 to 8.24 pair micro-F1. The published-protocol ensemble does not reproduce that gain (\wwAllNo{} to \wwAllShift). The two differ in training data (3,865 query-disjoint records against 5,844 deduplicated released records), in encoder training and in test-time thresholds, so we cannot say which difference removes the gain. We therefore do not claim that label shift helps in general, only that it helped in one earlier configuration and under the peer-hidden mask here.
+The earlier query-disjoint study (Table~\ref{tab:legacygrid}) found that shift raised the all-blocks ensemble from 5.56 to 8.24 pair micro-F1. Table~\ref{tab:shiftgain} compares the paired gains of three configurations on the same 184 records. In the earlier study the all-blocks gain was \sgOldOO{} (\sgOldOOLo{} to \sgOldOOHi{}). With the same encoders and heads trained on the full released split, duplicates included, it was \sgFullOO{} (\sgFullOOLo{} to \sgFullOOHi{}). With the newly fine-tuned encoders of the deduplicated protocol it is \sgDdOO{} (\sgDdOOLo{} to \sgDdOOHi{}). The deduplicated gain is smaller than the earlier one by \sdOldOO{} (\sdOldOOLo{} to \sdOldOOHi{}), an interval that excludes zero, but it is not distinguishably smaller than the full-released one (\sdFullOO{}, \sdFullOOLo{} to \sdFullOOHi{}). For the name-on/peer-off mask the comparison goes the other way: the deduplicated gain is larger than the earlier one by \sdOldOF{} (\sdOldOFLo{} to \sdOldOFHi{}, excluding zero) and not distinguishably different from the full-released one (\sdFullOF{}, \sdFullOFLo{} to \sdFullOFHi{}). The configurations differ in encoder fine-tuning data (3,234 gradient-update and 631 early-stopping records against 5,844 and 1,068), in head and threshold data (3,865 and 940 records against 6,912 and 1,657) and in the exported vectors. We cannot say which difference matters, and the old encoder vectors are no longer available to separate them. We therefore do not claim that label shift helps in general: its effect depends on the configuration.
+
+\input{table_shiftgain.tex}
 
 \section{Earlier Study on a Query-Disjoint Split (as Logged)}\label{sec:legacy}
-Before the published-protocol work, we trained on a query-disjoint split: every training and validation record whose query appears in the test set was dropped (4,128 of 8,933), leaving 3,865 training and 940 validation records. These runs scored the Hugging Face test file and were not re-run for this paper, so Tables~\ref{tab:qd}--\ref{tab:oracle} are reported as logged and labelled accordingly. The judge rows were re-checked against their saved result files. Table~\ref{tab:qd} shows that for a frozen-encoder MLP, validation pair F1 fell from 32.19 to 23.05 and test pair F1 from 33.08 to 19.83 under the query-disjoint split.
+Before the deduplicated-protocol work, we trained on a query-disjoint split: every training and validation record whose query appears in the test set was dropped (4,128 of 8,933), leaving 3,865 training and 940 validation records. These runs scored the Hugging Face test file and were not re-run for this paper, so Tables~\ref{tab:qd}--\ref{tab:oracle} are reported as logged and labelled accordingly. The judge rows were re-checked against their saved result files. Table~\ref{tab:qd} shows that for a frozen-encoder MLP, validation pair F1 fell from 32.19 to 23.05 and test pair F1 from 33.08 to 19.83 under the query-disjoint split.
 
 \input{tables_legacy.tex}
 
@@ -252,7 +256,7 @@ RQ & Outcome & Evidence \\
 RQ1 & Supported & Duplicates inflate pair micro-F1 by \dropAE--\dropHF{} points; shortcut-only \shortAEpair{} against floor \floorAE \\
 RQ2 & Partly supported & Pair \ensAEpair{} and error \ensAEerror{} above published Aegis-SFT; agent \ensAEagent{} below \pubSFTagent \\
 RQ3 & Large gap & \ensAEpair{} in-domain against \wwAllNo{} on Who\&W.; block masks stay within intervals of one another except one post hoc mask \\
-RQ4 & Conditional & Shift: \wwNameNo{} to \wwNameShift{} only with peer block hidden (post hoc); no effect with all blocks \\
+RQ4 & Conditional & Shift gain \sgDdOF{} (paired interval excludes zero) with the peer block hidden (post hoc), \sgDdOO{} with all blocks; the pattern differs across training configurations \\
 RQ5 & Not supported (earlier study) & Adversary lowers AEGIS pair by 7--10; judge adds nothing in two studies \\
 \bottomrule
 \end{tabularx}
@@ -261,13 +265,13 @@ RQ5 & Not supported (earlier study) & Adversary lowers AEGIS pair by 7--10; judg
 
 \textbf{What the audit shows.} The released AEGIS files contain verbatim duplicates, and a model that never reads the text beats several published rows. Pair micro-F1 on AEGIS-Bench should therefore be read against a trivial floor, a shortcut-only baseline and a deduplicated protocol.
 
-\textbf{What travels.} A fine-tuned ensemble gives a large in-domain gain under the published protocol (pair \ensAEpair{} against \pubSFT{}), but it transfers to natural failures no better than the shortcut-only model unless one hides the peer block and applies label shift, a post hoc choice. The earlier study's negative results (adversarial framework removal, a frozen judge) are consistent with a bottleneck at mode identification rather than agent detection.
+\textbf{What travels.} A fine-tuned ensemble gives a large in-domain gain under the deduplicated protocol (pair \ensAEpair{} against \pubSFT{}), but it transfers to natural failures no better than the shortcut-only model unless one hides the peer block and applies label shift, a post hoc choice whose gain also depends on the training configuration. The earlier study's negative results (adversarial framework removal, a frozen judge) are consistent with a bottleneck at mode identification rather than agent detection.
 
 \textbf{RQ1: how much of the score is the benchmark.} Two separate effects sit in the released AEGIS files. The first is overlap: shared queries between training and test are expected when several faulty variants are generated per task, but verbatim duplicate conversations are a different matter, because a model can memorise them. The second is shortcuts: agent name, framework and turn counts alone predict a useful share of the labels. The two effects add: the full frozen model drops by \dropAE{} points when duplicates are removed, and the part of the score that survives is partly explained by the shortcut-only baseline (\shortAEpair{} of \fullAEdedup). We do not claim that either effect was intended, and we cannot say whether the published rows were trained with the duplicates.
 
-\textbf{RQ2: a stronger model under the published protocol.} The 14-encoder ensemble is better than the published rows at the pair and error levels and worse at the agent level. Pair and error micro-F1 reward predicting the right modes, while agent micro-F1 rewards finding the faulty agent, which is where a 14B generative model has an advantage. The per-group breakdown shows the average hides large differences between groups, so a single headline number is not enough for a diagnosis tool that will be used on one framework at a time.
+\textbf{RQ2: a stronger model under the deduplicated protocol.} The 14-encoder ensemble is better than the published rows at the pair and error levels and worse at the agent level. Pair and error micro-F1 reward predicting the right modes, while agent micro-F1 rewards finding the faulty agent, which is where a 14B generative model has an advantage. The per-group breakdown shows the average hides large differences between groups, so a single headline number is not enough for a diagnosis tool that will be used on one framework at a time.
 
-\textbf{RQ3 and RQ4: transfer and label shift.} On natural failures the all-blocks ensemble is at the level of the shortcut-only model, and the gap between \ensAEpair{} in-domain and \wwAllNo{} on Who\&When is large for any reading of the intervals. Hiding the peer block and applying label shift gives the best Who\&When numbers we measured, including \wwNameShiftErr{} error micro-F1 against \pubOthreeWWerr{} for the published o3 row. We hold this result back for three reasons: the mask was chosen after seeing Who\&When, the effect was absent with all blocks on, and the earlier study's all-blocks gain did not reproduce. The most defensible reading is that label shift can help when the model has few other cues, and that its benefit depends on which blocks it sees.
+\textbf{RQ3 and RQ4: transfer and label shift.} On natural failures the all-blocks ensemble is at the level of the shortcut-only model, and the gap between \ensAEpair{} in-domain and \wwAllNo{} on Who\&When is large for any reading of the intervals. Hiding the peer block and applying label shift gives the best Who\&When numbers we measured, including \wwNameShiftErr{} error micro-F1 against \pubOthreeWWerr{} for the published o3 row. We hold this result back for three reasons: the mask was chosen after seeing Who\&When, it is the only mask whose paired gain excludes zero, and the all-blocks gain of the earlier study (\sgOldOO{}) was smaller in the deduplicated run (\sgDdOO{}). The most defensible reading is that the effect of label shift depends on the training configuration, which this study cannot fully explain.
 
 \textbf{Cost.} The trained attributor produces its outputs in minutes on a CPU from saved vectors, after a one-off fine-tune of about 222 s per epoch on a T4 GPU. In the earlier study each judge pass took about 3.4 to 4.1 hours of wall time per Kaggle kernel for no measurable gain. A cheap trained model with honest controls is therefore a useful baseline for this task even though it does not replace a stronger LLM.
 
@@ -301,23 +305,23 @@ RQ5 & Not supported (earlier study) & Adversary lowers AEGIS pair by 7--10; judg
 \emph{Internal validity.} Head-seed spread is not part of the intervals, which are record-level; each fine-tuned encoder was trained once, and thresholds are global rather than per-mode. \emph{Construct validity.} Pair F1 on Who\&When depends on an LLM-based mapping of free-text reasons to 14 modes and on agent-name matching, so part of the measured error is annotation error. \emph{External validity.} One injected dataset, one natural dataset, one small encoder family.
 \begin{enumerate}
 \item Who\&When has 184 records and is a single natural test set; intervals are wide, and claims concern this benchmark only.
-\item The peer-hidden label-shift result was selected after seeing Who\&When. Thresholds and early stopping use only AEGIS data.
+\item The peer-hidden label-shift result was selected after seeing Who\&When; the leave-one-framework-out check was run afterwards and did not separate the masks. Thresholds and early stopping use only AEGIS data. The three-seed intervals are paired over records but treat the head seeds as fixed.
 \item Label shift is transductive, and its assumptions (calibration, stable $P(\text{text}\mid\text{mode})$) are untested for our model.
 \item Who\&When mode labels come from an LLM mapping, so error-level numbers are weaker evidence than agent-level numbers.
 \item Published rows are copied as reported and were not reproduced; the published paper does not name its test file, so comparisons are against numbers on an unnamed file.
 \item Our novelty checks were limited to search results and the first part of two papers. ``We did not find'' is not ``none exists''. The related audits~\cite{audit1,audit2,catch} should be read in full before submission.
-\item Test duplicates were removed from our training data only, which may understate what the published protocol yields.
+\item Test duplicates were removed from our training data only, which may understate what training on the released data yields.
 \item The earlier query-disjoint studies were not re-run for this paper and used the Hugging Face file; they are reported as logged.
 \item Free Kaggle T4 GPUs were used and each fine-tuned encoder was trained once.
 \end{enumerate}
 \textbf{Future work.} Natural failure sets with annotated modes at scale, shared prediction files for exact comparison with published rows, calibrated tests of label shift, and larger judges.
 
 \section{Conclusion}
-Under the published training protocol, a small fine-tuned ensemble exceeds published pair and error rows on AEGIS-Bench, but the released files contain exact duplicates and the benchmark rewards a model that never reads the text. On natural failures the ensemble is no better than that shortcut model unless a post hoc block mask and label shift are used, and an earlier study found that adversarial framework removal and a frozen judge add nothing. We recommend that attribution papers report duplicate checks, a trivial floor and a shortcut-only baseline next to every trained model.
+Under the deduplicated protocol (the published training data minus test duplicates), a small fine-tuned ensemble exceeds published pair and error rows on AEGIS-Bench, but the released files contain exact duplicates and the benchmark rewards a model that never reads the text. On natural failures the ensemble is no better than that shortcut model unless a post hoc block mask and label shift are used, and even then the gain depends on the training configuration. An earlier study found that adversarial framework removal and a frozen judge add nothing. We recommend that attribution papers report duplicate checks, a trivial floor and a shortcut-only baseline next to every trained model.
 
 \appendices
 \section{Implementation Settings}
-Table~\ref{tab:settings} lists the settings that are fixed across the published-protocol experiments. Items marked as tuned are chosen on AEGIS validation only.
+Table~\ref{tab:settings} lists the settings that are fixed across the deduplicated-protocol experiments. Items marked as tuned are chosen on AEGIS validation only.
 
 \begin{table}[t]
 \caption{Implementation settings.}
@@ -334,7 +338,7 @@ Head & MLP, 2 hidden layers of 256 units; 14 mode outputs + 1 faulty-agent outpu
 Ensemble & 14 encoders (seeds 0--13) $\times$ 3 head seeds; probabilities averaged \\
 Masks & Name block and peer block each on or off (4 masks), one head per seed trained on all four \\
 Decoder & Two global thresholds $t_a,t_m$ (tuned per mask on validation); top pair if none fires \\
-Label shift & EM from the training prior on unlabelled target records; weights clipped so probabilities stay $\le 1$ \\
+Label shift & EM from the training prior on unlabelled target records; weights normalised to mean one, then clipped so probabilities stay $\le 1$ \\
 Statistics & Record-level bootstrap, 2,000 resamples, 95\% intervals \\
 Hardware & CPU for heads and decoding; free Kaggle T4 GPUs for fine-tuning \\
 Judge (earlier) & Qwen2.5-7B-Instruct, 4-bit; pointwise log-odds, two option orders; prefix at most about 7,000 tokens; $k\in\{5,12\}$ \\
@@ -342,43 +346,18 @@ Judge (earlier) & Qwen2.5-7B-Instruct, 4-bit; pointwise log-odds, two option ord
 \end{tabularx}
 \end{table}
 
-\section{A Synthetic Check of Label-Shift Calibration}
-To see why calibration matters, an earlier run used a small synthetic two-class check (training prior 0.2, true target prior 0.7, Gaussian classes). With calibrated posteriors the EM loop recovered a prior of 0.70 from 0.36 for the naive estimate, whereas with over-confident posteriors it settled near 0.40. We have not tested the calibration of our own model, so its assumptions remain unverified. A name-normalised scoring variant (agent names reduced by dropping a trailing role suffix and case) added 0.5--0.9 pair points to every row in the earlier study; it corrects a naming mismatch rather than the model and is not used here.
-
 \section{Published Rows}
 Table~\ref{tab:pubfull} lists every published row we use, with micro and macro F1. They are copied as reported from Table~1 of~\cite{aegis}, and the extraction script checks them against the paper text. Published micro-F1 rows can be compared with ours only on micro-F1 of the same level.
 
-\input{table_pubfull.tex}
 
 \section{Pre-Registration Details of the Earlier Judge Studies}
 For the judge studies, the gates, success criteria and the scoring script were written to a pre-commit file before any test or Who\&When score was computed, and the final scoring script refuses to overwrite its output. A gate on the shortlist required recall at 5 of at least 1.5 times recall at 1 on AEGIS validation before any judge was run. The conversation (at most about 7,000 tokens, head and tail kept) is a shared prefix, so all candidates of a record share one cached prefix. Variants were plain, rag (retrieved labelled AEGIS examples placed in the prompt) and rand (random examples, a control). Study 2 ($k=12$) was committed after study 1 with a success bar fixed in advance: the headline Who\&When pair F1 had to exceed the model's with a paired interval that excludes zero, and the validation objective had to stay at least that of the shortlist model. Paired intervals use 10,000 bootstrap resamples over records. Retrieved examples hurt on Who\&When (pair 8.57 against 11.05 for the plain judge in study 1).
 
-\section{Steps to Reproduce the Published-Protocol Results}
-The steps below produce every number in Sections~\ref{sec:leak}--\ref{sec:ww}. (1)~Stage the released train and validation files, the Hugging Face test file, the authors' test file and Who\&When, together with the deduplicated id lists. (2)~Fine-tune the 14 MiniLM encoders with seeds 0 to 13, each with a 15\% early-stopping hold-out; each run exports the vectors of all 101,009 turn texts. (3)~Run the ensemble scorer, which trains three heads per encoder over the four masks, averages probabilities over encoders, tunes thresholds on validation, applies optional label shift to Who\&When only, and writes the result file with intervals. (4)~Run \texttt{paper/make\_tables.py} to regenerate every table and number macro. (5)~Compile the paper. The scorer-parity test and the duplicate comparison need only the released files and run in seconds on a CPU. Fine-tuning needs a GPU; we used free Kaggle T4 sessions split over several accounts because of the two-concurrent-session limit, and kept each run's log as a research artefact.
-
-\section{Provenance of Reported Results}
-Table~\ref{tab:prov} maps each group of results to the files that produced it; the repository's provenance document holds the exact commands, logs and ledger phases.
-
-\begin{table}[t]
-\caption{Where each result comes from.}
-\label{tab:prov}
-\centering\footnotesize
-\begin{tabularx}{\columnwidth}{@{}l Y@{}}
-\toprule
-Result & Source \\
-\midrule
-Published rows & \texttt{published\_rows.json}, from~\cite{aegis} Table~1 \\
-Scorer parity & \texttt{test\_scorer\_parity.py} \\
-Duplicate counts & \texttt{test\_file\_comparison.json} \\
-Floors, shortcut, intervals & \texttt{block\_ablation.json} \\
-14-encoder ensemble & \texttt{s4\_ensemble.json}; encoder logs \texttt{s4\_s0}--\texttt{s4\_s13} \\
-Earlier study & project ledger and result files, labelled as logged \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\section{Steps to Reproduce the Deduplicated-Protocol Results}
+The steps below produce every number in Sections~\ref{sec:leak}--\ref{sec:ww}. (1)~Stage the released train and validation files, the Hugging Face test file, the authors' test file and Who\&When, together with the deduplicated id lists. (2)~Fine-tune the 14 MiniLM encoders with seeds 0 to 13, each with a 15\% early-stopping hold-out; each run exports the vectors of all 101,009 turn texts. (3)~Run the ensemble scorer, which trains three heads per encoder over the four masks, averages probabilities over encoders, tunes thresholds on validation, applies optional label shift to Who\&When only, and writes the result file with intervals. (4)~Run \texttt{paper/make\_tables.py} to regenerate every table and number macro. (5)~Run \texttt{aegis.scripts.shift\_paired}, which writes the paired label-shift intervals from the saved probability dumps. (6)~Compile the paper. The scorer-parity test and the duplicate comparison need only the released files and run in seconds on a CPU. Fine-tuning needs a GPU; we used free Kaggle T4 sessions split over several accounts because of the two-concurrent-session limit, and kept each run's log as a research artefact.
 
 \section*{Reproducibility}
-Every number in the abstract and tables is produced by \texttt{paper/make\_tables.py} from committed result files. A provenance table in the repository maps each result to its script, command, log and ledger phase; fine-tuning logs of all 14 encoders and the scorer-parity test are included. Embeddings used downstream were recomputed locally.
+Every number in the abstract and tables is produced by \texttt{paper/make\_tables.py} from committed result files. A provenance document in the repository maps each result to its script, command, log and ledger phase (published rows: \texttt{published\_rows.json}; scorer parity: \texttt{test\_scorer\_parity.py}; duplicates: \texttt{test\_file\_comparison.json}; floors and shortcut baselines: \texttt{block\_ablation.json}; ensemble: \texttt{s4\_ensemble.json}; paired shift gains: \texttt{shift\_paired.json}; earlier study: the project ledger, as logged); fine-tuning logs of all 14 encoders and the scorer-parity test are included. Embeddings used downstream were recomputed locally.
 
 \section*{Acknowledgment}
 The authors thank the Department of Computer Science and Engineering, Netaji Subhas University of Technology, for its support. Experiments used a CPU and free Kaggle GPU resources.

@@ -1,7 +1,7 @@
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}
-\begin{axis}[ybar,width=\columnwidth,height=5.2cm,bar width=7pt,ymin=0,ymax=14,ylabel={Pair micro-F1 (\%)},
+\begin{axis}[ybar,width=\columnwidth,height=4.3cm,bar width=7pt,ymin=0,ymax=14,ylabel={Pair micro-F1 (\%)},
  symbolic x coords={1,2,3,4},xtick=data,xticklabels={on/on,on/off,off/on,off/off},xlabel={name / peer block at test time},
  legend style={at={(0.5,1.02)},anchor=south,legend columns=3,font=\footnotesize},tick label style={font=\footnotesize},
  error bars/y dir=both,error bars/y explicit]
@@ -11,6 +11,6 @@
 \legend{no shift,label shift,trivial floor}
 \end{axis}
 \end{tikzpicture}
-\caption{Who\&When pair micro-F1 of the 14-encoder ensemble by test-time block mask, with and without label shift (bars: 95\% intervals; dashed: trivial floor). Shift helps only when the peer block is hidden.}
+\caption{Who\&When pair micro-F1 of the 14-encoder ensemble by test-time block mask, with and without label shift (bars: 95\% intervals; dashed: trivial floor). Shift helped clearly only with the name block on and the peer block hidden (Table~\ref{tab:shiftgain}).}
 \label{fig:ww}
 \end{figure}

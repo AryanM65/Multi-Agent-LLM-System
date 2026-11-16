@@ -16,7 +16,7 @@ Query-disjoint & 3,865 / 940 & 23.05 & 19.83 \\
 \end{table}
 
 \begin{table*}[t]
-\caption{Earlier study (query-disjoint, as logged): test-time block mask grid for a 14-encoder ensemble, mean $\pm$ std over 3 head seeds, micro-F1 pair / agent / error. The all-blocks label-shift gain seen here (5.56 to 8.24) is \emph{not} reproduced by the published-protocol ensemble of Table~\ref{tab:gridci}.}
+\caption{Earlier study (query-disjoint, as logged): test-time block mask grid for a 14-encoder ensemble, mean $\pm$ population standard deviation (ddof 0) over 3 head seeds, micro-F1 pair / agent / error; label shift is transductive. The all-blocks gain seen here (5.56 to 8.24) is smaller in the deduplicated ensemble (Table~\ref{tab:shiftgain}).}
 \label{tab:legacygrid}
 \centering\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lccc@{}}
@@ -32,7 +32,7 @@ off / off & 25.24$\pm$0.45 / 76.07$\pm$0.78 / 38.32$\pm$0.30 & 3.17$\pm$0.65 / 4
 \end{table*}
 
 \begin{table}[t]
-\caption{Earlier study: leave-one-framework-out inside AEGIS (mean over 6 held-out frameworks; micro-F1).}
+\caption{Earlier study: leave-one-framework-out inside AEGIS (mean over 6 held-out frameworks; micro-F1; encoders es\_s0 to es\_s2, one head seed; differences between masks are small).}
 \label{tab:lofo}
 \centering\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lccc@{}}
