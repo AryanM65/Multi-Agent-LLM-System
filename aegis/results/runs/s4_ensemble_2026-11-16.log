@@ -1,0 +1,33 @@
+train 6912 val 1657 (released 7146/1787)
+[encoder s4_s0] trained 3 heads (39s elapsed)
+[encoder s4_s1] trained 3 heads (76s elapsed)
+[encoder s4_s2] trained 3 heads (111s elapsed)
+[encoder s4_s3] trained 3 heads (151s elapsed)
+[encoder s4_s4] trained 3 heads (189s elapsed)
+[encoder s4_s5] trained 3 heads (223s elapsed)
+[encoder s4_s6] trained 3 heads (258s elapsed)
+[encoder s4_s7] trained 3 heads (293s elapsed)
+[encoder s4_s8] trained 3 heads (332s elapsed)
+[encoder s4_s9] trained 3 heads (368s elapsed)
+[encoder s4_s10] trained 3 heads (404s elapsed)
+[encoder s4_s11] trained 3 heads (439s elapsed)
+[encoder s4_s12] trained 3 heads (474s elapsed)
+[encoder s4_s13] trained 3 heads (515s elapsed)
+
+=== s4: 14 encoders x 3 head seeds; micro-F1 percent [95% record bootstrap] ===
+names+peer|noshift|repo_test       pair 35.77 [33.1,38.2] | agent 73.20 [70.2,76.0] | error 45.79 [43.3,48.0]
+names+peer|noshift|hf_test         pair 39.72 [37.5,42.1] | agent 84.31 [82.8,85.9] | error 47.58 [45.4,49.8]
+names+peer|noshift|who_when        pair 4.96 [2.6,7.6] | agent 49.93 [44.8,55.3] | error 7.96 [4.8,11.3]
+names+peer|shift|who_when          pair 5.14 [3.2,7.1] | agent 51.69 [47.8,55.7] | error 10.28 [7.5,13.1]
+names|noshift|repo_test            pair 32.77 [30.4,35.1] | agent 70.64 [67.5,73.5] | error 42.12 [39.8,44.2]
+names|noshift|hf_test              pair 36.61 [34.5,38.8] | agent 82.02 [80.4,83.7] | error 44.55 [42.4,46.7]
+names|noshift|who_when             pair 6.16 [3.7,8.8] | agent 51.03 [46.7,55.3] | error 12.56 [9.2,16.0]
+names|shift|who_when               pair 10.68 [8.6,12.7] | agent 51.27 [47.8,54.8] | error 23.12 [19.5,26.6]
+peer|noshift|repo_test             pair 34.93 [32.4,37.4] | agent 73.05 [70.1,75.8] | error 44.72 [42.4,47.1]
+peer|noshift|hf_test               pair 38.37 [36.1,40.7] | agent 81.63 [79.9,83.3] | error 46.02 [43.9,48.2]
+peer|noshift|who_when              pair 4.71 [2.3,7.5] | agent 45.21 [39.7,50.7] | error 7.90 [4.8,11.4]
+peer|shift|who_when                pair 3.78 [2.0,5.8] | agent 48.38 [44.1,52.8] | error 7.64 [4.9,10.5]
+neither|noshift|repo_test          pair 31.84 [29.4,34.3] | agent 70.31 [67.3,73.0] | error 40.80 [38.5,43.1]
+neither|noshift|hf_test            pair 34.88 [32.7,37.1] | agent 78.08 [76.1,79.9] | error 42.13 [40.0,44.4]
+neither|noshift|who_when           pair 4.77 [2.6,7.4] | agent 46.19 [41.0,51.3] | error 9.82 [6.5,13.4]
+neither|shift|who_when             pair 6.67 [4.8,8.7] | agent 47.81 [43.5,51.9] | error 15.86 [12.7,19.0]
