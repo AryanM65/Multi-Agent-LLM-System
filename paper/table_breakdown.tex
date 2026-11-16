@@ -1,0 +1,24 @@
+\begin{table}[t]
+\caption{Where the 14-encoder ensemble does well: micro-F1 (\%) on the authors' test file by benchmark and by framework (head seed 0, all blocks; one prediction per record, no intervals, so small groups are noisy).}
+\label{tab:breakdown}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Group & Value & $n$ & Pair & Agent & Error \\
+\midrule
+benchmark & GSM8K & 100 & 38.4 & 68.1 & 57.3 \\
+benchmark & HumanEval & 100 & 32.4 & 66.0 & 46.2 \\
+benchmark & MATH & 100 & 41.5 & 81.7 & 47.9 \\
+benchmark & MMLU & 100 & 40.0 & 81.7 & 48.6 \\
+benchmark & SciBench & 100 & 34.1 & 66.5 & 48.9 \\
+benchmark & magentic+gaia & 40 & 46.2 & 81.9 & 48.4 \\
+benchmark & smol+gaia & 60 & 6.5 & 56.7 & 8.1 \\
+framework & agentverse & 117 & 41.9 & 89.6 & 50.8 \\
+framework & dylan & 87 & 19.1 & 33.3 & 50.0 \\
+framework & llm debate & 140 & 43.2 & 79.7 & 45.4 \\
+framework & macnet & 156 & 39.2 & 76.6 & 50.7 \\
+framework & magentic one & 40 & 46.2 & 81.9 & 48.4 \\
+framework & smoagents & 60 & 6.5 & 56.7 & 8.1 \\
+\bottomrule
+\end{tabular}
+\end{table}

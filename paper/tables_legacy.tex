@@ -1,0 +1,153 @@
+% Numbers in this file come from the earlier query-disjoint study (draft Tables III, VII-XIV), as logged on Kaggle and in the project ledger.
+% They were NOT re-run for this paper. The k=5 and k=12 judge rows were re-checked against aegis/results/rr/final_rrf1.json and rr_k12/final_rrf2.json.
+
+\begin{table}[t]
+\caption{Earlier study, query-disjoint training split: frozen-encoder MLP, pair micro-F1 (\%), AEGIS validation and Hugging Face test file (as logged).}
+\label{tab:qd}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Training split & Train / val records & Val pair & Test pair \\
+\midrule
+Released split & 7,146 / 1,787 & 32.19 & 33.08 \\
+Query-disjoint & 3,865 / 940 & 23.05 & 19.83 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table*}[t]
+\caption{Earlier study (query-disjoint, as logged): test-time block mask grid for a 14-encoder ensemble, mean $\pm$ std over 3 head seeds, micro-F1 pair / agent / error. The all-blocks label-shift gain seen here (5.56 to 8.24) is \emph{not} reproduced by the published-protocol ensemble of Table~\ref{tab:gridci}.}
+\label{tab:legacygrid}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Name / peer block & AEGIS test & Who\&When, no shift & Who\&When, label shift \\
+\midrule
+on / on & 32.96$\pm$0.66 / 79.37$\pm$0.86 / 40.95$\pm$0.86 & 5.56$\pm$0.74 / 43.75$\pm$0.05 / 11.76$\pm$0.63 & 8.24$\pm$1.19 / 47.72$\pm$1.05 / 17.12$\pm$1.37 \\
+on / off & 27.90$\pm$3.16 / 81.41$\pm$2.04 / 38.44$\pm$0.40 & 6.94$\pm$0.90 / 44.69$\pm$1.69 / 16.12$\pm$1.50 & 8.26$\pm$0.36 / 45.55$\pm$0.76 / 17.71$\pm$1.80 \\
+off / on & 31.22$\pm$0.89 / 72.21$\pm$0.94 / 40.28$\pm$1.13 & 3.35$\pm$0.93 / 40.55$\pm$1.22 / 7.63$\pm$1.16 & 1.72$\pm$1.15 / 44.52$\pm$3.54 / 5.01$\pm$3.60 \\
+off / off & 25.24$\pm$0.45 / 76.07$\pm$0.78 / 38.32$\pm$0.30 & 3.17$\pm$0.65 / 41.75$\pm$0.97 / 9.91$\pm$2.02 & 2.09$\pm$1.48 / 42.24$\pm$0.87 / 5.65$\pm$3.78 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[t]
+\caption{Earlier study: leave-one-framework-out inside AEGIS (mean over 6 held-out frameworks; micro-F1).}
+\label{tab:lofo}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Mask (name / peer) & Pair & Agent & Error \\
+\midrule
+on / on & 18.16 & 70.56 & 26.75 \\
+on / off & 17.44 & 69.76 & 26.75 \\
+off / on & 17.74 & 62.90 & 27.57 \\
+off / off & 17.62 & 63.42 & 29.89 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Earlier study: framework-adversarial training on single encoders (AEGIS test pair; Who\&When pair / agent / error micro-F1; as logged).}
+\label{tab:adv}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Variant & AEGIS pair & Who\&When \\
+\midrule
+Reference (no adversary) & 27.80 & 5.13 / 41.00 / 14.00 \\
+$\lambda=0.5$, seed 0 & 19.43 & 4.20 / 42.97 / 12.40 \\
+$\lambda=0.5$, seed 1 & 19.90 & 3.50 / 42.37 / 13.00 \\
+$\lambda=1.0$ & 19.40 & 4.57 / 42.83 / 13.70 \\
+$\lambda=0.5$ + name-dropout & 19.40 & 4.60 / 41.33 / 12.53 \\
+$\lambda=1.0$ + name-dropout & 19.07 & 4.17 / 38.77 / 14.77 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table*}[t]
+\caption{Earlier study: frozen Qwen2.5-7B judge with 95\% bootstrap intervals (pair micro-F1 unless stated). Differences are over the same records. Model alone is a 3-seed ensemble; the shortlist model is the pre-committed headline.}
+\label{tab:judge}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Data & Row & Pair micro-F1 [95\% CI] & Paired difference vs model alone \\
+\midrule
+AEGIS test & Model alone & 34.02 [31.80, 36.37] & -- \\
+AEGIS test & Shortlist model, $k{=}5$ & 33.57 [31.42, 35.75] & $-0.45$ [$-1.27$, $+0.37$] pair; $+1.28$ [$+0.51$, $+1.99$] agent \\
+AEGIS test & Judge alone, plain, $k{=}5$ & 24.98 [23.01, 27.16] & $-9.04$ pair \\
+AEGIS test & Judge alone, rag, $k{=}5$ & 27.00 [25.08, 29.15] & $-7.01$ pair \\
+Who\&When & Model alone & 9.21 [6.99, 11.60] & -- \\
+Who\&When & Shortlist model, $k{=}5$ & 8.96 [6.31, 11.66] & -- \\
+Who\&When & Judge alone, plain, $k{=}5$ & 11.05 [8.34, 14.00] & $+1.82$ [$-0.19$, $+3.74$] pair; $+6.65$ [$+3.54$, $+9.88$] agent \\
+Who\&When & Judge alone, rag, $k{=}5$ & 8.57 [6.09, 11.55] & -- \\
+Who\&When (study 2) & Shortlist model, $k{=}12$ & 8.94 [6.50, 11.36] & $-0.29$ [$-1.52$, $+0.79$] pair \\
+Who\&When (study 2) & Judge alone, plain, $k{=}12$ & 9.67 [7.96, 11.31] & $+0.41$ [$-1.67$, $+2.53$] pair; $+1.09$ [$-1.64$, $+3.72$] agent \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[t]
+\caption{Earlier study: shortlist recall of the trained model (\%), the share of gold pairs in the top-$k$ candidates.}
+\label{tab:recall}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & $k{=}1$ & $k{=}5$ & $k{=}8$ & $k{=}12$ \\
+\midrule
+AEGIS validation & 22.6 & 51.1 & 60.9 & 71.1 \\
+Who\&When (diagnostic) & 1.6 & 28.8 & 42.9 & 52.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Earlier study: oracle diagnostic on the AEGIS test file (single encoder, micro-F1; pair / agent / error).}
+\label{tab:oracle}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & Pair & Agent & Error \\
+\midrule
+Model & 27.79 & 81.37 & 38.66 \\
+Oracle agents & 31.12 & 92.20 & 40.09 \\
+Oracle modes & 56.06 & 72.05 & 79.90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table*}[t]
+\caption{Earlier study (query-disjoint, as logged), our rows with micro / macro F1 (\%) at pair, agent and error level. Who\&When rows are the mean over three head seeds; label shift is transductive. Dashes: not computed.}
+\label{tab:legacymacro}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llcccccc@{}}
+\toprule
+Test set & Model & Pair mi & Pair ma & Agent mi & Agent ma & Error mi & Error ma \\
+\midrule
+AEGIS (HF file) & Trivial floor & 7.35 & 6.35 & 68.58 & 61.98 & 27.14 & 26.99 \\
+AEGIS (HF file) & Frozen encoder, flat MLP & 19.83 & 12.99 & 78.74 & 65.27 & 33.01 & 32.62 \\
+AEGIS (HF file) & Fine-tuned, all blocks (14 enc.) & 32.96 & 18.86 & 79.37 & 66.06 & 40.95 & 39.47 \\
+Who\&When & Trivial floor & 3.42 & 2.85 & 38.32 & 38.41 & 13.33 & 12.34 \\
+Who\&When & Frozen encoder, flat MLP & 4.25 & -- & 39.60 & -- & 10.83 & -- \\
+Who\&When & Fine-tuned, all blocks, no shift & 5.56 & 3.14 & 43.75 & 32.07 & 11.76 & 7.86 \\
+Who\&When & Fine-tuned, all blocks, label shift & 8.24 & 4.86 & 47.72 & 38.69 & 17.12 & 5.08 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[t]
+\caption{Earlier study: name-dropout on single encoders (mean of 3 head seeds; AEGIS test pair, then Who\&When pair / agent / error micro-F1; as logged).}
+\label{tab:namedrop}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Encoder & Recipe & AEGIS pair & Who\&When \\
+\midrule
+s0 & Base & 27.80 & 5.13 / 41.00 / 14.00 \\
+s0 & Name-dropout & 26.00 & 6.03 / 47.03 / 14.53 \\
+s1 & Base & 27.73 & 6.07 / 41.27 / 16.60 \\
+s1 & Name-dropout & 27.70 & 6.70 / 45.47 / 16.03 \\
+7 enc. & Name-dropout & 26.88 & 6.80 / 45.78 / 16.12 \\
+\bottomrule
+\end{tabular}
+\end{table}

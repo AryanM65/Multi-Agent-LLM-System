@@ -1,0 +1,15 @@
+\begin{table*}[t]
+\caption{Test-time block masks, 14-encoder ensemble (3 head seeds): pair micro-F1 (\%) with 95\% record-level bootstrap intervals. Label shift is applied to Who\&When only.}
+\label{tab:gridci}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Name / peer block & Authors' file & HF file & Who\&When & + shift \\
+\midrule
+on / on & 35.77 {\scriptsize[33.1, 38.2]} & 39.72 {\scriptsize[37.5, 42.1]} & 4.96 {\scriptsize[2.6, 7.6]} & 5.14 {\scriptsize[3.2, 7.1]} \\
+on / off$^\dagger$ & 32.77 {\scriptsize[30.4, 35.1]} & 36.61 {\scriptsize[34.5, 38.8]} & 6.16 {\scriptsize[3.7, 8.8]} & 10.68 {\scriptsize[8.6, 12.7]} \\
+off / on & 34.93 {\scriptsize[32.4, 37.4]} & 38.37 {\scriptsize[36.1, 40.7]} & 4.71 {\scriptsize[2.3, 7.5]} & 3.78 {\scriptsize[2.0, 5.8]} \\
+off / off & 31.84 {\scriptsize[29.4, 34.3]} & 34.88 {\scriptsize[32.7, 37.1]} & 4.77 {\scriptsize[2.6, 7.4]} & 6.67 {\scriptsize[4.8, 8.7]} \\
+\bottomrule
+\end{tabular}
+\end{table*}
