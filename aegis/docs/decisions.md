@@ -46,3 +46,15 @@ turn text. Every turn of train/val/test/who_when is covered (verified: 0 missing
 Pair predicted iff p_agent >= t_a and p_mode >= t_m, at least one pair per trajectory (every record has a fault), thresholds tuned on val only.
 Every results table includes the trivial "predict everything" floor and the frequency baseline, because agent-level micro-F1 has a floor near 70
 (54-56% of agents are faulty) and error-level micro-F1 a floor near 28. Published DCL (22.9 / 24.7) is below both floors.
+
+## 2026-11-16 D11 (revises D1): the repo file `evaluation/data/aegis.jsonl` is the test set the paper describes; report it as primary, HF `test.jsonl` as secondary
+Evidence (paper Section 6, "Datasets": "we first sample 100 trajectories from each of the six benchmarks to form our test set, Aegis-Bench"):
+- repo `aegis.jsonl`: exactly 100 per benchmark: GSM8K 100, HumanEval 100, MATH 100, MMLU 100, SciBench 100, GAIA 100 (magentic 40 + smol 60).
+- HF `Aegis-Bench/test.jsonl`: GSM8K 105, HumanEval 105, MATH 105, MMLU 105, SciBench 104, GAIA 76 (magentic 28 + smol 48). Does not match.
+This is strong evidence, not proof (the paper does not name a file). Consequences:
+1. Comparisons to published rows use the repo file as primary and show HF test as a second column. Both are reported.
+2. The HF train/val split overlaps the repo test: 585 of its 600 records share a query with HF train and 125 conversations are verbatim copies of HF train records
+   (110 with identical labels). A paper-protocol row on the repo file therefore needs a de-duplicated variant (drop HF train/val records whose conversation text
+   appears in the repo test), reported next to the plain one.
+3. The pair micro-F1 of a frozen flat MLP is about 6.9 points lower on the repo file (26.15 vs 33.02, 5 seeds; S2 log `aegis/results/runs/s2_test_file_check_2026-11-16.log`).
+D1's reason ("official release") stays true for HF but is not a reason to prefer it for matching published numbers.
