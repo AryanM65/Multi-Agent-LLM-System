@@ -1,0 +1,33 @@
+done paper full
+done paper shortcut_only
+done paper content_only
+done dedup full
+done dedup shortcut_only
+done dedup content_only
+floor|repo_test                        pair 6.47 [6.19,6.74] | agent 62.00 [59.72,64.25] | error 26.19 [25.44,26.96]
+floor|hf_test                          pair 7.35 [7.14,7.56] | agent 68.58 [67.15,69.95] | error 27.14 [26.41,27.87]
+floor|who_when                         pair 3.42 [3.09,3.78] | agent 38.32 [34.99,41.79] | error 13.33 [13.33,13.33]
+frequency|paper|repo_test              pair 11.92 [10.99,12.87] | agent 69.83 [67.03,72.42] | error 27.43 [26.30,28.54]
+frequency|paper|hf_test                pair 13.85 [13.05,14.67] | agent 80.37 [79.05,81.66] | error 29.02 [27.86,30.14]
+frequency|paper|who_when               pair 0.00 [0.00,0.00] | agent 0.00 [0.00,0.00] | error 0.00 [0.00,0.00]
+full|paper|repo_test                   pair 26.15 [24.02,28.36] | agent 68.45 [65.53,71.22] | error 37.29 [35.17,39.34]
+full|paper|hf_test                     pair 33.02 [30.84,35.12] | agent 80.72 [79.15,82.16] | error 40.36 [38.01,42.45]
+full|paper|who_when                    pair 1.85 [0.81,3.18] | agent 33.97 [29.08,39.19] | error 8.05 [5.82,10.67]
+shortcut_only|paper|repo_test          pair 11.90 [10.26,13.57] | agent 59.07 [56.18,61.90] | error 24.09 [22.04,26.11]
+shortcut_only|paper|hf_test            pair 14.30 [12.78,15.80] | agent 69.14 [67.32,70.99] | error 26.38 [24.32,28.35]
+shortcut_only|paper|who_when           pair 4.75 [2.56,7.02] | agent 34.08 [28.77,39.71] | error 11.33 [8.25,14.57]
+content_only|paper|repo_test           pair 20.28 [18.73,21.73] | agent 71.14 [68.29,73.92] | error 35.23 [33.49,36.88]
+content_only|paper|hf_test             pair 23.22 [21.74,24.61] | agent 76.90 [75.43,78.29] | error 36.43 [34.70,38.10]
+content_only|paper|who_when            pair 3.48 [2.22,4.92] | agent 41.75 [37.00,46.63] | error 10.79 [8.62,13.21]
+frequency|dedup|repo_test              pair 10.77 [10.03,11.51] | agent 69.55 [66.69,72.19] | error 27.24 [26.26,28.19]
+frequency|dedup|hf_test                pair 12.81 [12.05,13.53] | agent 80.45 [79.21,81.68] | error 28.87 [27.86,29.87]
+frequency|dedup|who_when               pair 0.00 [0.00,0.00] | agent 0.00 [0.00,0.00] | error 0.00 [0.00,0.00]
+full|dedup|repo_test                   pair 20.02 [18.49,21.47] | agent 68.45 [65.57,71.02] | error 31.43 [29.74,33.05]
+full|dedup|hf_test                     pair 23.84 [22.25,25.43] | agent 79.13 [77.59,80.48] | error 34.13 [32.40,35.76]
+full|dedup|who_when                    pair 1.96 [1.03,3.14] | agent 33.88 [29.02,39.19] | error 7.63 [5.58,10.01]
+shortcut_only|dedup|repo_test          pair 10.75 [9.17,12.40] | agent 58.35 [55.48,61.22] | error 23.54 [21.55,25.69]
+shortcut_only|dedup|hf_test            pair 11.74 [10.27,13.26] | agent 68.37 [66.56,70.15] | error 24.93 [22.87,26.87]
+shortcut_only|dedup|who_when           pair 4.95 [2.67,7.51] | agent 38.08 [33.19,42.97] | error 10.87 [7.46,14.67]
+content_only|dedup|repo_test           pair 16.79 [15.48,17.98] | agent 69.62 [66.86,72.30] | error 30.89 [29.34,32.37]
+content_only|dedup|hf_test             pair 18.77 [17.59,19.91] | agent 75.17 [73.70,76.58] | error 32.60 [31.13,33.99]
+content_only|dedup|who_when            pair 2.71 [1.64,3.92] | agent 40.45 [35.68,45.41] | error 10.22 [8.09,12.45]
