@@ -35,6 +35,13 @@ this list drives the rewrite.
 11. **Table IV**: "631 of 3,865 training records held out" is the query-disjoint run; S4 holds out 1,068 of 6,912 (15%). Per-epoch time about 225 s on a T4 (draft says about 150 s).
 12. **Abstract**: "Block-dropout ... and label-shift correction ... help": re-confirm on the S4 ensemble before keeping the wording; if a row no longer shows the effect, say so.
 
+## D2. S4 result that CONTRADICTS the draft (added 2026-11-16 after the 14-encoder run, `aegis/results/s4_ensemble.json`)
+16. **Label shift with all blocks on does not help under the published protocol**: Who&When pair micro-F1 4.96 [2.6, 7.6] -> 5.14 [3.2, 7.1] (the draft: 5.56 -> 8.24). Shift helps clearly only with the name block hidden
+    (names-only: 6.16 -> 10.68 [8.6, 12.7]; neither: 4.77 -> 6.67) and hurts with peer-only (4.71 -> 3.78). The draft says shift "raised Who&When pair micro-F1 on every ensemble that kept the name block" and "hurt when only peer features
+    (or neither block) were available": both statements must be rewritten from the S4 grid. The names-only mask was selected after seeing Who&When (post hoc); leave-one-framework-out favoured all blocks on; so names-only + shift is an
+    exploratory lead, not the headline. Abstract, contributions, RQ3 outcome (Table XV), Discussion ("Together with ensembling, they take Who&When pair F1 ... to about 8") and Conclusion all need this change.
+17. **Agent-level on the authors' file** (73.20) is below published Aegis-SFT (76.53) although above the floor (62.00); state it next to the pair/error gains.
+
 ## E. Citations and claims that must be re-verified (not checked here)
 13. Related work claims about audits [11]-[13] (e.g. "simple predictors match or beat GPT-4.1 on three benchmarks", "a NeurIPS 2026 study of 24,000 traces"): taken from search snippets earlier;
     read the sources before keeping any sentence that quotes numbers. V-F(ii) leans on [12].
