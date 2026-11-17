@@ -383,3 +383,7 @@ M3 = {"rpQwPair": f"{Q['pair']['micro']:.2f}", "rpQwAgent": f"{Q['agent']['micro
 with open(OUT / "numbers.tex", "a") as fh:
     fh.write("% reproduction check, from baselines_dedup.json\n" + "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in M3.items()))
 print("repro table +", len(M3), "macros")
+
+CB = json.load(open(R / "cluster_bootstrap.json"))["rows"]["repo_test"]
+with open(OUT / "numbers.tex", "a") as fh:
+    fh.write("% query-cluster bootstrap, from cluster_bootstrap.json\n" + f"\\newcommand{{\\clAEgroups}}{{{CB['query_groups']}}}\n\\newcommand{{\\clAEpairLo}}{{{CB['pair']['cluster_lo']}}}\n\\newcommand{{\\clAEpairHi}}{{{CB['pair']['cluster_hi']}}}\n")

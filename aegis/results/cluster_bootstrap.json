@@ -1,0 +1,80 @@
+{
+ "method": "resample query groups, 10,000 draws, 3 head seeds pooled; ensemble all blocks, no shift; percent",
+ "rows": {
+  "repo_test": {
+   "records": 600,
+   "query_groups": 422,
+   "pair": {
+    "micro": 35.77,
+    "record_lo": 33.1,
+    "record_hi": 38.2,
+    "cluster_lo": 33.2,
+    "cluster_hi": 38.3
+   },
+   "agent": {
+    "micro": 73.2,
+    "record_lo": 70.2,
+    "record_hi": 76.0,
+    "cluster_lo": 70.2,
+    "cluster_hi": 76.1
+   },
+   "error": {
+    "micro": 45.79,
+    "record_lo": 43.3,
+    "record_hi": 48.0,
+    "cluster_lo": 43.2,
+    "cluster_hi": 48.2
+   }
+  },
+  "hf_test": {
+   "records": 600,
+   "query_groups": 438,
+   "pair": {
+    "micro": 39.72,
+    "record_lo": 37.5,
+    "record_hi": 42.0,
+    "cluster_lo": 37.3,
+    "cluster_hi": 42.2
+   },
+   "agent": {
+    "micro": 84.31,
+    "record_lo": 82.7,
+    "record_hi": 85.8,
+    "cluster_lo": 82.6,
+    "cluster_hi": 85.9
+   },
+   "error": {
+    "micro": 47.58,
+    "record_lo": 45.3,
+    "record_hi": 49.7,
+    "cluster_lo": 45.2,
+    "cluster_hi": 49.9
+   }
+  },
+  "who_when": {
+   "records": 184,
+   "query_groups": 142,
+   "pair": {
+    "micro": 4.96,
+    "record_lo": 2.7,
+    "record_hi": 7.7,
+    "cluster_lo": 2.6,
+    "cluster_hi": 7.6
+   },
+   "agent": {
+    "micro": 49.93,
+    "record_lo": 44.9,
+    "record_hi": 55.0,
+    "cluster_lo": 44.9,
+    "cluster_hi": 55.0
+   },
+   "error": {
+    "micro": 7.96,
+    "record_lo": 4.8,
+    "record_hi": 11.4,
+    "cluster_lo": 4.9,
+    "cluster_hi": 11.2
+   }
+  }
+ }
+}
