@@ -1,0 +1,21 @@
+\begin{table}[t]
+\caption{Paired tests on the same records (pair micro-F1 difference, percentage points; 10,000-resample record-level bootstrap interval; two-sided Wilcoxon signed-rank test on per-record pair F1 averaged over head seeds). Authors' file: 600 records; Who\&When: 184. Ten tests are shown, so a Bonferroni level is 0.005.}
+\label{tab:paired}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Comparison & Difference [95\% interval] & Wilcoxon $p$ \\
+\midrule
+Authors' file: on/on minus off/off & \textbf{+3.93 {\scriptsize[+2.54, +5.34]}} & $<$0.001 \\
+Authors' file: on/on minus off/on & \textbf{+3.00 {\scriptsize[+1.93, +4.11]}} & $<$0.001 \\
+Authors' file: on/on minus on/off & +0.84 {\scriptsize[-0.05, +1.78]} & 0.212 \\
+Who\&W.: on/on minus off/off, no shift & +0.19 {\scriptsize[-1.51, +1.94]} & 0.575 \\
+Who\&W.: shift minus no shift, on/on & +0.19 {\scriptsize[-1.51, +1.84]} & 0.566 \\
+Who\&W.: shift minus no shift, on/off & \textbf{+4.51 {\scriptsize[+1.71, +7.25]}} & $<$0.001 \\
+Who\&W.: shift minus no shift, off/on & -0.93 {\scriptsize[-3.07, +1.07]} & 0.289 \\
+Who\&W.: shift minus no shift, off/off & +1.91 {\scriptsize[-0.18, +3.88]} & 0.190 \\
+Who\&W.: on/off + shift minus on/on no shift & \textbf{+5.72 {\scriptsize[+2.74, +8.58]}} & $<$0.001 \\
+Who\&W.: on/off + shift minus off/off no shift & \textbf{+5.91 {\scriptsize[+3.29, +8.48]}} & $<$0.001 \\
+\bottomrule
+\end{tabular}
+\end{table}

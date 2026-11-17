@@ -242,3 +242,105 @@ for p, tag in (("base", "Old"), ("paper", "Full")):
 with open(OUT / "numbers.tex", "a") as fh:
     fh.write("% paired label-shift gains, from aegis/results/shift_paired.json\n" + "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in M.items()))
 print("shiftgain table +", len(M), "macros")
+
+# ======== robustness: head-seed SD, paired tests, sensitivity, name audit, cost (aegis/results/{robustness_stats,name_audit,ensemble_size}.json) ========
+RB = json.load(open(R / "robustness_stats.json"))
+NA = json.load(open(R / "name_audit.json"))
+ES = json.load(open(R / "ensemble_size.json")) if (R / "ensemble_size.json").exists() else None
+MASK_LAB = {"names+peer": "on / on", "names": "on / off", "peer": "off / on", "neither": "off / off"}
+
+
+def ms(v, lv):
+    return f"{v[lv]['mean']:.2f} $\\pm$ {v[lv]['sd']:.2f}"
+
+
+def pfmt(p):
+    return "$<$0.001" if p < 0.001 else f"{p:.3f}"
+
+
+S = "\\begin{table}[t]\n\\caption{Head-seed variability: mean $\\pm$ SD over the three head seeds of the 14-encoder ensemble (micro-F1, \\%). Block masks are name / peer (on or off). Shift rows are transductive and use Who\\&When inputs only.}\n\\label{tab:seedsd}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}llrrr@{}}\n\\toprule\nTest set, mask & Shift & Pair & Agent & Error \\\\\n\\midrule\n"
+for lab, key in (("Authors' file, on / on", "names+peer|noshift|repo_test"), ("HF file, on / on", "names+peer|noshift|hf_test"),
+                 ("Who\\&When, on / on", "names+peer|noshift|who_when"), ("Who\\&When, on / off", "names|noshift|who_when"),
+                 ("Who\\&When, off / on", "peer|noshift|who_when"), ("Who\\&When, off / off", "neither|noshift|who_when"),
+                 ("Who\\&When, on / on", "names+peer|shift|who_when"), ("Who\\&When, on / off", "names|shift|who_when")):
+    v = RB["seed_stats"][key]
+    S += f"{lab} & {'yes' if '|shift|' in key else 'no'} & " + " & ".join(ms(v, lv) for lv in LV) + " \\\\\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+(OUT / "table_seedsd.tex").write_text(S)
+
+PR = RB["paired"]
+P_ROWS = (("Authors' file: on/on minus off/off", "repo_test: all-blocks minus neither (no shift)"),
+          ("Authors' file: on/on minus off/on", "repo_test: all-blocks minus names (no shift)"),
+          ("Authors' file: on/on minus on/off", "repo_test: all-blocks minus peer (no shift)"),
+          ("Who\\&W.: on/on minus off/off, no shift", "who_when: all-blocks minus neither (no shift)"),
+          ("Who\\&W.: shift minus no shift, on/on", "who_when: shift minus no shift, mask names+peer"),
+          ("Who\\&W.: shift minus no shift, on/off", "who_when: shift minus no shift, mask names"),
+          ("Who\\&W.: shift minus no shift, off/on", "who_when: shift minus no shift, mask peer"),
+          ("Who\\&W.: shift minus no shift, off/off", "who_when: shift minus no shift, mask neither"),
+          ("Who\\&W.: on/off + shift minus on/on no shift", "who_when: names+shift minus all-blocks no-shift"),
+          ("Who\\&W.: on/off + shift minus off/off no shift", "who_when: names+shift minus neither no-shift"))
+S = "\\begin{table}[t]\n\\caption{Paired tests on the same records (pair micro-F1 difference, percentage points; 10,000-resample record-level bootstrap interval; two-sided Wilcoxon signed-rank test on per-record pair F1 averaged over head seeds). Authors' file: 600 records; Who\\&When: 184. Ten tests are shown, so a Bonferroni level is 0.005.}\n\\label{tab:paired}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lrr@{}}\n\\toprule\nComparison & Difference [95\\% interval] & Wilcoxon $p$ \\\\\n\\midrule\n"
+for lab, key in P_ROWS:
+    v = PR[key]
+    c = f"{v['diff']:+.2f} {{\\scriptsize[{v['lo']:+.2f}, {v['hi']:+.2f}]}}"
+    S += f"{lab} & {'\\textbf{' + c + '}' if v['bootstrap_excludes_zero'] else c} & {pfmt(v['wilcoxon_p'])} \\\\\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+(OUT / "table_paired.tex").write_text(S)
+
+SN = RB["sensitivity"]
+S = "\\begin{table}[t]\n\\caption{Sensitivity of pair micro-F1 (\\%) to the decision thresholds. Both tuned thresholds $(t_a, t_m)$ are multiplied by the same factor (1.0 is the tuned setting). Mean over three head seeds.}\n\\label{tab:sens}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lccccc@{}}\n\\toprule\nSetting & 0.5 & 0.75 & 1.0 & 1.25 & 1.5 \\\\\n\\midrule\n"
+for lab, key in (("Authors' file, on / on", "names+peer|noshift|repo_test"), ("HF file, on / on", "names+peer|noshift|hf_test"),
+                 ("Who\\&W., on / on", "names+peer|noshift|who_when"), ("Who\\&W., on / off", "names|noshift|who_when"), ("Who\\&W., on / off + shift", "names|shift|who_when")):
+    S += f"{lab} & " + " & ".join(f"{SN[key][s]['pair']:.2f}" for s in ("0.5", "0.75", "1.0", "1.25", "1.5")) + " \\\\\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+(OUT / "table_sens.tex").write_text(S)
+
+SC = NA["scores"]["repo_test"]
+S = "\\begin{table}[t]\n\\caption{Agent names in the authors' test file. Gold agent labels that equal no speaker name in their own conversation, by framework (none in the 16,586 training labels or the Hugging Face file), and the ensemble's micro-F1 (\\%) under exact and normalised (case, hyphen and underscore ignored) name matching. Mean over three head seeds.}\n\\label{tab:names}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lrrrr@{}}\n\\toprule\n & Unmatched labels & Agent, exact & Agent, normalised & Pair, normalised \\\\\n\\midrule\n"
+for fw, lab in (("dylan", "DyLAN (87 records)"), ("macnet", "MacNet (100 records)")):
+    mm = NA["mismatch"]["repo_test"][fw]
+    bf = SC["by_framework"][fw]
+    S += f"{lab} & {mm['not_exact_speaker']} of {mm['gold_agent_labels']} & {bf['exact']['agent']:.1f} & {bf['normalised']['agent']:.1f} & {bf['normalised']['pair']:.1f} \\\\\n"
+S += f"All 600 records & {sum(v['not_exact_speaker'] for v in NA['mismatch']['repo_test'].values())} of {sum(v['gold_agent_labels'] for v in NA['mismatch']['repo_test'].values())} & {SC['exact']['agent']['mean']:.1f} & {SC['normalised']['agent']['mean']:.1f} & {SC['normalised']['pair']['mean']:.1f} \\\\\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+(OUT / "table_names.tex").write_text(S)
+
+M2 = {"nmDyMis": NA["mismatch"]["repo_test"]["dylan"]["not_exact_speaker"], "nmDyTot": NA["mismatch"]["repo_test"]["dylan"]["gold_agent_labels"],
+      "nmMacMis": NA["mismatch"]["repo_test"]["macnet"]["not_exact_speaker"],
+      "nmAgentExact": f"{SC['exact']['agent']['mean']:.2f}", "nmAgentNorm": f"{SC['normalised']['agent']['mean']:.2f}",
+      "nmAgentNormLo": f"{SC['normalised']['agent']['lo']:.1f}", "nmAgentNormHi": f"{SC['normalised']['agent']['hi']:.1f}",
+      "nmPairNorm": f"{SC['normalised']['pair']['mean']:.2f}", "nmPairNormLo": f"{SC['normalised']['pair']['lo']:.1f}", "nmPairNormHi": f"{SC['normalised']['pair']['hi']:.1f}",
+      "nmDyAgentExact": f"{SC['by_framework']['dylan']['exact']['agent']:.1f}", "nmDyAgentNorm": f"{SC['by_framework']['dylan']['normalised']['agent']:.1f}",
+      "nmDistinctIds": NA["ids"]["repo_test"]["distinct_ids"],
+      "sdAEpair": f"{RB['seed_stats']['names+peer|noshift|repo_test']['pair']['sd']:.2f}",
+      "sdWWallPair": f"{RB['seed_stats']['names+peer|noshift|who_when']['pair']['sd']:.2f}",
+      "sdWWnameShiftPair": f"{RB['seed_stats']['names|shift|who_when']['pair']['sd']:.2f}",
+      "ptAEallNeither": f"{PR['repo_test: all-blocks minus neither (no shift)']['diff']:+.2f}",
+      "ptAEallNeitherLo": f"{PR['repo_test: all-blocks minus neither (no shift)']['lo']:+.2f}",
+      "ptAEallNeitherHi": f"{PR['repo_test: all-blocks minus neither (no shift)']['hi']:+.2f}",
+      "ptAEallNames": f"{PR['repo_test: all-blocks minus names (no shift)']['diff']:+.2f}",
+      "ptWWnameShiftP": pfmt(PR["who_when: shift minus no shift, mask names"]["wilcoxon_p"]).replace("$<$", "$<$"),
+      "ptWWnameShiftVsAll": f"{PR['who_when: names+shift minus all-blocks no-shift']['diff']:+.2f}",
+      "ptWWnameShiftVsAllLo": f"{PR['who_when: names+shift minus all-blocks no-shift']['lo']:+.2f}",
+      "ptWWnameShiftVsAllHi": f"{PR['who_when: names+shift minus all-blocks no-shift']['hi']:+.2f}",
+      "sensAEmin": f"{min(SN['names+peer|noshift|repo_test'][s]['pair'] for s in ('0.75', '1.0', '1.25', '1.5')):.2f}",
+      "sensAEhalf": f"{SN['names+peer|noshift|repo_test']['0.5']['pair']:.2f}",
+      "sensShiftMin": f"{min(v['pair'] for v in SN['names|shift|who_when'].values()):.2f}",
+      "sensShiftMax": f"{max(v['pair'] for v in SN['names|shift|who_when'].values()):.2f}"}
+if ES:
+    FK, SE = ES["first_k"]["names+peer|noshift|repo_test"], ES["single_encoder"]["names+peer|noshift|repo_test"]
+    FKW, SEW = ES["first_k"]["names|shift|who_when"], ES["single_encoder"]["names|shift|who_when"]
+    S = "\\begin{table}[t]\n\\caption{Ensemble size. Pair micro-F1 (\\%), mean over three head seeds, when the ensemble is built from the first $k$ of the 14 fine-tuned encoders (``single'': mean $\\pm$ SD, over the 14 encoders used alone). Thresholds are re-tuned on validation for each $k$.}\n\\label{tab:ensize}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lcccccc@{}}\n\\toprule\nSetting & single & $k{=}1$ & 2 & 4 & 7 & 14 \\\\\n\\midrule\n"
+    for lab, fk, se in (("Authors' file, on / on", FK, SE), ("Who\\&W., on / off + shift", FKW, SEW)):
+        S += f"{lab} & {se['pair']['mean']:.2f} $\\pm$ {se['pair']['sd']:.2f} & " + " & ".join(f"{fk[str(k)]['pair']:.2f}" for k in (1, 2, 4, 7, 14)) + " \\\\\n"
+    S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+    (OUT / "table_ensize.tex").write_text(S)
+    cst = ES["cost"]
+    M2.update({"ensSingleAE": f"{SE['pair']['mean']:.2f}", "ensSingleAEsd": f"{SE['pair']['sd']:.2f}", "ensKtwoAE": f"{FK['2']['pair']:.2f}", "ensKfourAE": f"{FK['4']['pair']:.2f}",
+               "ensKsevenAE": f"{FK['7']['pair']:.2f}", "ensKfourteenAE": f"{FK['14']['pair']:.2f}",
+               "ensSingleWWshift": f"{SEW['pair']['mean']:.2f}", "ensSingleWWshiftSd": f"{SEW['pair']['sd']:.2f}", "ensFourteenWWshift": f"{FKW['14']['pair']:.2f}",
+               "costFeat": cst["mean_feature_build_s_per_encoder"], "costHead": cst["mean_head_train_s_per_encoder_3_heads_4_masks"],
+               "costInf": cst["mean_inference_s_per_encoder_all_splits"], "costParams": f"{cst['head_params']:,}".replace(",", "{,}")})
+with open(OUT / "numbers.tex", "a") as fh:
+    fh.write("% robustness numbers, from robustness_stats.json, name_audit.json, ensemble_size.json\n" + "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in M2.items()))
+print("robustness tables +", len(M2), "macros")

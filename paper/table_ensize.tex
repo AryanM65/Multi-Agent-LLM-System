@@ -1,0 +1,13 @@
+\begin{table}[t]
+\caption{Ensemble size. Pair micro-F1 (\%), mean over three head seeds, when the ensemble is built from the first $k$ of the 14 fine-tuned encoders (``single'': mean $\pm$ SD, over the 14 encoders used alone). Thresholds are re-tuned on validation for each $k$.}
+\label{tab:ensize}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Setting & single & $k{=}1$ & 2 & 4 & 7 & 14 \\
+\midrule
+Authors' file, on / on & 31.66 $\pm$ 0.45 & 32.42 & 33.79 & 35.07 & 35.34 & 35.77 \\
+Who\&W., on / off + shift & 9.73 $\pm$ 1.35 & 8.12 & 9.14 & 11.09 & 11.80 & 10.68 \\
+\bottomrule
+\end{tabular}
+\end{table}

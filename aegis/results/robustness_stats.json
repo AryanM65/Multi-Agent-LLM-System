@@ -1,0 +1,728 @@
+{
+ "method": "3 head seeds over the 14-encoder ensemble; thresholds tuned on deduplicated released validation; percent",
+ "seed_stats": {
+  "names+peer|noshift|repo_test": {
+   "pair": {
+    "mean": 35.77,
+    "sd": 0.2,
+    "per_seed": [
+     35.83,
+     35.54,
+     35.94
+    ]
+   },
+   "agent": {
+    "mean": 73.2,
+    "sd": 0.41,
+    "per_seed": [
+     72.75,
+     73.56,
+     73.3
+    ]
+   },
+   "error": {
+    "mean": 45.79,
+    "sd": 0.71,
+    "per_seed": [
+     46.6,
+     45.36,
+     45.41
+    ]
+   }
+  },
+  "names+peer|noshift|hf_test": {
+   "pair": {
+    "mean": 39.72,
+    "sd": 0.41,
+    "per_seed": [
+     40.19,
+     39.42,
+     39.56
+    ]
+   },
+   "agent": {
+    "mean": 84.31,
+    "sd": 0.42,
+    "per_seed": [
+     84.53,
+     84.58,
+     83.82
+    ]
+   },
+   "error": {
+    "mean": 47.58,
+    "sd": 0.77,
+    "per_seed": [
+     48.46,
+     47.18,
+     47.1
+    ]
+   }
+  },
+  "names+peer|noshift|who_when": {
+   "pair": {
+    "mean": 4.96,
+    "sd": 1.12,
+    "per_seed": [
+     3.67,
+     5.71,
+     5.49
+    ]
+   },
+   "agent": {
+    "mean": 49.93,
+    "sd": 0.64,
+    "per_seed": [
+     50.11,
+     50.46,
+     49.22
+    ]
+   },
+   "error": {
+    "mean": 7.96,
+    "sd": 1.0,
+    "per_seed": [
+     6.82,
+     8.68,
+     8.39
+    ]
+   }
+  },
+  "names+peer|shift|who_when": {
+   "pair": {
+    "mean": 5.14,
+    "sd": 1.97,
+    "per_seed": [
+     4.61,
+     7.32,
+     3.5
+    ]
+   },
+   "agent": {
+    "mean": 51.69,
+    "sd": 0.36,
+    "per_seed": [
+     52.05,
+     51.33,
+     51.7
+    ]
+   },
+   "error": {
+    "mean": 10.28,
+    "sd": 5.24,
+    "per_seed": [
+     8.59,
+     16.16,
+     6.1
+    ]
+   }
+  },
+  "names|noshift|repo_test": {
+   "pair": {
+    "mean": 32.77,
+    "sd": 0.69,
+    "per_seed": [
+     32.82,
+     32.06,
+     33.43
+    ]
+   },
+   "agent": {
+    "mean": 70.64,
+    "sd": 0.43,
+    "per_seed": [
+     70.15,
+     70.82,
+     70.95
+    ]
+   },
+   "error": {
+    "mean": 42.12,
+    "sd": 0.49,
+    "per_seed": [
+     42.61,
+     41.62,
+     42.13
+    ]
+   }
+  },
+  "names|noshift|hf_test": {
+   "pair": {
+    "mean": 36.61,
+    "sd": 0.25,
+    "per_seed": [
+     36.58,
+     36.38,
+     36.88
+    ]
+   },
+   "agent": {
+    "mean": 82.02,
+    "sd": 0.63,
+    "per_seed": [
+     82.08,
+     82.62,
+     81.36
+    ]
+   },
+   "error": {
+    "mean": 44.55,
+    "sd": 0.74,
+    "per_seed": [
+     45.4,
+     44.15,
+     44.1
+    ]
+   }
+  },
+  "names|noshift|who_when": {
+   "pair": {
+    "mean": 6.16,
+    "sd": 0.46,
+    "per_seed": [
+     5.77,
+     6.67,
+     6.05
+    ]
+   },
+   "agent": {
+    "mean": 51.03,
+    "sd": 1.74,
+    "per_seed": [
+     50.41,
+     53.0,
+     49.69
+    ]
+   },
+   "error": {
+    "mean": 12.56,
+    "sd": 1.56,
+    "per_seed": [
+     11.17,
+     14.26,
+     12.26
+    ]
+   }
+  },
+  "names|shift|who_when": {
+   "pair": {
+    "mean": 10.68,
+    "sd": 2.18,
+    "per_seed": [
+     10.34,
+     13.0,
+     8.69
+    ]
+   },
+   "agent": {
+    "mean": 51.27,
+    "sd": 2.25,
+    "per_seed": [
+     53.77,
+     49.41,
+     50.62
+    ]
+   },
+   "error": {
+    "mean": 23.12,
+    "sd": 3.72,
+    "per_seed": [
+     21.48,
+     27.38,
+     20.49
+    ]
+   }
+  },
+  "peer|noshift|repo_test": {
+   "pair": {
+    "mean": 34.93,
+    "sd": 0.59,
+    "per_seed": [
+     35.55,
+     34.37,
+     34.86
+    ]
+   },
+   "agent": {
+    "mean": 73.05,
+    "sd": 0.83,
+    "per_seed": [
+     72.16,
+     73.81,
+     73.16
+    ]
+   },
+   "error": {
+    "mean": 44.72,
+    "sd": 0.93,
+    "per_seed": [
+     45.79,
+     44.07,
+     44.3
+    ]
+   }
+  },
+  "peer|noshift|hf_test": {
+   "pair": {
+    "mean": 38.37,
+    "sd": 0.78,
+    "per_seed": [
+     39.28,
+     37.97,
+     37.88
+    ]
+   },
+   "agent": {
+    "mean": 81.63,
+    "sd": 0.84,
+    "per_seed": [
+     80.93,
+     82.56,
+     81.4
+    ]
+   },
+   "error": {
+    "mean": 46.02,
+    "sd": 0.96,
+    "per_seed": [
+     47.12,
+     45.58,
+     45.37
+    ]
+   }
+  },
+  "peer|noshift|who_when": {
+   "pair": {
+    "mean": 4.71,
+    "sd": 0.56,
+    "per_seed": [
+     4.73,
+     4.15,
+     5.26
+    ]
+   },
+   "agent": {
+    "mean": 45.21,
+    "sd": 0.63,
+    "per_seed": [
+     44.84,
+     45.93,
+     44.85
+    ]
+   },
+   "error": {
+    "mean": 7.9,
+    "sd": 1.15,
+    "per_seed": [
+     8.46,
+     6.57,
+     8.66
+    ]
+   }
+  },
+  "peer|shift|who_when": {
+   "pair": {
+    "mean": 3.78,
+    "sd": 0.86,
+    "per_seed": [
+     3.19,
+     4.76,
+     3.38
+    ]
+   },
+   "agent": {
+    "mean": 48.38,
+    "sd": 0.9,
+    "per_seed": [
+     48.96,
+     47.35,
+     48.83
+    ]
+   },
+   "error": {
+    "mean": 7.64,
+    "sd": 1.59,
+    "per_seed": [
+     7.56,
+     9.26,
+     6.09
+    ]
+   }
+  },
+  "neither|noshift|repo_test": {
+   "pair": {
+    "mean": 31.84,
+    "sd": 0.25,
+    "per_seed": [
+     32.07,
+     31.57,
+     31.87
+    ]
+   },
+   "agent": {
+    "mean": 70.31,
+    "sd": 0.25,
+    "per_seed": [
+     70.3,
+     70.57,
+     70.08
+    ]
+   },
+   "error": {
+    "mean": 40.8,
+    "sd": 0.48,
+    "per_seed": [
+     40.46,
+     40.58,
+     41.35
+    ]
+   }
+  },
+  "neither|noshift|hf_test": {
+   "pair": {
+    "mean": 34.88,
+    "sd": 0.27,
+    "per_seed": [
+     34.91,
+     35.13,
+     34.59
+    ]
+   },
+   "agent": {
+    "mean": 78.08,
+    "sd": 0.78,
+    "per_seed": [
+     77.51,
+     78.97,
+     77.77
+    ]
+   },
+   "error": {
+    "mean": 42.13,
+    "sd": 0.22,
+    "per_seed": [
+     41.89,
+     42.31,
+     42.19
+    ]
+   }
+  },
+  "neither|noshift|who_when": {
+   "pair": {
+    "mean": 4.77,
+    "sd": 0.76,
+    "per_seed": [
+     4.21,
+     5.63,
+     4.45
+    ]
+   },
+   "agent": {
+    "mean": 46.19,
+    "sd": 1.3,
+    "per_seed": [
+     46.85,
+     47.03,
+     44.69
+    ]
+   },
+   "error": {
+    "mean": 9.82,
+    "sd": 1.51,
+    "per_seed": [
+     8.83,
+     11.56,
+     9.07
+    ]
+   }
+  },
+  "neither|shift|who_when": {
+   "pair": {
+    "mean": 6.67,
+    "sd": 2.81,
+    "per_seed": [
+     3.71,
+     9.31,
+     7.0
+    ]
+   },
+   "agent": {
+    "mean": 47.81,
+    "sd": 1.54,
+    "per_seed": [
+     49.41,
+     47.67,
+     46.34
+    ]
+   },
+   "error": {
+    "mean": 15.86,
+    "sd": 7.27,
+    "per_seed": [
+     8.18,
+     22.64,
+     16.76
+    ]
+   }
+  }
+ },
+ "paired": {
+  "repo_test: all-blocks minus names (no shift)": {
+   "split": "repo_test",
+   "diff": 3.0,
+   "lo": 1.93,
+   "hi": 4.11,
+   "bootstrap_excludes_zero": true,
+   "wilcoxon_p": 0.0,
+   "n_records": 600,
+   "n_changed": 332
+  },
+  "repo_test: all-blocks minus peer (no shift)": {
+   "split": "repo_test",
+   "diff": 0.84,
+   "lo": -0.05,
+   "hi": 1.78,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.2117,
+   "n_records": 600,
+   "n_changed": 285
+  },
+  "repo_test: all-blocks minus neither (no shift)": {
+   "split": "repo_test",
+   "diff": 3.93,
+   "lo": 2.54,
+   "hi": 5.34,
+   "bootstrap_excludes_zero": true,
+   "wilcoxon_p": 0.0,
+   "n_records": 600,
+   "n_changed": 341
+  },
+  "who_when: all-blocks minus names (no shift)": {
+   "split": "who_when",
+   "diff": -1.21,
+   "lo": -2.98,
+   "hi": 0.5,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.3144,
+   "n_records": 184,
+   "n_changed": 19
+  },
+  "who_when: all-blocks minus peer (no shift)": {
+   "split": "who_when",
+   "diff": 0.24,
+   "lo": -0.8,
+   "hi": 1.28,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.5345,
+   "n_records": 184,
+   "n_changed": 16
+  },
+  "who_when: all-blocks minus neither (no shift)": {
+   "split": "who_when",
+   "diff": 0.19,
+   "lo": -1.51,
+   "hi": 1.94,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.5753,
+   "n_records": 184,
+   "n_changed": 20
+  },
+  "who_when: shift minus no shift, mask names+peer": {
+   "split": "who_when",
+   "diff": 0.19,
+   "lo": -1.51,
+   "hi": 1.84,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.5664,
+   "n_records": 184,
+   "n_changed": 29
+  },
+  "who_when: shift minus no shift, mask names": {
+   "split": "who_when",
+   "diff": 4.51,
+   "lo": 1.71,
+   "hi": 7.25,
+   "bootstrap_excludes_zero": true,
+   "wilcoxon_p": 0.0002,
+   "n_records": 184,
+   "n_changed": 69
+  },
+  "who_when: shift minus no shift, mask peer": {
+   "split": "who_when",
+   "diff": -0.93,
+   "lo": -3.07,
+   "hi": 1.07,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.2886,
+   "n_records": 184,
+   "n_changed": 16
+  },
+  "who_when: shift minus no shift, mask neither": {
+   "split": "who_when",
+   "diff": 1.91,
+   "lo": -0.18,
+   "hi": 3.88,
+   "bootstrap_excludes_zero": false,
+   "wilcoxon_p": 0.1895,
+   "n_records": 184,
+   "n_changed": 39
+  },
+  "who_when: names+shift minus all-blocks no-shift": {
+   "split": "who_when",
+   "diff": 5.72,
+   "lo": 2.74,
+   "hi": 8.58,
+   "bootstrap_excludes_zero": true,
+   "wilcoxon_p": 0.0,
+   "n_records": 184,
+   "n_changed": 69
+  },
+  "who_when: names+shift minus neither no-shift": {
+   "split": "who_when",
+   "diff": 5.91,
+   "lo": 3.29,
+   "hi": 8.48,
+   "bootstrap_excludes_zero": true,
+   "wilcoxon_p": 0.0,
+   "n_records": 184,
+   "n_changed": 68
+  }
+ },
+ "sensitivity": {
+  "names+peer|noshift|repo_test": {
+   "0.5": {
+    "pair": 28.33,
+    "agent": 74.12,
+    "error": 42.16
+   },
+   "0.75": {
+    "pair": 33.4,
+    "agent": 74.14,
+    "error": 45.39
+   },
+   "1.0": {
+    "pair": 35.77,
+    "agent": 73.2,
+    "error": 45.79
+   },
+   "1.25": {
+    "pair": 35.54,
+    "agent": 70.02,
+    "error": 44.25
+   },
+   "1.5": {
+    "pair": 35.01,
+    "agent": 66.51,
+    "error": 43.28
+   }
+  },
+  "names+peer|noshift|hf_test": {
+   "0.5": {
+    "pair": 32.94,
+    "agent": 87.0,
+    "error": 43.64
+   },
+   "0.75": {
+    "pair": 37.62,
+    "agent": 86.47,
+    "error": 46.93
+   },
+   "1.0": {
+    "pair": 39.72,
+    "agent": 84.31,
+    "error": 47.58
+   },
+   "1.25": {
+    "pair": 39.53,
+    "agent": 80.22,
+    "error": 45.84
+   },
+   "1.5": {
+    "pair": 38.99,
+    "agent": 75.78,
+    "error": 44.35
+   }
+  },
+  "names+peer|noshift|who_when": {
+   "0.5": {
+    "pair": 4.99,
+    "agent": 50.03,
+    "error": 10.9
+   },
+   "0.75": {
+    "pair": 5.09,
+    "agent": 50.15,
+    "error": 9.35
+   },
+   "1.0": {
+    "pair": 4.96,
+    "agent": 49.93,
+    "error": 7.96
+   },
+   "1.25": {
+    "pair": 4.74,
+    "agent": 48.63,
+    "error": 7.31
+   },
+   "1.5": {
+    "pair": 4.69,
+    "agent": 47.69,
+    "error": 7.15
+   }
+  },
+  "names|noshift|who_when": {
+   "0.5": {
+    "pair": 7.06,
+    "agent": 51.17,
+    "error": 14.69
+   },
+   "0.75": {
+    "pair": 6.45,
+    "agent": 51.7,
+    "error": 13.63
+   },
+   "1.0": {
+    "pair": 6.16,
+    "agent": 51.03,
+    "error": 12.56
+   },
+   "1.25": {
+    "pair": 5.78,
+    "agent": 50.52,
+    "error": 10.82
+   },
+   "1.5": {
+    "pair": 5.4,
+    "agent": 49.04,
+    "error": 10.34
+   }
+  },
+  "names|shift|who_when": {
+   "0.5": {
+    "pair": 10.69,
+    "agent": 48.78,
+    "error": 23.41
+   },
+   "0.75": {
+    "pair": 10.55,
+    "agent": 50.4,
+    "error": 23.28
+   },
+   "1.0": {
+    "pair": 10.68,
+    "agent": 51.27,
+    "error": 23.12
+   },
+   "1.25": {
+    "pair": 10.34,
+    "agent": 51.98,
+    "error": 22.46
+   },
+   "1.5": {
+    "pair": 10.26,
+    "agent": 51.77,
+    "error": 22.03
+   }
+  }
+ }
+}

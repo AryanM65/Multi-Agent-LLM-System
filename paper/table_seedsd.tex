@@ -1,0 +1,19 @@
+\begin{table}[t]
+\caption{Head-seed variability: mean $\pm$ SD over the three head seeds of the 14-encoder ensemble (micro-F1, \%). Block masks are name / peer (on or off). Shift rows are transductive and use Who\&When inputs only.}
+\label{tab:seedsd}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Test set, mask & Shift & Pair & Agent & Error \\
+\midrule
+Authors' file, on / on & no & 35.77 $\pm$ 0.20 & 73.20 $\pm$ 0.41 & 45.79 $\pm$ 0.71 \\
+HF file, on / on & no & 39.72 $\pm$ 0.41 & 84.31 $\pm$ 0.42 & 47.58 $\pm$ 0.77 \\
+Who\&When, on / on & no & 4.96 $\pm$ 1.12 & 49.93 $\pm$ 0.64 & 7.96 $\pm$ 1.00 \\
+Who\&When, on / off & no & 6.16 $\pm$ 0.46 & 51.03 $\pm$ 1.74 & 12.56 $\pm$ 1.56 \\
+Who\&When, off / on & no & 4.71 $\pm$ 0.56 & 45.21 $\pm$ 0.63 & 7.90 $\pm$ 1.15 \\
+Who\&When, off / off & no & 4.77 $\pm$ 0.76 & 46.19 $\pm$ 1.30 & 9.82 $\pm$ 1.51 \\
+Who\&When, on / on & yes & 5.14 $\pm$ 1.97 & 51.69 $\pm$ 0.36 & 10.28 $\pm$ 5.24 \\
+Who\&When, on / off & yes & 10.68 $\pm$ 2.18 & 51.27 $\pm$ 2.25 & 23.12 $\pm$ 3.72 \\
+\bottomrule
+\end{tabular}
+\end{table}
