@@ -357,13 +357,16 @@ def pub3(key, pre):
     return " & ".join(f"{pub[key][f'{pre}_{lv}_micro']:.2f}" for lv in LV)
 
 
-S = "\\begin{table*}[t]\n\\caption{Reproduction check (micro-F1, \\%). Rows marked ``rep.'' are copied from Table~1 of~\\cite{aegis}; rows marked ``ours'' were run by us with 95\\% record-level intervals. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. The published rows were evaluated on a test file the paper does not name.}\n\\label{tab:repro}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}llrrrrrr@{}}\n\\toprule\n & & \\multicolumn{3}{c}{AEGIS-Bench test file} & \\multicolumn{3}{c}{Who\\&When} \\\\\n\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\nModel & Test file & Pair & Agent & Error & Pair & Agent & Error \\\\\n\\midrule\n"
+S = "\\begin{table*}[t]\n\\caption{Reproduction check (micro-F1, \\%). Rows marked ``rep.'' are copied from Table~1 of~\\cite{aegis}; every row marked ``ours'' was run by us, scored with the authors' scorer on the same test records and with 95\\% record-level intervals. The last four rows (trivial floor, frequency, flat MLP, shortcut-only MLP) use the same deduplicated training data as the ensemble; the flat MLP and shortcut-only MLP use frozen embeddings and five head seeds. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. Frequency scores zero on Who\\&When because it predicts agent names seen in training, and Who\\&When agent names are free-form. The published rows were evaluated on a test file the paper does not name.}\n\\label{tab:repro}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}llrrrrrr@{}}\n\\toprule\n & & \\multicolumn{3}{c}{AEGIS-Bench test file} & \\multicolumn{3}{c}{Who\\&When} \\\\\n\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\nModel & Test file & Pair & Agent & Error & Pair & Agent & Error \\\\\n\\midrule\n"
 S += f"Qwen2.5-7B, rep. & unnamed & {pub3('Qwen2.5-7B-Instruct', 'ab')} & {pub3('Qwen2.5-7B-Instruct', 'ww')} \\\\\n"
 S += f"Qwen2.5-7B, ours & HF & {ci3(BD['qwen_zeroshot|hf_test'])} & {ci3(BD['qwen_zeroshot|who_when'])} \\\\\n"
 S += "\\midrule\n"
 S += f"DCL, rep. & unnamed & {pub3('DCL (Ours)', 'ab')} & {pub3('DCL (Ours)', 'ww')} \\\\\n"
 S += f"DCL-style, ours & authors' & {ci3(BD['dcl_style|repo_test'])} & {ci3(BD['dcl_style|who_when'])} \\\\\n"
 S += f"DCL-style, ours & HF & {ci3(BD['dcl_style|hf_test'])} & -- \\\\\n"
+S += "\\midrule\n"
+for lab, k in (("Trivial floor, ours", "floor"), ("Frequency, ours", "frequency|dedup"), ("Flat MLP, frozen MiniLM, ours", "full|dedup"), ("Shortcut-only MLP, ours", "shortcut_only|dedup")):
+    S += f"{lab} & authors' & {ci3(ab[k + '|repo_test'] if k != 'floor' else ab['floor|repo_test'])} & {ci3(ab[k + '|who_when'] if k != 'floor' else ab['floor|who_when'])} \\\\\n"
 S += "\\bottomrule\n\\end{tabular}\n\\end{table*}\n"
 (OUT / "table_repro.tex").write_text(S)
 Q, QW, DA, DH, DW = BD["qwen_zeroshot|hf_test"], BD["qwen_zeroshot|who_when"], BD["dcl_style|repo_test"], BD["dcl_style|hf_test"], BD["dcl_style|who_when"]

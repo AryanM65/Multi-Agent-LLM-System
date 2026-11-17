@@ -570,7 +570,7 @@ Claude-Sonnet-4 & 7.68 & 2.34 & 40.73 & 15.51 & 21.21 & 16.55 & 6.77 & 2.66 & 44
 % ---- end fig_aegis.tex ----
 
 \subsection{Reproduction check of lighter baselines}\label{sec:repro}
-To test whether our pipeline and the published rows are comparable at all, we ran the two published baselines that fit our compute, and report them next to the published rows in Table~\ref{tab:repro}. They are a check, not a replacement for the published rows, which stay the reference.
+To test whether our pipeline and the published rows are comparable at all, we ran the two published baselines that fit our compute, and report them next to the published rows in Table~\ref{tab:repro}. The table also lists our own trivial floor, frequency, flat-MLP and shortcut-only rows next to them, so that every row we ran uses the same test records and the authors' scorer. They are a check, not a replacement for the published rows, which stay the reference.
 
 \textbf{Qwen2.5-7B zero-shot.} We ran the model on the Hugging Face file and Who\&When with the authors' prompt (AWQ 4-bit weights, greedy decoding, 512 new tokens, long prompts cut to the first 30\% and last 70\% of the budget; 8 of 600 outputs unparseable and counted as empty). Pair and error micro-F1 are of the same size as the published row (pair \rpQwPair{} against \pubQwPair, error \rpQwError{} against \pubQwError{}) and so are the Who\&When pair and error values (pair \rpQwWWpair{} against 2.31, error \rpQwWWerror{} against 3.64). Agent-level micro-F1 on the AEGIS file is \emph{not} reproduced: \rpQwAgent{} against \pubQwAgent{} published. Our value is itself below the trivial floor of \floorHFagent{} on that file, and the published one is further below. We did not isolate the cause; candidates are the test file (the published one is not named, and we used the Hugging Face file), 4-bit weights, the prompt variant, sampling against greedy decoding, and the rule for unparseable outputs, none tested.
 
@@ -580,7 +580,7 @@ To test whether our pipeline and the published rows are comparable at all, we ra
 
 % ---- begin table_repro.tex ----
 \begin{table*}[t]
-\caption{Reproduction check (micro-F1, \%). Rows marked ``rep.'' are copied from Table~1 of~\cite{aegis}; rows marked ``ours'' were run by us with 95\% record-level intervals. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. The published rows were evaluated on a test file the paper does not name.}
+\caption{Reproduction check (micro-F1, \%). Rows marked ``rep.'' are copied from Table~1 of~\cite{aegis}; every row marked ``ours'' was run by us, scored with the authors' scorer on the same test records and with 95\% record-level intervals. The last four rows (trivial floor, frequency, flat MLP, shortcut-only MLP) use the same deduplicated training data as the ensemble; the flat MLP and shortcut-only MLP use frozen embeddings and five head seeds. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. Frequency scores zero on Who\&When because it predicts agent names seen in training, and Who\&When agent names are free-form. The published rows were evaluated on a test file the paper does not name.}
 \label{tab:repro}
 \centering\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}llrrrrrr@{}}
@@ -595,6 +595,11 @@ Qwen2.5-7B, ours & HF & 8.01 {\scriptsize[6.8, 9.3]} & 49.24 {\scriptsize[45.8, 
 DCL, rep. & unnamed & 8.33 & 22.93 & 24.73 & 1.60 & 8.40 & 14.67 \\
 DCL-style, ours & authors' & 12.64 {\scriptsize[11.6, 13.7]} & 63.64 {\scriptsize[61.1, 66.1]} & 30.88 {\scriptsize[29.4, 32.3]} & 3.01 {\scriptsize[1.8, 4.3]} & 38.12 {\scriptsize[34.0, 42.4]} & 11.02 {\scriptsize[8.7, 13.5]} \\
 DCL-style, ours & HF & 13.90 {\scriptsize[13.0, 14.8]} & 69.42 {\scriptsize[67.9, 70.9]} & 32.89 {\scriptsize[31.4, 34.4]} & -- \\
+\midrule
+Trivial floor, ours & authors' & 6.47 {\scriptsize[6.2, 6.7]} & 62.00 {\scriptsize[59.7, 64.3]} & 26.19 {\scriptsize[25.4, 27.0]} & 3.42 {\scriptsize[3.1, 3.8]} & 38.32 {\scriptsize[35.0, 41.8]} & 13.33 {\scriptsize[13.3, 13.3]} \\
+Frequency, ours & authors' & 10.77 {\scriptsize[10.0, 11.5]} & 69.55 {\scriptsize[66.7, 72.2]} & 27.24 {\scriptsize[26.3, 28.2]} & 0.00 {\scriptsize[0.0, 0.0]} & 0.00 {\scriptsize[0.0, 0.0]} & 0.00 {\scriptsize[0.0, 0.0]} \\
+Flat MLP, frozen MiniLM, ours & authors' & 20.02 {\scriptsize[18.5, 21.5]} & 68.45 {\scriptsize[65.6, 71.0]} & 31.43 {\scriptsize[29.7, 33.0]} & 1.96 {\scriptsize[1.0, 3.1]} & 33.88 {\scriptsize[29.0, 39.2]} & 7.63 {\scriptsize[5.6, 10.0]} \\
+Shortcut-only MLP, ours & authors' & 10.75 {\scriptsize[9.2, 12.4]} & 58.35 {\scriptsize[55.5, 61.2]} & 23.54 {\scriptsize[21.5, 25.7]} & 4.95 {\scriptsize[2.7, 7.5]} & 38.08 {\scriptsize[33.2, 43.0]} & 10.87 {\scriptsize[7.5, 14.7]} \\
 \bottomrule
 \end{tabular}
 \end{table*}
