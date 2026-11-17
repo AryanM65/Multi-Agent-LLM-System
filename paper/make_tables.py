@@ -344,3 +344,39 @@ if ES:
 with open(OUT / "numbers.tex", "a") as fh:
     fh.write("% robustness numbers, from robustness_stats.json, name_audit.json, ensemble_size.json\n" + "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in M2.items()))
 print("robustness tables +", len(M2), "macros")
+
+# ======== reproduction check: our runs of lighter published baselines (aegis/results/baselines_dedup.json) ========
+BD = json.load(open(R / "baselines_dedup.json"))["rows"]
+
+
+def ci3(r):
+    return " & ".join(f"{r[lv]['micro']:.2f} {{\\scriptsize[{r[lv]['lo']:.1f}, {r[lv]['hi']:.1f}]}}" for lv in LV)
+
+
+def pub3(key, pre):
+    return " & ".join(f"{pub[key][f'{pre}_{lv}_micro']:.2f}" for lv in LV)
+
+
+S = "\\begin{table*}[t]\n\\caption{Reproduction check (micro-F1, \\%). Rows marked ``rep.'' are copied from Table~1 of~\\cite{aegis}; rows marked ``ours'' were run by us with 95\\% record-level intervals. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. The published rows were evaluated on a test file the paper does not name.}\n\\label{tab:repro}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}llrrrrrr@{}}\n\\toprule\n & & \\multicolumn{3}{c}{AEGIS-Bench test file} & \\multicolumn{3}{c}{Who\\&When} \\\\\n\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\nModel & Test file & Pair & Agent & Error & Pair & Agent & Error \\\\\n\\midrule\n"
+S += f"Qwen2.5-7B, rep. & unnamed & {pub3('Qwen2.5-7B-Instruct', 'ab')} & {pub3('Qwen2.5-7B-Instruct', 'ww')} \\\\\n"
+S += f"Qwen2.5-7B, ours & HF & {ci3(BD['qwen_zeroshot|hf_test'])} & {ci3(BD['qwen_zeroshot|who_when'])} \\\\\n"
+S += "\\midrule\n"
+S += f"DCL, rep. & unnamed & {pub3('DCL (Ours)', 'ab')} & {pub3('DCL (Ours)', 'ww')} \\\\\n"
+S += f"DCL-style, ours & authors' & {ci3(BD['dcl_style|repo_test'])} & {ci3(BD['dcl_style|who_when'])} \\\\\n"
+S += f"DCL-style, ours & HF & {ci3(BD['dcl_style|hf_test'])} & -- \\\\\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table*}\n"
+(OUT / "table_repro.tex").write_text(S)
+Q, QW, DA, DH, DW = BD["qwen_zeroshot|hf_test"], BD["qwen_zeroshot|who_when"], BD["dcl_style|repo_test"], BD["dcl_style|hf_test"], BD["dcl_style|who_when"]
+M3 = {"rpQwPair": f"{Q['pair']['micro']:.2f}", "rpQwAgent": f"{Q['agent']['micro']:.2f}", "rpQwError": f"{Q['error']['micro']:.2f}",
+      "rpQwWWpair": f"{QW['pair']['micro']:.2f}", "rpQwWWagent": f"{QW['agent']['micro']:.2f}", "rpQwWWerror": f"{QW['error']['micro']:.2f}",
+      "pubQwPair": f"{pub['Qwen2.5-7B-Instruct']['ab_pair_micro']:.2f}", "pubQwAgent": f"{pub['Qwen2.5-7B-Instruct']['ab_agent_micro']:.2f}",
+      "pubQwError": f"{pub['Qwen2.5-7B-Instruct']['ab_error_micro']:.2f}", "pubDCLagent": f"{pub['DCL (Ours)']['ab_agent_micro']:.2f}",
+      "pubDCLerror": f"{pub['DCL (Ours)']['ab_error_micro']:.2f}", "pubDCLwwAgent": f"{pub['DCL (Ours)']['ww_agent_micro']:.2f}",
+      "pubDCLwwError": f"{pub['DCL (Ours)']['ww_error_micro']:.2f}", "pubDCLwwPair": f"{pub['DCL (Ours)']['ww_pair_micro']:.2f}",
+      "rpDclPair": f"{DA['pair']['micro']:.2f}", "rpDclAgent": f"{DA['agent']['micro']:.2f}", "rpDclError": f"{DA['error']['micro']:.2f}",
+      "rpDclPairLo": f"{DA['pair']['lo']:.1f}", "rpDclPairHi": f"{DA['pair']['hi']:.1f}",
+      "rpDclWWpair": f"{DW['pair']['micro']:.2f}", "rpDclWWagent": f"{DW['agent']['micro']:.2f}", "rpDclWWerror": f"{DW['error']['micro']:.2f}",
+      "floorAEagent": f"{ab['floor|repo_test']['agent']['micro']:.2f}", "floorHFagent": f"{ab['floor|hf_test']['agent']['micro']:.2f}"}
+with open(OUT / "numbers.tex", "a") as fh:
+    fh.write("% reproduction check, from baselines_dedup.json\n" + "".join(f"\\newcommand{{\\{k}}}{{{v}}}\n" for k, v in M3.items()))
+print("repro table +", len(M3), "macros")

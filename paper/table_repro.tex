@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\caption{Reproduction check (micro-F1, \%). Rows marked ``rep.'' are copied from Table~1 of~\cite{aegis}; rows marked ``ours'' were run by us with 95\% record-level intervals. Qwen2.5-7B (zero-shot, AWQ 4-bit, greedy, long prompts truncated) was run on the Hugging Face file only. DCL-style is our frozen-encoder re-implementation of the published design, trained under the deduplicated protocol (5 seeds), and is not the published DCL. The published rows were evaluated on a test file the paper does not name.}
+\label{tab:repro}
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+ & & \multicolumn{3}{c}{AEGIS-Bench test file} & \multicolumn{3}{c}{Who\&When} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Model & Test file & Pair & Agent & Error & Pair & Agent & Error \\
+\midrule
+Qwen2.5-7B, rep. & unnamed & 5.02 & 27.55 & 14.96 & 2.31 & 40.92 & 3.64 \\
+Qwen2.5-7B, ours & HF & 8.01 {\scriptsize[6.8, 9.3]} & 49.24 {\scriptsize[45.8, 52.5]} & 20.15 {\scriptsize[18.2, 22.2]} & 2.98 {\scriptsize[0.6, 5.5]} & 35.16 {\scriptsize[27.9, 42.1]} & 6.23 {\scriptsize[2.8, 9.9]} \\
+\midrule
+DCL, rep. & unnamed & 8.33 & 22.93 & 24.73 & 1.60 & 8.40 & 14.67 \\
+DCL-style, ours & authors' & 12.64 {\scriptsize[11.6, 13.7]} & 63.64 {\scriptsize[61.1, 66.1]} & 30.88 {\scriptsize[29.4, 32.3]} & 3.01 {\scriptsize[1.8, 4.3]} & 38.12 {\scriptsize[34.0, 42.4]} & 11.02 {\scriptsize[8.7, 13.5]} \\
+DCL-style, ours & HF & 13.90 {\scriptsize[13.0, 14.8]} & 69.42 {\scriptsize[67.9, 70.9]} & 32.89 {\scriptsize[31.4, 34.4]} & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}
