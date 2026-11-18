@@ -1,7 +1,0 @@
-[finetuned] seed 0 done (107s)
-[finetuned] seed 1 done (109s)
-[finetuned] seed 2 done (113s)
-[finetuned] flat_mlp  val grouped: pair 32.70/24.84  agent 85.29/72.24  error 42.89/42.47  (pair micro std 2.60)
-[finetuned] gnn_L0    val grouped: pair 32.32/25.16  agent 85.51/73.03  error 42.43/41.95  (pair micro std 3.19)
-[finetuned] gnn_L2    val grouped: pair 33.12/26.80  agent 87.46/77.90  error 43.86/44.62  (pair micro std 0.18)
-done

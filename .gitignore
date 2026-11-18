@@ -54,3 +54,23 @@ aegis/third_party/
 
 # S4 fine-tuned vectors (163 MB per encoder, kept on local disk and on Kaggle; logs are committed)
 aegis/results/kaggle_logs/s4_s*/ft_shards/
+
+# ---- Repo cleanup: only code, manuscript and cover letter are published ----
+# Everything below stays on local disk but is not tracked.
+btp-pipeline/
+model/
+dataset/
+docs/
+local-notes/
+aegis/docs/
+aegis/results/
+/context.md
+/current-progress.md
+/dcl.md
+/new-plan.md
+/CLAUDE.md
+/*.pdf
+# Duplicate / build artifacts of the manuscript
+paper/paper_single.*
+paper/flatten.py
+.claude/

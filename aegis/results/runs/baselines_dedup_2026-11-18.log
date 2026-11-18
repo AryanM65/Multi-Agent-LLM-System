@@ -1,13 +1,0 @@
-qwen hf_test {'pair': np.float64(8.01), 'agent': np.float64(49.24), 'error': np.float64(20.15)}
-qwen who_when {'pair': np.float64(2.98), 'agent': np.float64(35.16), 'error': np.float64(6.23)}
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 9252.60it/s]
-DCL-style: train 6912 val 1657
-seed 0 thr 0.3 epochs 20 (16s)
-seed 1 thr 0.3 epochs 20 (16s)
-seed 2 thr 0.3 epochs 20 (17s)
-seed 3 thr 0.3 epochs 20 (17s)
-seed 4 thr 0.3 epochs 20 (17s)
-dcl repo_test {'pair': np.float64(12.64), 'agent': np.float64(63.64), 'error': np.float64(30.88)}
-dcl hf_test {'pair': np.float64(13.9), 'agent': np.float64(69.42), 'error': np.float64(32.89)}
-dcl who_when {'pair': np.float64(3.01), 'agent': np.float64(38.12), 'error': np.float64(11.02)}

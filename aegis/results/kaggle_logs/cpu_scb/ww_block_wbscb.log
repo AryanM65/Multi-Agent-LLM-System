@@ -1,27 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2616.30it/s]
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2706.31it/s]
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2676.28it/s]
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3356.25it/s]
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2868.10it/s]
-[supcon5_s7] trained
-[supcon5_s8] trained
-[supcon3_s6] trained
-[supcon10] trained
-[supcon10_s1] trained
-[attnsup5] trained
-[attnsup5_s1] trained
-
-=== wbscb: block-dropout model, ensemble of 7 encoders, mean+-std over 3 seeds (micro F1 percent; macro after slash) ===
-names+peer         test      pair 36.85+-0.31/23.50 | agen 79.32+-0.36/62.68 | erro 44.33+-0.25/43.58
-names+peer         who_when  pair 5.51+-0.76/2.57 | agen 46.98+-1.04/35.97 | erro 9.99+-0.82/7.03
-names+peer  +shift who_when  pair 4.95+-1.29/2.45 | agen 48.12+-2.81/38.54 | erro 11.42+-3.95/4.45
-names              test      pair 32.70+-0.32/18.66 | agen 75.95+-0.81/62.94 | erro 39.67+-0.30/38.09
-names              who_when  pair 5.59+-0.55/2.60 | agen 44.40+-0.70/34.74 | erro 12.44+-0.88/8.58
-names       +shift who_when  pair 7.84+-1.86/5.33 | agen 43.10+-1.92/37.59 | erro 19.84+-4.74/6.58
-peer               test      pair 34.17+-0.48/18.62 | agen 75.79+-0.88/53.70 | erro 43.15+-0.43/42.11
-peer               who_when  pair 3.13+-0.29/1.58 | agen 44.09+-0.86/34.92 | erro 6.67+-0.58/4.66
-peer        +shift who_when  pair 3.77+-0.24/1.97 | agen 43.99+-1.93/39.54 | erro 8.48+-0.47/2.09
-neither            test      pair 28.08+-2.20/14.72 | agen 77.15+-3.10/53.83 | erro 38.59+-0.52/38.14
-neither            who_when  pair 3.80+-0.34/2.06 | agen 41.95+-1.47/36.80 | erro 11.40+-1.81/7.83
-neither     +shift who_when  pair 5.69+-0.18/4.04 | agen 42.81+-0.65/37.72 | erro 15.72+-2.85/4.82

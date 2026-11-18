@@ -1,24 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-124479 turns, 99550 unique texts
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 10222.26it/s]
-embedding 99550 new texts (0 cached)
-  5000/99550  5s
-  10000/99550  14s
-  15000/99550  28s
-  20000/99550  43s
-  25000/99550  57s
-  30000/99550  72s
-  35000/99550  87s
-  40000/99550  103s
-  45000/99550  118s
-  50000/99550  134s
-  55000/99550  149s
-  60000/99550  165s
-  65000/99550  182s
-  70000/99550  202s
-  75000/99550  223s
-  80000/99550  243s
-  85000/99550  263s
-  90000/99550  283s
-  95000/99550  304s
-  99550/99550  326s
