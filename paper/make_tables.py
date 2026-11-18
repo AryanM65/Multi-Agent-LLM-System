@@ -279,12 +279,12 @@ P_ROWS = (("Authors' file: on/on minus off/off", "repo_test: all-blocks minus ne
           ("Who\\&W.: shift minus no shift, off/off", "who_when: shift minus no shift, mask neither"),
           ("Who\\&W.: on/off + shift minus on/on no shift", "who_when: names+shift minus all-blocks no-shift"),
           ("Who\\&W.: on/off + shift minus off/off no shift", "who_when: names+shift minus neither no-shift"))
-S = "\\begin{table}[t]\n\\caption{Paired tests on the same records (pair micro-F1 difference, percentage points; 10,000-resample record-level bootstrap interval; two-sided Wilcoxon signed-rank test on per-record pair F1 averaged over head seeds). Authors' file: 600 records; Who\\&When: 184. Ten tests are shown, so a Bonferroni level is 0.005.}\n\\label{tab:paired}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lrr@{}}\n\\toprule\nComparison & Difference [95\\% interval] & Wilcoxon $p$ \\\\\n\\midrule\n"
+S = "\\begin{table*}[t]\n\\caption{Paired tests on the same records (pair micro-F1 difference, percentage points; 10,000-resample record-level bootstrap interval; two-sided Wilcoxon signed-rank test on per-record pair F1 averaged over head seeds). Authors' file: 600 records; Who\\&When: 184. Ten tests are shown, so a Bonferroni level is 0.005.}\n\\label{tab:paired}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lrr@{}}\n\\toprule\nComparison & Difference [95\\% interval] & Wilcoxon $p$ \\\\\n\\midrule\n"
 for lab, key in P_ROWS:
     v = PR[key]
     c = f"{v['diff']:+.2f} {{\\scriptsize[{v['lo']:+.2f}, {v['hi']:+.2f}]}}"
     S += f"{lab} & {'\\textbf{' + c + '}' if v['bootstrap_excludes_zero'] else c} & {pfmt(v['wilcoxon_p'])} \\\\\n"
-S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
+S += "\\bottomrule\n\\end{tabular}\n\\end{table*}\n"
 (OUT / "table_paired.tex").write_text(S)
 
 SN = RB["sensitivity"]
@@ -296,12 +296,12 @@ S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
 (OUT / "table_sens.tex").write_text(S)
 
 SC = NA["scores"]["repo_test"]
-S = "\\begin{table}[t]\n\\caption{Agent names in the authors' test file. Gold agent labels that equal no speaker name in their own conversation, by framework (none in the 16,586 training labels or the Hugging Face file), and the ensemble's micro-F1 (\\%) under exact and normalised (case, hyphen and underscore ignored) name matching. Mean over three head seeds.}\n\\label{tab:names}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lrrrr@{}}\n\\toprule\n & Unmatched labels & Agent, exact & Agent, normalised & Pair, normalised \\\\\n\\midrule\n"
-for fw, lab in (("dylan", "DyLAN (87 records)"), ("macnet", "MacNet (100 records)")):
+S = "\\begin{table}[t]\n\\caption{Agent names in the authors' test file. Gold agent labels that equal no speaker name in their own conversation, by framework (none in the 16,586 training labels or the Hugging Face file), and the ensemble's micro-F1 (\\%) under exact and normalised (case, hyphen and underscore ignored) name matching. Mean over three head seeds.}\n\\label{tab:names}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{2pt}\n\\begin{tabular}{@{}lrrrr@{}}\n\\toprule\n & Unmatched & Agent ex. & Agent norm. & Pair norm. \\\\\n\\midrule\n"
+for fw, lab in (("dylan", "DyLAN (87 rec.)"), ("macnet", "MacNet (100 rec.)")):
     mm = NA["mismatch"]["repo_test"][fw]
     bf = SC["by_framework"][fw]
     S += f"{lab} & {mm['not_exact_speaker']} of {mm['gold_agent_labels']} & {bf['exact']['agent']:.1f} & {bf['normalised']['agent']:.1f} & {bf['normalised']['pair']:.1f} \\\\\n"
-S += f"All 600 records & {sum(v['not_exact_speaker'] for v in NA['mismatch']['repo_test'].values())} of {sum(v['gold_agent_labels'] for v in NA['mismatch']['repo_test'].values())} & {SC['exact']['agent']['mean']:.1f} & {SC['normalised']['agent']['mean']:.1f} & {SC['normalised']['pair']['mean']:.1f} \\\\\n"
+S += f"All 600 rec. & {sum(v['not_exact_speaker'] for v in NA['mismatch']['repo_test'].values())} of {sum(v['gold_agent_labels'] for v in NA['mismatch']['repo_test'].values())} & {SC['exact']['agent']['mean']:.1f} & {SC['normalised']['agent']['mean']:.1f} & {SC['normalised']['pair']['mean']:.1f} \\\\\n"
 S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
 (OUT / "table_names.tex").write_text(S)
 
@@ -330,7 +330,7 @@ M2 = {"nmDyMis": NA["mismatch"]["repo_test"]["dylan"]["not_exact_speaker"], "nmD
 if ES:
     FK, SE = ES["first_k"]["names+peer|noshift|repo_test"], ES["single_encoder"]["names+peer|noshift|repo_test"]
     FKW, SEW = ES["first_k"]["names|shift|who_when"], ES["single_encoder"]["names|shift|who_when"]
-    S = "\\begin{table}[t]\n\\caption{Ensemble size. Pair micro-F1 (\\%), mean over three head seeds, when the ensemble is built from the first $k$ of the 14 fine-tuned encoders (``single'': mean $\\pm$ SD, over the 14 encoders used alone). Thresholds are re-tuned on validation for each $k$.}\n\\label{tab:ensize}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{3pt}\n\\begin{tabular}{@{}lcccccc@{}}\n\\toprule\nSetting & single & $k{=}1$ & 2 & 4 & 7 & 14 \\\\\n\\midrule\n"
+    S = "\\begin{table}[t]\n\\caption{Ensemble size. Pair micro-F1 (\\%), mean over three head seeds, when the ensemble is built from the first $k$ of the 14 fine-tuned encoders (``single'': mean $\\pm$ SD, over the 14 encoders used alone). Thresholds are re-tuned on validation for each $k$.}\n\\label{tab:ensize}\n\\centering\\footnotesize\\setlength{\\tabcolsep}{2pt}\n\\begin{tabular}{@{}lcccccc@{}}\n\\toprule\nSetting & single & $k{=}1$ & 2 & 4 & 7 & 14 \\\\\n\\midrule\n"
     for lab, fk, se in (("Authors' file, on / on", FK, SE), ("Who\\&W., on / off + shift", FKW, SEW)):
         S += f"{lab} & {se['pair']['mean']:.2f} $\\pm$ {se['pair']['sd']:.2f} & " + " & ".join(f"{fk[str(k)]['pair']:.2f}" for k in (1, 2, 4, 7, 14)) + " \\\\\n"
     S += "\\bottomrule\n\\end{tabular}\n\\end{table}\n"

@@ -1,14 +1,14 @@
 \begin{table}[t]
 \caption{Agent names in the authors' test file. Gold agent labels that equal no speaker name in their own conversation, by framework (none in the 16,586 training labels or the Hugging Face file), and the ensemble's micro-F1 (\%) under exact and normalised (case, hyphen and underscore ignored) name matching. Mean over three head seeds.}
 \label{tab:names}
-\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\centering\footnotesize\setlength{\tabcolsep}{2pt}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
- & Unmatched labels & Agent, exact & Agent, normalised & Pair, normalised \\
+ & Unmatched & Agent ex. & Agent norm. & Pair norm. \\
 \midrule
-DyLAN (87 records) & 109 of 200 & 35.6 & 76.2 & 39.7 \\
-MacNet (100 records) & 6 of 393 & 75.8 & 76.6 & 37.2 \\
-All 600 records & 115 of 1320 & 73.2 & 80.0 & 38.9 \\
+DyLAN (87 rec.) & 109 of 200 & 35.6 & 76.2 & 39.7 \\
+MacNet (100 rec.) & 6 of 393 & 75.8 & 76.6 & 37.2 \\
+All 600 rec. & 115 of 1320 & 73.2 & 80.0 & 38.9 \\
 \bottomrule
 \end{tabular}
 \end{table}
